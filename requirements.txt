@@ -1,0 +1,14 @@
+numpy
+torch
+torchaudio
+
+soundfile
+sklearn
+tensorboard
+wandb
+
+ruamel.yaml
+dacite
+prettyprinter
+tqdm
+python-dotenv

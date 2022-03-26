@@ -1,0 +1,13 @@
+model:
+  type: 'simclr'
+  infonce_weight: 1.0
+  vicreg_weight: 1.0
+  barlowtwins_weight: 0.0
+  representations_losses: [false, true, false]
+  embeddings_losses: [true, false, false]
+training:
+  batch_size: 256
+data:
+  train: './data/voxceleb1_train_list'
+  wav_augment:
+    enable: true
