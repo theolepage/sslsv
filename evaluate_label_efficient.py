@@ -43,7 +43,7 @@ def get_checkpoint_name(checkpoint_dir, nb_labels_per_spk, fine_tune, supervised
     if supervised:
         checkpoint_dir += 'supervised'
     else:
-        checkpoint_dir += 'fine-tuned' if fine_tune else 'frozen'
+        checkpoint_dir += 'finetuned' if fine_tune else 'frozen'
     return checkpoint_dir
 
 

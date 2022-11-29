@@ -4,10 +4,10 @@ from typing import Tuple
 
 @dataclass
 class TrainingConfig:
-    epochs: int = 500
-    batch_size: int = 64
+    epochs: int = 300
+    batch_size: int = 256
     learning_rate: float = 0.001
-    patience: int = 50
+    patience: int = 300
     tracked_metric: str = 'test_eer'
     tracked_mode: str = 'min'
     optimizer: str = 'adam'

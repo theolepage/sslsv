@@ -171,7 +171,7 @@ class ThinResNet34(nn.Module):
             X = X.log()
             X = self.instance_norm(X)
             X = X.unsqueeze(1)
-            # X shape: (B, H, W, C) = (B, 1, 40, 200)
+            # X shape: (B, C, H, W) = (B, 1, 40, 200)
 
         Z = self.conv(X)
         Z = self.relu(Z)
