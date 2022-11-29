@@ -120,13 +120,14 @@ class Trainer:
             )
             self.best_metric = metric
             self.nb_epochs_remaining = 0
-            self.save_checkpoint()
+            self.save_checkpoint('best')
         else:
             print(
                 f'\n=> {self.config.training.tracked_metric}'
                 f' did not improved from {self.best_metric}'
             )
             self.nb_epochs_remaining += 1
+        self.save_checkpoint('latest')
 
         if self.nb_epochs_remaining >= self.config.training.patience:
             return False
@@ -200,7 +201,7 @@ class Trainer:
         ).get_url()
 
     def load_checkpoint(self):
-        checkpoint_path = Path(self.checkpoint_dir) / 'model.pt'
+        checkpoint_path = Path(self.checkpoint_dir) / 'model_latest.pt'
         checkpoint = None
         if checkpoint_path.exists():
             checkpoint = torch.load(checkpoint_path, map_location='cpu')
@@ -210,7 +211,7 @@ class Trainer:
             self.lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
         return checkpoint
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, suffix):
         torch.save(
             {
                 'epoch': self.epoch + 1,
@@ -219,7 +220,7 @@ class Trainer:
                 'optimizer': self.optimizer.state_dict(),
                 'lr_scheduler': self.lr_scheduler.state_dict()
             },
-            self.checkpoint_dir + '/model.pt'
+            self.checkpoint_dir + '/model_' + suffix + '.pt'
         )
 
     def start(self):

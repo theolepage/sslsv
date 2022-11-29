@@ -11,7 +11,7 @@ def evaluate(args):
     config, checkpoint_dir = load_config(args.config)
     model = load_model(config)
 
-    checkpoint = torch.load(Path(checkpoint_dir) / 'model.pt')
+    checkpoint = torch.load(Path(checkpoint_dir) / 'model_latest.pt')
     model.load_state_dict(checkpoint['model'])
     model.cuda()
     model.eval()

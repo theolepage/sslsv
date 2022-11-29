@@ -63,7 +63,7 @@ def train(args, nb_labels_per_spk, fine_tune=False, supervised=False):
     # Load model (to use as an encoder)
     model = load_model(config)
     if not supervised:
-        checkpoint = torch.load(Path(checkpoint_dir) / 'model.pt')
+        checkpoint = torch.load(Path(checkpoint_dir) / 'model_latest.pt')
         model.load_state_dict(checkpoint['model'])
         for p in model.parameters(): p.requires_grad = fine_tune
 
