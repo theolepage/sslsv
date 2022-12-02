@@ -63,8 +63,13 @@ Trials and train lists files are also automatically created with the following f
 
 Start self-supervised training with `python train.py configs/vicreg_b256.yml`.
 
+### wandb
+
+Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments you first need to provide your API key with `wandb login API_KEY`.
+
 ## To-Do
 
+- [ ] Handle CPU training
 - [ ] DDP: adapt losses and supervised sampler
 - [ ] Refactor evaluation (use AudioDataset class for handling test data)
 - [ ] Documentation, comments, typing

@@ -102,7 +102,7 @@ class Trainer:
             print(f'{metric_name}: {metric_value}') 
             self.writer.add_scalar(metric_name, metric_value, self.epoch)
 
-        wandb.log({**metrics, 'epoch': self.epoch})
+        wandb.log(metrics, step=self.epoch)
 
     def track_improvement(self, metrics):
         metric = metrics[self.config.training.tracked_metric]
@@ -195,6 +195,8 @@ class Trainer:
         self.writer = SummaryWriter(log_dir=self.checkpoint_dir + '/logs')
         self.wandb_url = wandb.init(
             project='sslsv',
+            id=(self.config.wandb_id if self.config.wandb_id else self.config.name),
+            resume='allow',
             dir=self.checkpoint_dir,
             name=self.config.name,
             config=vars(self.config)
