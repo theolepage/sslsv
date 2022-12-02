@@ -17,8 +17,11 @@ def extract_embeddings_from_batch(curr_batch_data, model):
     B, N, T = batch.shape
     batch = batch.reshape((B * N, T))
 
+
     with torch.no_grad():
-        feats = model(torch.FloatTensor(batch).cuda()).detach().cpu().numpy()
+        batch = torch.FloatTensor(batch)
+        batch = batch.cuda() if torch.cuda.is_available() else batch
+        feats = model(batch).detach().cpu().numpy()
     feats = normalize(feats, axis=1)
     feats = feats.reshape((B, N, -1))
     feats = feats.mean(axis=1)
