@@ -45,9 +45,10 @@ class ModelConfig:
 
 @dataclass
 class Config:
-    training: TrainingConfig
-    data: DataConfig
-    model: ModelConfig
+    training: TrainingConfig = TrainingConfig()
+    data: DataConfig = DataConfig()
+    model: ModelConfig = ModelConfig()
     name: str = 'test'
     seed: int = 1717
     reproducibility: bool = False
+    wandb_id: str = None
