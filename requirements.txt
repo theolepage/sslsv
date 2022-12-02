@@ -3,7 +3,8 @@ torch
 torchaudio
 
 soundfile
-sklearn
+scikit-learn
+scipy
 tensorboard
 wandb
 
