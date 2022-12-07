@@ -1,8 +1,5 @@
 model:
-  type: 'simclr'
-  infonce_weight: 0.0
-  vicreg_weight: 0.0
-  barlowtwins_weight: 1.0
+  type: 'barlowtwins'
 data:
   train: './data/voxceleb1_train_list'
   wav_augment:

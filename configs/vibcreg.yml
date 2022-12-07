@@ -1,5 +1,5 @@
 model:
-  type: 'simclr'
+  type: 'vibcreg'
 data:
   train: './data/voxceleb1_train_list'
   wav_augment:
