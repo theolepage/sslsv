@@ -20,6 +20,10 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning ([arxiv](https://arxiv.org/abs/2105.04906))  
   *Adrien Bardes, Jean Ponce, Yann LeCun*
 
+- **VIbCReg** (`sslsv.models.VIbCReg`)  
+  Computer Vision Self-supervised Learning Methods on Time Series ([arxiv](https://arxiv.org/abs/2109.00783))  
+  *Daesoo Lee, Erlend Aune*
+
 - **Barlow Twins** (`sslsv.models.BarlowTwins`)  
   Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arxiv](https://arxiv.org/abs/2103.03230))  
   *Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny*
