@@ -20,12 +20,14 @@ from sslsv.utils.distributed import is_main_process
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
 from sslsv.models.VICReg import VICReg, VICRegConfig
 from sslsv.models.BarlowTwins import BarlowTwins, BarlowTwinsConfig
+from sslsv.models.MultiLosses import MultiLosses, MultiLossesConfig
 
 
 REGISTERED_MODELS = {
     'simclr':      (SimCLR,      SimCLRConfig),
     'vicreg':      (VICReg,      VICRegConfig),
     'barlowtwins': (BarlowTwins, BarlowTwinsConfig),
+    'multilosses': (MultiLosses, MultiLossesConfig),
 }
 
 
