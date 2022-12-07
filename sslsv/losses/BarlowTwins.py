@@ -2,7 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-class BarlowTwins(nn.Module):
+
+class BarlowTwinsLoss(nn.Module):
 
     def __init__(self, lamda=0.05, scale=0.025):
         super().__init__()

@@ -50,9 +50,9 @@ class Trainer:
             x_2 = x[:, 1, :]
 
             with autocast(enabled=(self.scaler is not None)):
-                z_1 = self.model(x_1, training=True)
-                z_2 = self.model(x_2, training=True)
-                loss, metrics = self.model.module.compute_loss(z_1, z_2)
+                y_1, z_1 = self.model(x_1, training=True)
+                y_2, z_2 = self.model(x_2, training=True)
+                loss, metrics = self.model.module.compute_loss(z_1, z_2, y_1, y_2)
 
             # Update metrics (average for epoch)
             if not train_metrics:

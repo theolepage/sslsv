@@ -17,11 +17,15 @@ from sslsv.data.AudioDataset import AudioDataset
 from sslsv.data.SupervisedSampler import SupervisedSampler
 from sslsv.utils.distributed import is_main_process
 
-from sslsv.models.simclr import SimCLRModel, SimCLRConfig
+from sslsv.models.SimCLR import SimCLR, SimCLRConfig
+from sslsv.models.VICReg import VICReg, VICRegConfig
+from sslsv.models.BarlowTwins import BarlowTwins, BarlowTwinsConfig
 
 
 REGISTERED_MODELS = {
-    'simclr': (SimCLRModel, SimCLRConfig)
+    'simclr':      (SimCLR,      SimCLRConfig),
+    'vicreg':      (VICReg,      VICRegConfig),
+    'barlowtwins': (BarlowTwins, BarlowTwinsConfig),
 }
 
 

@@ -2,26 +2,26 @@
 
 Collection of **self-supervised learning** (SSL) methods for **speaker verification** (SV).
 
-## Resources
+## Methods
+
+### Encoders
+
+- **Thin-ResNet34** (`sslsv.encoders.ThinResNet34`)  
+  Delving into VoxCeleb: environment invariant speaker recognition ([arxiv](https://arxiv.org/abs/1910.11238))  
+  *Joon Son Chung, Jaesung Huh, Seongkyu Mun*
 
 ### Models
 
-- **`sslsv.model.ThinResNet34`**  
-  "Delving into VoxCeleb: environment invariant speaker recognition" ([arxiv](https://arxiv.org/abs/1910.11238))  
-  *Joon Son Chung, Jaesung Huh, Seongkyu Mun*
+- **SimCLR** (`sslsv.models.SimCLR`)  
+  A Simple Framework for Contrastive Learning of Visual Representations ([arxiv](https://arxiv.org/abs/2002.05709))  
+  *Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton*
 
-### Losses
-
-- **`sslsv.losses.InfoNCE`**  
-  "Representation Learning with Contrastive Predictive Coding" ([arxiv](https://arxiv.org/pdf/1807.03748.pdf))  
-  *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
-
-- **`sslsv.losses.VICReg`**  
-  "VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning" ([arxiv](https://arxiv.org/abs/2105.04906))  
+- **VICReg** (`sslsv.models.VICReg`)  
+  VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning ([arxiv](https://arxiv.org/abs/2105.04906))  
   *Adrien Bardes, Jean Ponce, Yann LeCun*
 
-- **`sslsv.losses.BarlowTwins`**  
-  "Barlow Twins: Self-Supervised Learning via Redundancy Reduction" ([arxiv](https://arxiv.org/abs/2103.03230))  
+- **Barlow Twins** (`sslsv.models.BarlowTwins`)  
+  Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arxiv](https://arxiv.org/abs/2103.03230))  
   *Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny*
 
 ## Datasets
@@ -61,7 +61,7 @@ Trials and train lists files are also automatically created with the following f
 
 ## Usage
 
-Start self-supervised training with `python train.py configs/vicreg_b256.yml`.
+Start self-supervised training with `python train.py configs/vicreg.yml`.
 
 ### wandb
 

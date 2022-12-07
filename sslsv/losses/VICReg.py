@@ -2,7 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-class VICReg(nn.Module):
+
+class VICRegLoss(nn.Module):
 
     def __init__(
         self,
