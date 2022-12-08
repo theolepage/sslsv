@@ -19,7 +19,9 @@ from sslsv.data.SupervisedSampler import SupervisedSampler
 from sslsv.utils.distributed import is_main_process
 
 from sslsv.encoders.ThinResNet34 import ThinResNet34, ThinResNet34Config
+from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 
+from sslsv.models.LIM import LIM, LIMConfig
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
 from sslsv.models.VICReg import VICReg, VICRegConfig
 from sslsv.models.VIbCReg import VIbCReg, VIbCRegConfig
@@ -28,11 +30,13 @@ from sslsv.models.MultiLosses import MultiLosses, MultiLossesConfig
 
 
 REGISTERED_ENCODERS = {
-    'thinresnet34': (ThinResNet34, ThinResNet34Config),
+    'thinresnet34':   (ThinResNet34,   ThinResNet34Config),
+    'simpleaudiocnn': (SimpleAudioCNN, SimpleAudioCNNConfig),
 }
 
 
 REGISTERED_MODELS = {
+    'lim':         (LIM,         LIMConfig),
     'simclr':      (SimCLR,      SimCLRConfig),
     'vicreg':      (VICReg,      VICRegConfig),
     'vibcreg':     (VIbCReg,     VIbCRegConfig),

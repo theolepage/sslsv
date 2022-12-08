@@ -6,11 +6,19 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
 
 ### Encoders
 
+- **Simple Audio CNN** (`sslsv.encoders.SimpleAudioCNN`)  
+  Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
+  *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
+
 - **Thin-ResNet34** (`sslsv.encoders.ThinResNet34`)  
   Delving into VoxCeleb: environment invariant speaker recognition ([arXiv](https://arxiv.org/abs/1910.11238))  
   *Joon Son Chung, Jaesung Huh, Seongkyu Mun*
 
 ### Models
+
+- **LIM** (`sslsv.models.LIM`)  
+  Learning Speaker Representations with Mutual Information ([arXiv](https://arxiv.org/abs/1812.00271))  
+  *Mirco Ravanelli, Yoshua Bengio*
 
 - **SimCLR** (`sslsv.models.SimCLR`)  
   A Simple Framework for Contrastive Learning of Visual Representations ([arXiv](https://arxiv.org/abs/2002.05709))  
