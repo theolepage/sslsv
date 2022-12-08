@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from dataclasses import dataclass, field
 
+from sslsv.modules.IterNorm import IterNorm
 from sslsv.losses.VIbCReg import VIbCRegLoss
 from sslsv.losses.InfoNCE import InfoNCELoss
 from sslsv.models.BaseModel import BaseModel, BaseModelConfig
@@ -25,6 +26,17 @@ class VIbCReg(BaseModel):
             config.inv_weight,
             config.var_weight,
             config.cov_weight
+        )
+
+        self.projector = nn.Sequential(
+            nn.Linear(1024, self.projector_dim),
+            nn.BatchNorm1d(self.projector_dim),
+            nn.ReLU(),
+            nn.Linear(self.projector_dim, self.projector_dim),
+            nn.BatchNorm1d(self.projector_dim),
+            nn.ReLU(),
+            nn.Linear(self.projector_dim, self.projector_dim),
+            IterNorm(self.projector_dim, nb_groups=64, T=5, dim=2, affine=True)
         )
 
     def compute_loss(self, Z_1, Z_2, Y_1, Y_2):
