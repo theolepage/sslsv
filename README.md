@@ -7,25 +7,25 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
 ### Encoders
 
 - **Thin-ResNet34** (`sslsv.encoders.ThinResNet34`)  
-  Delving into VoxCeleb: environment invariant speaker recognition ([arxiv](https://arxiv.org/abs/1910.11238))  
+  Delving into VoxCeleb: environment invariant speaker recognition ([arXiv](https://arxiv.org/abs/1910.11238))  
   *Joon Son Chung, Jaesung Huh, Seongkyu Mun*
 
 ### Models
 
 - **SimCLR** (`sslsv.models.SimCLR`)  
-  A Simple Framework for Contrastive Learning of Visual Representations ([arxiv](https://arxiv.org/abs/2002.05709))  
+  A Simple Framework for Contrastive Learning of Visual Representations ([arXiv](https://arxiv.org/abs/2002.05709))  
   *Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton*
 
 - **VICReg** (`sslsv.models.VICReg`)  
-  VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning ([arxiv](https://arxiv.org/abs/2105.04906))  
+  VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning ([arXiv](https://arxiv.org/abs/2105.04906))  
   *Adrien Bardes, Jean Ponce, Yann LeCun*
 
 - **VIbCReg** (`sslsv.models.VIbCReg`)  
-  Computer Vision Self-supervised Learning Methods on Time Series ([arxiv](https://arxiv.org/abs/2109.00783))  
+  Computer Vision Self-supervised Learning Methods on Time Series ([arXiv](https://arxiv.org/abs/2109.00783))  
   *Daesoo Lee, Erlend Aune*
 
 - **Barlow Twins** (`sslsv.models.BarlowTwins`)  
-  Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arxiv](https://arxiv.org/abs/2103.03230))  
+  Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arXiv](https://arxiv.org/abs/2103.03230))  
   *Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny*
 
 ## Datasets

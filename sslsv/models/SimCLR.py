@@ -10,7 +10,9 @@ from sslsv.models.BaseModel import BaseModel, BaseModelConfig
 
 @dataclass
 class SimCLRConfig(BaseModelConfig):
-    pass
+    
+    enable_projector: bool = True
+    projector_dim: int = 2048
 
 
 class SimCLR(BaseModel):
@@ -18,9 +20,31 @@ class SimCLR(BaseModel):
     def __init__(self, config):
         super().__init__(config)
 
+        self.enable_projector = config.enable_projector
+        self.projector_dim = config.projector_dim
+
+        self.projector = nn.Sequential(
+            nn.Linear(self.encoder_dim, self.projector_dim),
+            nn.BatchNorm1d(self.projector_dim),
+            nn.ReLU(),
+            nn.Linear(self.projector_dim, self.projector_dim),
+            nn.BatchNorm1d(self.projector_dim),
+            nn.ReLU(),
+            nn.Linear(self.projector_dim, self.projector_dim)
+        )
+
         self.loss_fn = InfoNCELoss()
 
-    def compute_loss(self, Z_1, Z_2, Y_1, Y_2):
+    def forward(self, X, training=False):
+        Y = super().forward(X)
+
+        if not training: return Y
+
+        Z = self.projector(Y) if self.enable_projector else Y
+
+        return Z
+
+    def compute_loss(self, Z_1, Z_2):
         loss = self.loss_fn((Z_1, Z_2))
 
         accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)

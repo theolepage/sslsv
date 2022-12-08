@@ -8,22 +8,25 @@ from typing import List, Tuple
 from sslsv.losses.InfoNCE import InfoNCELoss
 from sslsv.losses.VICReg import VICRegLoss
 from sslsv.losses.BarlowTwins import BarlowTwinsLoss
-from sslsv.models.BaseModel import BaseModel, BaseModelConfig
+from sslsv.models.SimCLR import SimCLR, SimCLRConfig
 from sslsv.configs import ModelConfig
 
 
 @dataclass
 class ElementMultiLossesConfig:
+
     name: str = None
     weight: float = 1.0
 
+
 @dataclass
-class MultiLossesConfig(BaseModelConfig):
+class MultiLossesConfig(SimCLRConfig):
+
     Y_losses: List[ElementMultiLossesConfig] = None
     Z_losses: List[ElementMultiLossesConfig] = None
 
 
-class MultiLosses(BaseModel):
+class MultiLosses(SimCLR):
 
     LOSS_FUNCTIONS = {
         'infonce':     InfoNCELoss(),
@@ -42,7 +45,10 @@ class MultiLosses(BaseModel):
             loss += l.weight * MultiLosses.LOSS_FUNCTIONS[l.name]((Z_1, Z_2))
         return loss
 
-    def compute_loss(self, Z_1, Z_2, Y_1, Y_2):
+    def compute_loss(self, Z_1, Z_2):
+        Y_1, Z_1 = Z_1
+        Y_2, Z_2 = Z_2
+
         loss = 0
         metrics = {}
 
