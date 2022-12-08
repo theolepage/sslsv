@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sslsv.losses.VICReg import VICRegLoss
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
@@ -18,8 +18,8 @@ class VICRegConfig(SimCLRConfig):
 
 class VICReg(SimCLR):
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, encoder):
+        super().__init__(config, encoder)
 
         self.loss_fn = VICRegLoss(
             config.inv_weight,

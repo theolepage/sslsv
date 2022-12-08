@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Tuple
 
 
@@ -40,6 +40,12 @@ class DataConfig:
 
 
 @dataclass
+class EncoderConfig:
+    __type__: str = None
+    encoded_dim: int = 1024
+
+
+@dataclass
 class ModelConfig:
     __type__: str = None
 
@@ -48,6 +54,7 @@ class ModelConfig:
 class Config:
     training: TrainingConfig = TrainingConfig()
     data: DataConfig = DataConfig()
+    encoder: EncoderConfig = EncoderConfig()
     model: ModelConfig = ModelConfig()
     name: str = 'test'
     seed: int = 1717

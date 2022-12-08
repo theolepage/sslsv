@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sslsv.losses.InfoNCE import InfoNCELoss
 from sslsv.models.BaseModel import BaseModel, BaseModelConfig
@@ -17,14 +17,14 @@ class SimCLRConfig(BaseModelConfig):
 
 class SimCLR(BaseModel):
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, encoder):
+        super().__init__(config, encoder)
 
         self.enable_projector = config.enable_projector
         self.projector_dim = config.projector_dim
 
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder_dim, self.projector_dim),
+            nn.Linear(self.encoder.encoded_dim, self.projector_dim),
             nn.BatchNorm1d(self.projector_dim),
             nn.ReLU(),
             nn.Linear(self.projector_dim, self.projector_dim),

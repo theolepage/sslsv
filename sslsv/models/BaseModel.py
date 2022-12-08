@@ -4,26 +4,22 @@ import torch.nn.functional as F
 
 from sslsv.encoders.ThinResNet34 import ThinResNet34
 
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import dataclass
 
 from sslsv.configs import ModelConfig
 
 
 @dataclass
 class BaseModelConfig(ModelConfig):
-
-    encoder_dim: int = 1024
+    pass
 
 
 class BaseModel(nn.Module):
 
-    def __init__(self, config):
+    def __init__(self, config, encoder):
         super().__init__()
 
-        self.encoder_dim = config.encoder_dim
-
-        self.encoder = ThinResNet34(self.encoder_dim)
+        self.encoder = encoder
 
     def forward(self, X, training=False):
         return self.encoder(X)

@@ -18,11 +18,18 @@ from sslsv.data.SiameseAudioDataset import SiameseAudioDataset
 from sslsv.data.SupervisedSampler import SupervisedSampler
 from sslsv.utils.distributed import is_main_process
 
+from sslsv.encoders.ThinResNet34 import ThinResNet34, ThinResNet34Config
+
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
 from sslsv.models.VICReg import VICReg, VICRegConfig
 from sslsv.models.VIbCReg import VIbCReg, VIbCRegConfig
 from sslsv.models.BarlowTwins import BarlowTwins, BarlowTwinsConfig
 from sslsv.models.MultiLosses import MultiLosses, MultiLossesConfig
+
+
+REGISTERED_ENCODERS = {
+    'thinresnet34': (ThinResNet34, ThinResNet34Config),
+}
 
 
 REGISTERED_MODELS = {
@@ -51,6 +58,7 @@ def load_config(path):
     
     data = ruamel.yaml.safe_load(open(path, 'r'))
     config = from_dict(Config, data)
+    config.encoder = get_sub_config(data, 'encoder', REGISTERED_ENCODERS)
     config.model = get_sub_config(data, 'model', REGISTERED_MODELS)
     config.name = Path(path).stem
 
@@ -117,4 +125,6 @@ def load_dataloader(config, nb_labels_per_spk=None):
 
 
 def load_model(config):
-    return REGISTERED_MODELS[config.model.__type__][0](config.model)
+    encoder = REGISTERED_ENCODERS[config.encoder.__type__][0](config.encoder)
+    model = REGISTERED_MODELS[config.model.__type__][0](config.model, encoder)
+    return model

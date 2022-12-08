@@ -2,8 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from dataclasses import dataclass, field
-from typing import List, Tuple
+from dataclasses import dataclass
+from typing import List
 
 from sslsv.losses.InfoNCE import InfoNCELoss
 from sslsv.losses.VICReg import VICRegLoss
@@ -34,8 +34,8 @@ class MultiLosses(SimCLR):
         'barlowtwins': BarlowTwinsLoss()
     }
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, encoder):
+        super().__init__(config, encoder)
 
         self.config = config
 

@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sslsv.modules.IterNorm import IterNorm
 from sslsv.losses.VIbCReg import VIbCRegLoss
@@ -19,8 +19,8 @@ class VIbCRegConfig(SimCLRConfig):
 
 class VIbCReg(SimCLR):
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, encoder):
+        super().__init__(config, encoder)
 
         self.projector = nn.Sequential(
             nn.Linear(1024, self.projector_dim),

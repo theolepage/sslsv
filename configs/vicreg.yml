@@ -1,3 +1,5 @@
+encoder:
+  type: 'thinresnet34'
 model:
   type: 'vicreg'
 data:
