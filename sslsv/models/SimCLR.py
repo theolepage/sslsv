@@ -24,7 +24,7 @@ class SimCLR(BaseModel):
         self.projector_dim = config.projector_dim
 
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoded_dim, self.projector_dim),
+            nn.Linear(self.encoder.encoder_dim, self.projector_dim),
             nn.BatchNorm1d(self.projector_dim),
             nn.ReLU(),
             nn.Linear(self.projector_dim, self.projector_dim),

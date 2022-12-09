@@ -42,7 +42,7 @@ class DataConfig:
 @dataclass
 class EncoderConfig:
     __type__: str = None
-    encoded_dim: int = 1024
+    encoder_dim: int = 1024
 
 
 @dataclass

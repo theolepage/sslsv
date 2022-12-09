@@ -37,9 +37,9 @@ class SimpleAudioCNN(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.encoded_dim = config.encoded_dim
+        self.encoder_dim = config.encoder_dim
 
-        nb_filters = [512, 512, 512, 512, self.encoded_dim]
+        nb_filters = [512, 512, 512, 512, self.encoder_dim]
         kernel_sizes = [10, 8, 4, 4, 4]
         strides = [5, 4, 2, 2, 2]
         paddings = [3, 2, 1, 1, 1]

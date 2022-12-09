@@ -16,6 +16,10 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
 
 ### Models
 
+- **CPC** (`sslsv.models.CPC`)  
+  Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
+  *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
+
 - **LIM** (`sslsv.models.LIM`)  
   Learning Speaker Representations with Mutual Information ([arXiv](https://arxiv.org/abs/1812.00271))  
   *Mirco Ravanelli, Yoshua Bengio*

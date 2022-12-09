@@ -31,14 +31,14 @@ class LIM(BaseModel):
         self.context_length = config.context_length
 
         self.discriminator = nn.Sequential(
-            nn.Linear(2 * self.encoder.encoded_dim, 256),
+            nn.Linear(2 * self.encoder.encoder_dim, 256),
             nn.ReLU(),
             nn.Linear(256, 1),
         )
 
     def forward(self, X, training=False):
         Y = super().forward(X)
-        return Y if training else Y.mean(dim=2)
+        return Y.mean(dim=2) if not training else Y
 
     def _extract_chunks(self, Y):
         N, C, L = Y.size()

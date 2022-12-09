@@ -2,7 +2,8 @@ encoder:
   type: 'simpleaudiocnn'
   encoder_dim: 512
 model:
-  type: 'lim'
+  type: 'cpc'
+  bidirectional: false
 data:
   siamese: false
   train: './data/voxceleb1_train_list'

@@ -130,7 +130,7 @@ class ThinResNet34(nn.Module):
     def __init__(self, config, n_mels=40):
         super().__init__()
 
-        self.encoded_dim = config.encoded_dim
+        self.encoder_dim = config.encoder_dim
 
         self.features_extractor = nn.Sequential(
             AudioPreEmphasis(),
@@ -156,7 +156,7 @@ class ThinResNet34(nn.Module):
         sap_out_size = int(n_mels / 8 * 256)
         self.sap = SAP(sap_out_size)
 
-        self.fc = nn.Linear(sap_out_size, self.encoded_dim)
+        self.fc = nn.Linear(sap_out_size, self.encoder_dim)
 
         self.__init_weights()
 

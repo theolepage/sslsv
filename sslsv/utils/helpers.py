@@ -21,6 +21,7 @@ from sslsv.utils.distributed import is_main_process
 from sslsv.encoders.ThinResNet34 import ThinResNet34, ThinResNet34Config
 from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 
+from sslsv.models.CPC import CPC, CPCConfig
 from sslsv.models.LIM import LIM, LIMConfig
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
 from sslsv.models.VICReg import VICReg, VICRegConfig
@@ -36,6 +37,7 @@ REGISTERED_ENCODERS = {
 
 
 REGISTERED_MODELS = {
+    'cpc':         (CPC,         CPCConfig),
     'lim':         (LIM,         LIMConfig),
     'simclr':      (SimCLR,      SimCLRConfig),
     'vicreg':      (VICReg,      VICRegConfig),
