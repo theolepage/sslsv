@@ -13,6 +13,7 @@ class CPCConfig(BaseModelConfig):
 
     bidirectional: bool = False
     nb_t_to_predict: int = 12
+    min_nb_t_for_context: int = 100
 
     aggregator_type: str = 'gru'
     aggregator_nb_layers: int = 1
@@ -72,6 +73,7 @@ class CPC(BaseModel):
 
         self.bidirectional = config.bidirectional
         self.nb_t_to_predict = config.nb_t_to_predict
+        self.min_nb_t_for_context = config.min_nb_t_for_context
 
         self.aggregator = CPCAggregator(
             config.aggregator_type,
@@ -132,7 +134,11 @@ class CPC(BaseModel):
         N, C, L = Y.size()
 
         # Number of timesteps used for context
-        idx = torch.randint(L - self.nb_t_to_predict + 1, size=(1,))
+        idx = torch.randint(
+            self.min_nb_t_for_context,
+            L - self.nb_t_to_predict + 1,
+            size=(1,)
+        )
 
         Y_past   = Y[:, :, :idx]
         Y_future = Y[:, :, idx:idx+self.nb_t_to_predict]
