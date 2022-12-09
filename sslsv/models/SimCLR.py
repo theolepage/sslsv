@@ -17,8 +17,8 @@ class SimCLRConfig(BaseModelConfig):
 
 class SimCLR(BaseModel):
 
-    def __init__(self, config, encoder):
-        super().__init__(config, encoder)
+    def __init__(self, config, create_encoder_fn):
+        super().__init__(config, create_encoder_fn)
 
         self.enable_projector = config.enable_projector
         self.projector_dim = config.projector_dim
@@ -35,16 +35,16 @@ class SimCLR(BaseModel):
 
         self.loss_fn = InfoNCELoss()
 
-    def forward(self, X, training=False):
-        Y = super().forward(X)
+    def train_step(self, X):
+        X_1 = X[:, 0, :]
+        X_2 = X[:, 1, :]
 
-        if not training: return Y
+        Y_1 = self.forward(X_1)
+        Y_2 = self.forward(X_2)
 
-        Z = self.projector(Y) if self.enable_projector else Y
+        Z_1 = self.projector(Y_1) if self.enable_projector else Y_1
+        Z_2 = self.projector(Y_2) if self.enable_projector else Y_2
 
-        return Z
-
-    def compute_loss(self, Z_1, Z_2):
         loss = self.loss_fn((Z_1, Z_2))
 
         accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)

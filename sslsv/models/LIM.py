@@ -24,8 +24,8 @@ class LIMConfig(BaseModelConfig):
 
 class LIM(BaseModel):
 
-    def __init__(self, config, encoder):
-        super().__init__(config, encoder)
+    def __init__(self, config, create_encoder_fn):
+        super().__init__(config, create_encoder_fn)
 
         self.loss_fn = config.loss_fn
         self.context_length = config.context_length
@@ -36,9 +36,8 @@ class LIM(BaseModel):
             nn.Linear(256, 1),
         )
 
-    def forward(self, X, training=False):
-        Y = super().forward(X)
-        return Y.mean(dim=2) if not training else Y
+    def forward(self, X):
+        return self.encoder(X).mean(dim=2)
 
     def _extract_chunks(self, Y):
         N, C, L = Y.size()
@@ -74,7 +73,9 @@ class LIM(BaseModel):
         loss = torch.mean(pos - loss)
         return -loss
 
-    def compute_loss(self, Y):
+    def train_step(self, X):
+        Y = self.encoder(X)
+
         C1, C2, CR = self._extract_chunks(Y)
 
         pos = self.discriminator(torch.cat((C1, C2), dim=1))

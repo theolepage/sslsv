@@ -16,10 +16,19 @@ class BaseModelConfig(ModelConfig):
 
 class BaseModel(nn.Module):
 
-    def __init__(self, config, encoder):
+    def __init__(self, config, create_encoder_fn):
         super().__init__()
 
-        self.encoder = encoder
+        self.encoder = create_encoder_fn()
 
-    def forward(self, X, training=False):
+    def forward(self, X):
         return self.encoder(X)
+
+    def train_step(self, X):
+        raise NotImplementedError
+
+    def on_train_step_start(self):
+        pass
+
+    def on_train_step_end(self):
+        pass

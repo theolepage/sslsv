@@ -19,8 +19,8 @@ class VIbCRegConfig(SimCLRConfig):
 
 class VIbCReg(SimCLR):
 
-    def __init__(self, config, encoder):
-        super().__init__(config, encoder)
+    def __init__(self, config, create_encoder_fn):
+        super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
             nn.Linear(1024, self.projector_dim),

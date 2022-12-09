@@ -67,8 +67,8 @@ class CPCPredictor(nn.Module):
 
 class CPC(BaseModel):
 
-    def __init__(self, config, encoder):
-        super().__init__(config, encoder)
+    def __init__(self, config, create_encoder_fn):
+        super().__init__(config, create_encoder_fn)
 
         self.bidirectional = config.bidirectional
         self.nb_t_to_predict = config.nb_t_to_predict
@@ -76,13 +76,13 @@ class CPC(BaseModel):
         self.aggregator = CPCAggregator(
             config.aggregator_type,
             config.aggregator_nb_layers,
-            encoder.encoder_dim,
+            self.encoder.encoder_dim,
             config.aggregator_dim
         )
 
         self.predictor = CPCPredictor(
             config.aggregator_dim,
-            encoder.encoder_dim,
+            self.encoder.encoder_dim,
             self.nb_t_to_predict
         )
 
@@ -90,29 +90,26 @@ class CPC(BaseModel):
             self.aggregator_r = CPCAggregator(
                 config.aggregator_type,
                 config.aggregator_nb_layers,
-                encoder.encoder_dim,
+                self.encoder.encoder_dim,
                 config.aggregator_dim
             )
 
             self.predictor_r = CPCPredictor(
                 config.aggregator_dim,
-                encoder.encoder_dim,
+                self.encoder.encoder_dim,
                 self.nb_t_to_predict
             )
 
-    def forward(self, X, training=False):
-        Y = super().forward(X)
-        
-        if self.bidirectional:
-            Y_r = super().forward(torch.flip(X, dims=(-1,)))
-            if not training:
-                return torch.cat(
-                    (self.aggregator(Y), self.aggregator(Y_r)),
-                    dim=-1
-                )
-            return Y, Y_r
+    def forward(self, X):
+        Y = self.encoder(X)
+        Z = self.aggregator(Y)
 
-        return self.aggregator(Y) if not training else Y
+        if self.bidirectional:
+            Y_r = self.encoder(torch.flip(X, dims=(-1,)))
+            Z_r = self.aggregator(Y_r)
+            return torch.cat((Z, Z_r), dim=-1)
+
+        return Z
 
     def _cpc_loss(self, Y_future_preds, Y_future):
         # Shape: (N, encoded_dim, nb_t_to_predict)
@@ -129,7 +126,7 @@ class CPC(BaseModel):
 
         return loss
 
-    def compute_loss_(self, Y):
+    def train_step_(self, Y):
         # Y: (N, encoded_dim, frame_length / 160)
 
         N, C, L = Y.size()
@@ -157,13 +154,13 @@ class CPC(BaseModel):
 
         return loss, accuracy
 
-    def compute_loss(self, Y):
-        if self.bidirectional: Y, Y_r = Y
-
-        loss, accuracy = self.compute_loss_(Y)
+    def train_step(self, X):
+        Y = self.encoder(X)
+        loss, accuracy = self.train_step_(Y)
         
         if self.bidirectional:
-            loss_r, accuracy_r = self.compute_loss_(Y_r)
+            Y_r = self.encoder(torch.flip(X, dims=(-1,)))
+            loss_r, accuracy_r = self.train_step_(Y_r)
             loss = (loss + loss_r) / 2
             accuracy = (accuracy + accuracy_r) / 2
 

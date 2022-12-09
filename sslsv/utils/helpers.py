@@ -131,6 +131,11 @@ def load_dataloader(config, nb_labels_per_spk=None):
 
 
 def load_model(config):
-    encoder = REGISTERED_ENCODERS[config.encoder.__type__][0](config.encoder)
-    model = REGISTERED_MODELS[config.model.__type__][0](config.model, encoder)
+    encoder_cls = REGISTERED_ENCODERS[config.encoder.__type__][0]
+    create_encoder_fn = lambda: encoder_cls(config.encoder)
+
+    model = REGISTERED_MODELS[config.model.__type__][0](
+        config.model,
+        create_encoder_fn
+    )
     return model

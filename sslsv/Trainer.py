@@ -38,36 +38,18 @@ class Trainer:
             else float('inf')
         )
 
-    def train_step(self, x):
-        with autocast(enabled=(self.scaler is not None)):
-            z = self.model(x, training=True)
-            loss, metrics = self.model.module.compute_loss(z)
-
-        return loss, metrics
-
-    def train_step_siamese(self, x):
-        x_1 = x[:, 0, :]
-        x_2 = x[:, 1, :]
-
-        with autocast(enabled=(self.scaler is not None)):
-            z_1 = self.model(x_1, training=True)
-            z_2 = self.model(x_2, training=True)
-            loss, metrics = self.model.module.compute_loss(z_1, z_2)
-
-        return loss, metrics
-
     def train_step_loop(self):
         train_metrics = {}
         self.last_progress = 0
 
-        for i, (x, y) in enumerate(self.train_dataloader):
-            x = x.to(self.device)
-            y = y.to(self.device)
+        for i, (X, Y) in enumerate(self.train_dataloader):
+            self.model.module.on_train_step_start()
 
-            if self.config.data.siamese:
-                loss, metrics = self.train_step_siamese(x)
-            else:
-                loss, metrics = self.train_step(x)
+            X = X.to(self.device)
+            Y = Y.to(self.device)
+
+            with autocast(enabled=(self.scaler is not None)):
+                loss, metrics = self.model.module.train_step(X)
 
             # Update metrics (average for epoch)
             if not train_metrics:
@@ -83,6 +65,8 @@ class Trainer:
             else:
                 loss.backward()
                 self.optimizer.step()
+
+            self.model.module.on_train_step_end()
 
             if is_main_process(): self.print_progress_bar(i)
 

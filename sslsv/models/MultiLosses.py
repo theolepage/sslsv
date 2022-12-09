@@ -34,26 +34,32 @@ class MultiLosses(SimCLR):
         'barlowtwins': BarlowTwinsLoss()
     }
 
-    def __init__(self, config, encoder):
-        super().__init__(config, encoder)
+    def __init__(self, config, create_encoder_fn):
+        super().__init__(config, create_encoder_fn)
 
         self.config = config
 
-    def compute_loss_(self, Z_1, Z_2, losses):
+    def compute_loss(self, Z_1, Z_2, losses):
         loss = 0
         for l in losses:
             loss += l.weight * MultiLosses.LOSS_FUNCTIONS[l.name]((Z_1, Z_2))
         return loss
 
-    def compute_loss(self, Z_1, Z_2):
-        Y_1, Z_1 = Z_1
-        Y_2, Z_2 = Z_2
+    def train_step(self, X):
+        X_1 = X[:, 0, :]
+        X_2 = X[:, 1, :]
+
+        Y_1 = self.forward(X_1)
+        Y_2 = self.forward(X_2)
+
+        Z_1 = self.projector(Y_1) if self.enable_projector else Y_1
+        Z_2 = self.projector(Y_2) if self.enable_projector else Y_2
 
         loss = 0
         metrics = {}
 
         # Representations
-        Y_loss = self.compute_loss_(Y_1, Y_2, self.config.Y_losses)
+        Y_loss = self.compute_loss(Y_1, Y_2, self.config.Y_losses)
         Y_accuracy = InfoNCELoss.determine_accuracy(Y_1, Y_2)
         metrics = {
             **metrics,
@@ -64,7 +70,7 @@ class MultiLosses(SimCLR):
 
         # Embeddings
         if self.enable_projector:
-            Z_loss = self.compute_loss_(Z_1, Z_2, self.config.Z_losses)
+            Z_loss = self.compute_loss(Z_1, Z_2, self.config.Z_losses)
             Z_accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)
             metrics = {
                 **metrics,
