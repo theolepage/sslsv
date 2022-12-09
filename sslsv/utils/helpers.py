@@ -29,6 +29,7 @@ from sslsv.models.VICReg import VICReg, VICRegConfig
 from sslsv.models.VIbCReg import VIbCReg, VIbCRegConfig
 from sslsv.models.MultiLosses import MultiLosses, MultiLossesConfig
 from sslsv.models.BYOL import BYOL, BYOLConfig
+from sslsv.models.SimSiam import SimSiam, SimSiamConfig
 
 
 REGISTERED_ENCODERS = {
@@ -46,6 +47,7 @@ REGISTERED_MODELS = {
     'vibcreg':     (VIbCReg,     VIbCRegConfig),
     'multilosses': (MultiLosses, MultiLossesConfig),
     'byol':        (BYOL,        BYOLConfig),
+    'simsiam':     (SimSiam,     SimSiamConfig),
 }
 
 

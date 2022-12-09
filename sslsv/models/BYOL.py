@@ -17,6 +17,7 @@ class BYOLConfig(BaseMomentumModelConfig):
 
     proj_hidden_dim: int = 4096
     proj_output_dim: int = 256
+
     pred_hidden_dim: int = 4096
 
 
