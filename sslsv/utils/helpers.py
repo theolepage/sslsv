@@ -24,10 +24,11 @@ from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 from sslsv.models.CPC import CPC, CPCConfig
 from sslsv.models.LIM import LIM, LIMConfig
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
+from sslsv.models.BarlowTwins import BarlowTwins, BarlowTwinsConfig
 from sslsv.models.VICReg import VICReg, VICRegConfig
 from sslsv.models.VIbCReg import VIbCReg, VIbCRegConfig
-from sslsv.models.BarlowTwins import BarlowTwins, BarlowTwinsConfig
 from sslsv.models.MultiLosses import MultiLosses, MultiLossesConfig
+from sslsv.models.BYOL import BYOL, BYOLConfig
 
 
 REGISTERED_ENCODERS = {
@@ -40,10 +41,11 @@ REGISTERED_MODELS = {
     'cpc':         (CPC,         CPCConfig),
     'lim':         (LIM,         LIMConfig),
     'simclr':      (SimCLR,      SimCLRConfig),
+    'barlowtwins': (BarlowTwins, BarlowTwinsConfig),
     'vicreg':      (VICReg,      VICRegConfig),
     'vibcreg':     (VIbCReg,     VIbCRegConfig),
-    'barlowtwins': (BarlowTwins, BarlowTwinsConfig),
     'multilosses': (MultiLosses, MultiLossesConfig),
+    'byol':        (BYOL,        BYOLConfig),
 }
 
 

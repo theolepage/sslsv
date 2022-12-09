@@ -42,8 +42,12 @@ class Trainer:
         train_metrics = {}
         self.last_progress = 0
 
+        max_steps = self.config.training.epochs * len(self.train_dataloader)
+
         for i, (X, Y) in enumerate(self.train_dataloader):
-            self.model.module.on_train_step_start()
+            step = self.epoch * len(self.train_dataloader) + i
+            
+            self.model.module.on_train_step_start(step, max_steps)
 
             X = X.to(self.device)
             Y = Y.to(self.device)
@@ -66,7 +70,7 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
 
-            self.model.module.on_train_step_end()
+            self.model.module.on_train_step_end(step, max_steps)
 
             if is_main_process(): self.print_progress_bar(i)
 

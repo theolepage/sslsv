@@ -28,6 +28,10 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   A Simple Framework for Contrastive Learning of Visual Representations ([arXiv](https://arxiv.org/abs/2002.05709))  
   *Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton*
 
+- **Barlow Twins** (`sslsv.models.BarlowTwins`)  
+  Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arXiv](https://arxiv.org/abs/2103.03230))  
+  *Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny*
+
 - **VICReg** (`sslsv.models.VICReg`)  
   VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning ([arXiv](https://arxiv.org/abs/2105.04906))  
   *Adrien Bardes, Jean Ponce, Yann LeCun*
@@ -36,9 +40,9 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   Computer Vision Self-supervised Learning Methods on Time Series ([arXiv](https://arxiv.org/abs/2109.00783))  
   *Daesoo Lee, Erlend Aune*
 
-- **Barlow Twins** (`sslsv.models.BarlowTwins`)  
-  Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arXiv](https://arxiv.org/abs/2103.03230))  
-  *Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny*
+- **BYOL** (`sslsv.models.BYOL`)  
+  Bootstrap Your Own Latent: A New Approach to Self-Supervised Learning ([arXiv](https://arxiv.org/abs/2006.07733))  
+  *Jean-Bastien Grill, Florian Strub, Florent Altché, Corentin Tallec, Pierre H. Richemond, Elena Buchatskaya, Carl Doersch, Bernardo Avila Pires, Zhaohan Daniel Guo, Mohammad Gheshlaghi Azar, Bilal Piot, Koray Kavukcuoglu, Rémi Munos, Michal Valko*
 
 ## Datasets
 
@@ -88,7 +92,7 @@ Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments 
 - [ ] Handle CPU training
 - [ ] DDP: adapt losses and supervised sampler
 - [ ] Refactor evaluation (use AudioDataset class for handling test data)
-- [ ] Documentation, comments, typing
+- [ ] Documentation, comments, typing, tests
 
 ## Credits
 
