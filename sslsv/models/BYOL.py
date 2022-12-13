@@ -62,6 +62,13 @@ class BYOL(BaseMomentumModel):
 
         return Z_1, Z_2, P_1, P_2
 
+    def get_learnable_params(self):
+        extra_learnable_params = [
+            {'params': self.projector.parameters()},
+            {'params': self.predictor.parameters()}
+        ]
+        return super().get_learnable_params() + extra_learnable_params
+
     def _byol_loss(self, P, Z):
         return 2 - 2 * F.cosine_similarity(P, Z.detach(), dim=-1).mean()
 

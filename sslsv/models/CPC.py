@@ -119,6 +119,18 @@ class CPC(BaseModel):
 
         return Y, Y_r
 
+    def get_learnable_params(self):
+        extra_learnable_params = [
+            {'params': self.aggregator.parameters()},
+            {'params': self.predictor.parameters()}
+        ]
+        if self.bidirectional:
+            extra_learnable_params += [
+                {'params': self.aggregator_r.parameters()},
+                {'params': self.predictor_r.parameters()}
+            ]
+        return super().get_learnable_params() + extra_learnable_params
+
     def _cpc_loss(self, Y_future_preds, Y_future):
         # Shape: (N, encoded_dim, nb_t_to_predict)
     

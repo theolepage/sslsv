@@ -49,6 +49,12 @@ class SimCLR(BaseModel):
 
         return Z_1, Z_2
 
+    def get_learnable_params(self):
+        extra_learnable_params = [
+            {'params': self.projector.parameters()}
+        ]
+        return super().get_learnable_params() + extra_learnable_params
+
     def train_step(self, Z):
         Z_1, Z_2 = Z
 

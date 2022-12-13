@@ -67,6 +67,9 @@ class BaseModel(nn.Module):
     def forward(self, X, training=False):
         return self.encoder(X)
 
+    def get_learnable_params(self):
+        return [{'params': self.encoder.parameters()}]
+
     def get_initial_learning_rate(self, training_config):
         return training_config.learning_rate
 

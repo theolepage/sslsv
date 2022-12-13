@@ -41,6 +41,12 @@ class LIM(BaseModel):
         
         return self.encoder(X)
 
+    def get_learnable_params(self):
+        extra_learnable_params = [
+            {'params': self.discriminator.parameters()}
+        ]
+        return super().get_learnable_params() + extra_learnable_params
+
     def _extract_chunks(self, Y):
         N, C, L = Y.size()
 

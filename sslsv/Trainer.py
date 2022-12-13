@@ -160,27 +160,29 @@ class Trainer:
             test_embeddings = extract_embeddings(self.model, self.config.data)
             test_metrics = evaluate(test_embeddings, self.config.data.trials)
 
-            metrics = {**train_metrics, lr, **test_metrics}
+            metrics = {**train_metrics, 'lr': lr, **test_metrics}
 
             if is_main_process():
                 self.log_metrics(metrics)
                 if not self.track_improvement(metrics): break
 
     def setup(self):
+        params = self.model.module.get_learnable_params()
+
         init_lr = self.model.module.get_initial_learning_rate(
             self.config.training
         )
 
         if self.config.training.optimizer == 'sgd':
             self.optimizer = SGD(
-                self.model.parameters(),
+                params,
                 momentum=0.9,
                 lr=init_lr,
                 weight_decay=self.config.training.weight_decay
             )
         elif self.config.training.optimizer == 'adam':
             self.optimizer = Adam(
-                self.model.parameters(),
+                params,
                 lr=init_lr,
                 weight_decay=self.config.training.weight_decay
             )
