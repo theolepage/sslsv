@@ -23,7 +23,8 @@ class SimpleAudioCNNBlock(nn.Module):
             out_dim,
             kernel_size=kernel_size,
             stride=stride,
-            padding=padding
+            padding=padding,
+            bias=False
         )
         self.ln = nn.BatchNorm1d(out_dim)
         self.act = nn.ReLU()

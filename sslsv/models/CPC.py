@@ -137,7 +137,7 @@ class CPC(BaseModel):
         losses = 0
         for t in range(self.nb_t_to_predict):
             dot = Y_future[:, :, t] @ Y_future_preds[:, :, t].T
-            log_softmax_dot = torch.nn.functional.log_softmax(dot, dim=-1)
+            log_softmax_dot = torch.nn.functional.log_softmax(dot, dim=1)
             diag = torch.diagonal(log_softmax_dot)
             losses += diag
 
@@ -172,8 +172,8 @@ class CPC(BaseModel):
 
         # Determine accuracy only for the last timestep
         accuracy = InfoNCELoss.determine_accuracy(
-            Y_future_preds[:, :, -1],
-            Y_future[:, :, -1]
+            Y_future[:, :, -1],
+            Y_future_preds[:, :, -1]
         )
 
         return loss, accuracy
