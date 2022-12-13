@@ -70,8 +70,12 @@ class BaseModel(nn.Module):
     def get_initial_learning_rate(self, training_config):
         return training_config.learning_rate
 
-    def adjust_learning_rate(self, optimizer, init_lr, epoch, epochs):
-        pass
+    def adjust_learning_rate(self, optimizer, learning_rate, epoch, epochs):
+        # Equivalent to StepLR(..., step_size=10, gamma=0.95)
+        lr = learning_rate * (0.95 ** (epoch // 10))
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+        return lr
 
     def train_step(self, X):
         raise NotImplementedError

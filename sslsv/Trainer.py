@@ -9,7 +9,6 @@ import torch
 
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, SGD
-from torch.optim.lr_scheduler import StepLR
 from torch.cuda.amp import GradScaler, autocast
 
 from sslsv.utils.evaluate import extract_embeddings, evaluate
@@ -97,11 +96,6 @@ class Trainer:
         duration = str(epoch_duration).split('.')[0]
         print(f'Duration: {duration}')
 
-        metrics = {
-            **metrics,
-            'lr': self.lr_scheduler.get_last_lr()[0]
-        }
-
         for metric_name, metric_value in metrics.items():
             print(f'{metric_name}: {metric_value}') 
             self.writer.add_scalar(metric_name, metric_value, self.epoch)
@@ -152,7 +146,7 @@ class Trainer:
         
             if is_main_process(): print(f'\nEpoch {self.epoch}')
 
-            self.model.module.adjust_learning_rate(
+            lr = self.model.module.adjust_learning_rate(
                 self.optimizer,
                 self.config.training.learning_rate,
                 self.epoch,
@@ -166,15 +160,11 @@ class Trainer:
             test_embeddings = extract_embeddings(self.model, self.config.data)
             test_metrics = evaluate(test_embeddings, self.config.data.trials)
 
-            metrics = {**train_metrics, **test_metrics}
+            metrics = {**train_metrics, lr, **test_metrics}
 
-            if is_main_process(): self.log_metrics(metrics)
-            
-            self.lr_scheduler.step()
-            
             if is_main_process():
-                if not self.track_improvement(metrics):
-                    break
+                self.log_metrics(metrics)
+                if not self.track_improvement(metrics): break
 
     def setup(self):
         init_lr = self.model.module.get_initial_learning_rate(
@@ -198,7 +188,6 @@ class Trainer:
             raise Exception(
                 f'Optimizer {self.config.training.optimizer} not supported'
             )
-        self.lr_scheduler = StepLR(self.optimizer, step_size=10, gamma=0.95)
         self.scaler = (
             GradScaler() if self.config.training.mixed_precision else None
         )
@@ -224,7 +213,6 @@ class Trainer:
             self.best_metric = checkpoint['best_metric']
             self.model.module.load_state_dict(checkpoint['model'])
             self.optimizer.load_state_dict(checkpoint['optimizer'])
-            self.lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
         return checkpoint
 
     def save_checkpoint(self, suffix):
@@ -234,7 +222,6 @@ class Trainer:
                 'best_metric': self.best_metric,
                 'model': self.model.module.state_dict(),
                 'optimizer': self.optimizer.state_dict(),
-                'lr_scheduler': self.lr_scheduler.state_dict()
             },
             self.checkpoint_dir + '/model_' + suffix + '.pt'
         )

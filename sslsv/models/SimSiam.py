@@ -65,6 +65,7 @@ class SimSiam(BaseModel):
         lr = learning_rate * 0.5 * (1.0 + math.cos(math.pi * epoch / epochs))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
+        return lr
 
     def _simsiam_loss(self, P, Z):
         return -F.cosine_similarity(P, Z.detach(), dim=-1).mean()
