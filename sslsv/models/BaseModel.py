@@ -53,7 +53,7 @@ class BaseModelConfig(ModelConfig):
 class BaseMomentumModelConfig(BaseModelConfig):
     
     tau_scheduler: bool = True
-    start_tau: float = 0.996
+    start_tau: float = 0.99
     end_tau: float = 1.0
 
 

@@ -83,13 +83,11 @@ class SimSiam(BaseModel):
     def train_step(self, Z):
         Z_1, Z_2, P_1, P_2 = Z
 
-        loss = self._simsiam_loss(P_1, Z_2)
-        loss += self._simsiam_loss(P_2, Z_1)
-        loss /= 2
+        loss = (
+            self._simsiam_loss(P_1, Z_2) + self._simsiam_loss(P_2, Z_1)
+        ) / 2
 
-        accuracy = InfoNCELoss.determine_accuracy(P_1, Z_2)
-        accuracy += InfoNCELoss.determine_accuracy(P_2, Z_1)
-        accuracy /= 2
+        accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)
 
         metrics = {
             'train_loss': loss,

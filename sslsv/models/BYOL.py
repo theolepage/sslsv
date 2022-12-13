@@ -77,9 +77,7 @@ class BYOL(BaseMomentumModel):
 
         loss = self._byol_loss(P_1, Z_2) + self._byol_loss(P_2, Z_1)
 
-        accuracy = InfoNCELoss.determine_accuracy(P_1, Z_2)
-        accuracy += InfoNCELoss.determine_accuracy(P_2, Z_1)
-        accuracy /= 2
+        accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)
 
         metrics = {
             'train_loss': loss,
