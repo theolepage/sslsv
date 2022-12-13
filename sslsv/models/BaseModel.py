@@ -67,6 +67,12 @@ class BaseModel(nn.Module):
     def forward(self, X, training=False):
         return self.encoder(X)
 
+    def get_initial_learning_rate(self, training_config):
+        return training_config.learning_rate
+
+    def adjust_learning_rate(self, optimizer, init_lr, epoch, epochs):
+        pass
+
     def train_step(self, X):
         raise NotImplementedError
 

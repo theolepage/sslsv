@@ -11,7 +11,7 @@ class TrainingConfig:
     tracked_metric: str = 'test_eer'
     tracked_mode: str = 'min'
     optimizer: str = 'adam'
-    weight_reg: float = 0
+    weight_decay: float = 0
     mixed_precision: bool = False
 
 

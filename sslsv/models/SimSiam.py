@@ -1,3 +1,5 @@
+import math
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -16,7 +18,7 @@ class SimSiamConfig(BaseModelConfig):
 
     pred_hidden_dim: int = 512
 
-
+# init_lr = 0.05 * args.batch_size / 256
 class SimSiam(BaseModel):
 
     def __init__(self, config, create_encoder_fn):
@@ -55,6 +57,14 @@ class SimSiam(BaseModel):
         P_2 = self.predictor(Z_2)
 
         return Z_1, Z_2, P_1, P_2
+
+    def get_initial_learning_rate(self, training_config):
+        return training_config.learning_rate * training_config.batch_size / 256
+
+    def adjust_learning_rate(self, optimizer, learning_rate, epoch, epochs):
+        lr = learning_rate * 0.5 * (1.0 + math.cos(math.pi * epoch / epochs))
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
 
     def _simsiam_loss(self, P, Z):
         return -F.cosine_similarity(P, Z.detach(), dim=-1).mean()

@@ -152,6 +152,13 @@ class Trainer:
         
             if is_main_process(): print(f'\nEpoch {self.epoch}')
 
+            self.model.module.adjust_learning_rate(
+                self.optimizer,
+                self.config.training.learning_rate,
+                self.epoch,
+                self.config.training.epochs
+            )
+
             self.model.train()
             train_metrics = self.train_step_loop()
 
@@ -170,18 +177,22 @@ class Trainer:
                     break
 
     def setup(self):
+        init_lr = self.model.module.get_initial_learning_rate(
+            self.config.training
+        )
+
         if self.config.training.optimizer == 'sgd':
             self.optimizer = SGD(
                 self.model.parameters(),
                 momentum=0.9,
-                lr=self.config.training.learning_rate,
-                weight_decay=self.config.training.weight_reg
+                lr=init_lr,
+                weight_decay=self.config.training.weight_decay
             )
         elif self.config.training.optimizer == 'adam':
             self.optimizer = Adam(
                 self.model.parameters(),
-                lr=self.config.training.learning_rate,
-                weight_decay=self.config.training.weight_reg
+                lr=init_lr,
+                weight_decay=self.config.training.weight_decay
             )
         else:
             raise Exception(
