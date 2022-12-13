@@ -53,7 +53,8 @@ class Trainer:
             Y = Y.to(self.device)
 
             with autocast(enabled=(self.scaler is not None)):
-                loss, metrics = self.model.module.train_step(X)
+                Z = self.model(X, training=True)
+                loss, metrics = self.model.module.train_step(Z)
 
             # Update metrics (average for epoch)
             if not train_metrics:

@@ -35,15 +35,22 @@ class SimCLR(BaseModel):
 
         self.loss_fn = InfoNCELoss()
 
-    def train_step(self, X):
+    def forward(self, X, training=False):
+        if not training: return self.encoder(X)
+
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
 
-        Y_1 = self.forward(X_1)
-        Y_2 = self.forward(X_2)
+        Y_1 = self.encoder(X_1)
+        Y_2 = self.encoder(X_2)
 
         Z_1 = self.projector(Y_1) if self.enable_projector else Y_1
         Z_2 = self.projector(Y_2) if self.enable_projector else Y_2
+
+        return Z_1, Z_2
+
+    def train_step(self, Z):
+        Z_1, Z_2 = Z
 
         loss = self.loss_fn((Z_1, Z_2))
 

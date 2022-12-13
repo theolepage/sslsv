@@ -64,7 +64,7 @@ class BaseModel(nn.Module):
 
         self.encoder = create_encoder_fn()
 
-    def forward(self, X):
+    def forward(self, X, training=False):
         return self.encoder(X)
 
     def train_step(self, X):

@@ -42,10 +42,9 @@ class SimSiam(BaseModel):
             nn.Linear(config.pred_hidden_dim, config.proj_output_dim)
         )
 
-    def _simsiam_loss(self, P, Z):
-        return -F.cosine_similarity(P, Z.detach(), dim=-1).mean()
-
-    def train_step(self, X):
+    def forward(self, X, training=False):
+        if not training: return self.encoder(X)
+        
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
 
@@ -54,6 +53,14 @@ class SimSiam(BaseModel):
 
         Z_2 = self.projector(self.encoder(X_2))
         P_2 = self.predictor(Z_2)
+
+        return Z_1, Z_2, P_1, P_2
+
+    def _simsiam_loss(self, P, Z):
+        return -F.cosine_similarity(P, Z.detach(), dim=-1).mean()
+
+    def train_step(self, Z):
+        Z_1, Z_2, P_1, P_2 = Z
 
         loss = self._simsiam_loss(P_1, Z_2)
         loss += self._simsiam_loss(P_2, Z_1)

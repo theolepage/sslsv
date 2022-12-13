@@ -102,16 +102,22 @@ class CPC(BaseModel):
                 self.nb_t_to_predict
             )
 
-    def forward(self, X):
+    def forward(self, X, training=False):
         Y = self.encoder(X)
-        Z = self.aggregator(Y)
+        Y_r = (
+            self.encoder(torch.flip(X, dims=(-1,)))
+            if self.bidirectional
+            else None
+        )
+        
+        if not training:
+            Z = self.aggregator(Y)
+            if self.bidirectional:
+                Z_r = self.aggregator(Y_r)
+                return torch.cat((Z, Z_r), dim=-1)
+            return Z
 
-        if self.bidirectional:
-            Y_r = self.encoder(torch.flip(X, dims=(-1,)))
-            Z_r = self.aggregator(Y_r)
-            return torch.cat((Z, Z_r), dim=-1)
-
-        return Z
+        return Y, Y_r
 
     def _cpc_loss(self, Y_future_preds, Y_future):
         # Shape: (N, encoded_dim, nb_t_to_predict)
@@ -160,12 +166,12 @@ class CPC(BaseModel):
 
         return loss, accuracy
 
-    def train_step(self, X):
-        Y = self.encoder(X)
+    def train_step(self, Y):
+        Y, Y_r = Y
+
         loss, accuracy = self.train_step_(Y)
         
         if self.bidirectional:
-            Y_r = self.encoder(torch.flip(X, dims=(-1,)))
             loss_r, accuracy_r = self.train_step_(Y_r)
             loss = (loss + loss_r) / 2
             accuracy = (accuracy + accuracy_r) / 2

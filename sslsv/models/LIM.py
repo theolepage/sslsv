@@ -36,8 +36,10 @@ class LIM(BaseModel):
             nn.Linear(256, 1),
         )
 
-    def forward(self, X):
-        return self.encoder(X).mean(dim=2)
+    def forward(self, X, training=False):
+        if not training: return self.encoder(X).mean(dim=2)
+        
+        return self.encoder(X)
 
     def _extract_chunks(self, Y):
         N, C, L = Y.size()
@@ -73,9 +75,7 @@ class LIM(BaseModel):
         loss = torch.mean(pos - loss)
         return -loss
 
-    def train_step(self, X):
-        Y = self.encoder(X)
-
+    def train_step(self, Y):
         C1, C2, CR = self._extract_chunks(Y)
 
         pos = self.discriminator(torch.cat((C1, C2), dim=1))

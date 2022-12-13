@@ -21,17 +21,25 @@ class Classifier(nn.Module):
         if self.add_last_layer:
             self.classifier_fc = nn.Linear(1024, 1024)
 
-    def forward(self, X):
-        Z = self.model(X)
-        if self.add_last_layer: Z = self.classifier_fc(Z)
-        return Z
+    def forward(self, X, training=False):
+        if not training:
+            Z = self.model(X)
+            Z = self.classifier_fc(Z) if self.add_last_layer else Z
+            return Z
 
-    def train_step(self, X):
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
 
-        Z_1 = self.forward(X_1)
-        Z_2 = self.forward(X_2)
+        Z_1 = self.model(X_1)
+        Z_2 = self.model(X_2)
+
+        Z_1 = self.classifier_fc(Z_1) if self.add_last_layer else Z_1
+        Z_2 = self.classifier_fc(Z_2) if self.add_last_layer else Z_2
+
+        return Z_1, Z_2
+
+    def train_step(self, Z):
+        Z_1, Z_2 = Z
 
         loss, accuracy = self.infonce((Z_1, Z_2))
 

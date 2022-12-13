@@ -48,10 +48,9 @@ class BYOL(BaseMomentumModel):
             nn.Linear(config.pred_hidden_dim, config.proj_output_dim)
         )
 
-    def _byol_loss(self, P, Z):
-        return 2 - 2 * F.cosine_similarity(P, Z.detach(), dim=-1).mean()
+    def forward(self, X, training=False):
+        if not training: return self.encoder(X)
 
-    def train_step(self, X):
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
 
@@ -60,6 +59,14 @@ class BYOL(BaseMomentumModel):
 
         P_2 = self.predictor(self.projector(self.encoder(X_2)))
         Z_2 = self.projector_momentum(self.encoder_momentum(X_2))
+
+        return Z_1, Z_2, P_1, P_2
+
+    def _byol_loss(self, P, Z):
+        return 2 - 2 * F.cosine_similarity(P, Z.detach(), dim=-1).mean()
+
+    def train_step(self, Z):
+        Z_1, Z_2, P_1, P_2 = Z
 
         loss = self._byol_loss(P_1, Z_2) + self._byol_loss(P_2, Z_1)
 

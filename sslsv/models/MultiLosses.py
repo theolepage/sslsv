@@ -45,15 +45,8 @@ class MultiLosses(SimCLR):
             loss += l.weight * MultiLosses.LOSS_FUNCTIONS[l.name]((Z_1, Z_2))
         return loss
 
-    def train_step(self, X):
-        X_1 = X[:, 0, :]
-        X_2 = X[:, 1, :]
-
-        Y_1 = self.forward(X_1)
-        Y_2 = self.forward(X_2)
-
-        Z_1 = self.projector(Y_1) if self.enable_projector else Y_1
-        Z_2 = self.projector(Y_2) if self.enable_projector else Y_2
+    def train_step(self, Z):
+        Z_1, Z_2 = Z
 
         loss = 0
         metrics = {}
