@@ -5,16 +5,16 @@ import torch.nn.functional as F
 
 class InfoNCELoss(nn.Module):
 
-    def __init__(self):
+    def __init__(self, temperature=0.07):
         super().__init__()
+
+        self.temperature = temperature
 
         self.ce = torch.nn.CrossEntropyLoss()
 
     @staticmethod
     def dot(Z_a, Z_b):
-        dot = F.normalize(Z_a, p=2, dim=1) @ F.normalize(Z_b, p=2, dim=1).T
-        dot = dot / 0.07
-        return dot
+        return F.normalize(Z_a, p=2, dim=1) @ F.normalize(Z_b, p=2, dim=1).T
 
     @staticmethod
     def determine_accuracy(Z_a, Z_b):
@@ -33,7 +33,7 @@ class InfoNCELoss(nn.Module):
 
         N, D = Z_a.size()
 
-        dot = InfoNCELoss.dot(Z_a, Z_b)
+        dot = InfoNCELoss.dot(Z_a, Z_b) / self.temperature
         labels = torch.arange(N, device=dot.device)
 
         loss = self.ce(dot, labels)

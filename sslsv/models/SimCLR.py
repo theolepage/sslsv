@@ -11,6 +11,8 @@ from sslsv.models.BaseModel import BaseModel, BaseModelConfig
 @dataclass
 class SimCLRConfig(BaseModelConfig):
     
+    temperature: float = 0.07
+
     enable_projector: bool = True
     projector_dim: int = 2048
 
@@ -33,7 +35,7 @@ class SimCLR(BaseModel):
             nn.Linear(self.projector_dim, self.projector_dim)
         )
 
-        self.loss_fn = InfoNCELoss()
+        self.loss_fn = InfoNCELoss(config.temperature)
 
     def forward(self, X, training=False):
         if not training: return self.encoder(X)

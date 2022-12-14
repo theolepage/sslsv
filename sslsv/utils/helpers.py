@@ -24,6 +24,7 @@ from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 from sslsv.models.CPC import CPC, CPCConfig
 from sslsv.models.LIM import LIM, LIMConfig
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
+from sslsv.models.MoCo import MoCo, MoCoConfig
 from sslsv.models.BarlowTwins import BarlowTwins, BarlowTwinsConfig
 from sslsv.models.VICReg import VICReg, VICRegConfig
 from sslsv.models.VIbCReg import VIbCReg, VIbCRegConfig
@@ -42,6 +43,7 @@ REGISTERED_MODELS = {
     'cpc':         (CPC,         CPCConfig),
     'lim':         (LIM,         LIMConfig),
     'simclr':      (SimCLR,      SimCLRConfig),
+    'moco':        (MoCo,        MoCoConfig),
     'barlowtwins': (BarlowTwins, BarlowTwinsConfig),
     'vicreg':      (VICReg,      VICRegConfig),
     'vibcreg':     (VIbCReg,     VIbCRegConfig),

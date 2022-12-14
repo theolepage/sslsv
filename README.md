@@ -28,6 +28,10 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   A Simple Framework for Contrastive Learning of Visual Representations ([arXiv](https://arxiv.org/abs/2002.05709))  
   *Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton*
 
+- **MoCo** (`sslsv.models.MoCo`)  
+  Improved Baselines with Momentum Contrastive Learning ([arXiv](https://arxiv.org/abs/2003.04297))  
+  *Xinlei Chen, Haoqi Fan, Ross Girshick, Kaiming He*
+
 - **Barlow Twins** (`sslsv.models.BarlowTwins`)  
   Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arXiv](https://arxiv.org/abs/2103.03230))  
   *Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny*

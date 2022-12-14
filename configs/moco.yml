@@ -1,0 +1,8 @@
+encoder:
+  type: 'thinresnet34'
+model:
+  type: 'moco'
+data:
+  train: './data/voxceleb1_train_list'
+  wav_augment:
+    enable: true
