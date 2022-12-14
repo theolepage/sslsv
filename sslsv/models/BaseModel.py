@@ -104,8 +104,12 @@ class BaseMomentumModel(BaseModel):
             config.end_tau
         )
 
+    def get_momentum_pairs(self):
+        return [(self.encoder, self.encoder_momentum)]
+
     def on_train_step_end(self, step, max_steps):
-        self.momentum_updater.update(self.encoder, self.encoder_momentum)
+        for m, mm in self.get_momentum_pairs():
+            self.momentum_updater.update(m, mm)
 
         if self.tau_scheduler:
             self.momentum_updater.update_tau(step, max_steps)

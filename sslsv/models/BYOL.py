@@ -69,6 +69,12 @@ class BYOL(BaseMomentumModel):
         ]
         return super().get_learnable_params() + extra_learnable_params
 
+    def get_momentum_pairs(self):
+        extra_momentum_pairs = [
+            (self.projector, self.projector_momentum)
+        ]
+        return super().get_momentum_pairs() + extra_momentum_pairs
+
     def _byol_loss(self, P, Z):
         return 2 - 2 * F.cosine_similarity(P, Z.detach(), dim=-1).mean()
 

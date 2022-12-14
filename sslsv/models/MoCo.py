@@ -79,6 +79,12 @@ class MoCo(BaseMomentumModel):
         ]
         return super().get_learnable_params() + extra_learnable_params
 
+    def get_momentum_pairs(self):
+        extra_momentum_pairs = [
+            (self.projector, self.projector_momentum)
+        ]
+        return super().get_momentum_pairs() + extra_momentum_pairs
+
     @torch.no_grad()
     def _enqueue(self, keys):
         batch_size = keys.size(0)
