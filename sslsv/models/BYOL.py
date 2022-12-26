@@ -4,8 +4,9 @@ import torch.nn.functional as F
 
 from dataclasses import dataclass
 
+from sslsv.losses.BYOL import BYOLLoss
 from sslsv.losses.InfoNCE import InfoNCELoss
-from sslsv.models.BaseModel import (
+from sslsv.models._BaseMomentumModel import (
     BaseMomentumModel,
     BaseMomentumModelConfig,
     initialize_momentum_params
@@ -48,6 +49,8 @@ class BYOL(BaseMomentumModel):
             nn.Linear(config.pred_hidden_dim, config.proj_output_dim)
         )
 
+        self.loss_fn = BYOLLoss()
+
     def forward(self, X, training=False):
         if not training: return self.encoder(X)
 
@@ -75,13 +78,10 @@ class BYOL(BaseMomentumModel):
         ]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
-    def _byol_loss(self, P, Z):
-        return 2 - 2 * F.cosine_similarity(P, Z.detach(), dim=-1).mean()
-
     def train_step(self, Z):
         Z_1, Z_2, P_1, P_2 = Z
 
-        loss = self._byol_loss(P_1, Z_2) + self._byol_loss(P_2, Z_1)
+        loss = self.loss_fn(P_1, Z_2) + self.loss_fn(P_2, Z_1)
 
         accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)
 

@@ -5,18 +5,21 @@ import torch.nn.functional as F
 from dataclasses import dataclass
 
 from sslsv.losses.VICReg import VICRegLoss
-from sslsv.models.SimCLR import SimCLR, SimCLRConfig
+from sslsv.models._BaseSiameseModel import (
+    BaseSiameseModel,
+    BaseSiameseModelConfig
+)
 
 
 @dataclass
-class VICRegConfig(SimCLRConfig):
+class VICRegConfig(BaseSiameseModelConfig):
 
     inv_weight: float = 1.0
     var_weight: float = 1.0
     cov_weight: float = 0.04
 
 
-class VICReg(SimCLR):
+class VICReg(BaseSiameseModel):
 
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)

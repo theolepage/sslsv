@@ -6,24 +6,27 @@ from dataclasses import dataclass
 
 from sslsv.modules.IterNorm import IterNorm
 from sslsv.losses.VIbCReg import VIbCRegLoss
-from sslsv.models.SimCLR import SimCLR, SimCLRConfig
+from sslsv.models._BaseSiameseModel import (
+    BaseSiameseModel,
+    BaseSiameseModelConfig
+)
 
 
 @dataclass
-class VIbCRegConfig(SimCLRConfig):
+class VIbCRegConfig(BaseSiameseModelConfig):
 
     inv_weight: float = 1.0
     var_weight: float = 1.0
     cov_weight: float = 8.0
 
 
-class VIbCReg(SimCLR):
+class VIbCReg(BaseSiameseModel):
 
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
-            nn.Linear(1024, self.projector_dim),
+            nn.Linear(self.encoder.encoder_dim, self.projector_dim),
             nn.BatchNorm1d(self.projector_dim),
             nn.ReLU(),
             nn.Linear(self.projector_dim, self.projector_dim),

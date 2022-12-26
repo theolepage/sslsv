@@ -6,8 +6,9 @@ import torch.nn.functional as F
 
 from dataclasses import dataclass
 
+from sslsv.losses.SimSiam import SimSiamLoss
 from sslsv.losses.InfoNCE import InfoNCELoss
-from sslsv.models.BaseModel import BaseModel, BaseModelConfig
+from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 
 
 @dataclass
@@ -44,6 +45,8 @@ class SimSiam(BaseModel):
             nn.Linear(config.pred_hidden_dim, config.proj_output_dim)
         )
 
+        self.loss_fn = SimSiamLoss()
+
     def forward(self, X, training=False):
         if not training: return self.encoder(X)
         
@@ -77,14 +80,12 @@ class SimSiam(BaseModel):
                 param_group['lr'] = lr
         return lr
 
-    def _simsiam_loss(self, P, Z):
-        return -F.cosine_similarity(P, Z.detach(), dim=-1).mean()
-
     def train_step(self, Z):
         Z_1, Z_2, P_1, P_2 = Z
 
         loss = (
-            self._simsiam_loss(P_1, Z_2) + self._simsiam_loss(P_2, Z_1)
+            self.loss_fn(P_1, Z_2) +
+            self.loss_fn(P_2, Z_1)
         ) / 2
 
         accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)

@@ -4,8 +4,9 @@ import torch.nn.functional as F
 
 from dataclasses import dataclass
 
+from sslsv.losses.MoCo import MoCoLoss
 from sslsv.losses.InfoNCE import InfoNCELoss
-from sslsv.models.BaseModel import (
+from sslsv.models._BaseMomentumModel import (
     BaseMomentumModel,
     BaseMomentumModelConfig,
     initialize_momentum_params
@@ -62,6 +63,8 @@ class MoCo(BaseMomentumModel):
 
         self.register_buffer('queue_ptr', torch.zeros(1, dtype=torch.long))
 
+        self.loss_fn = MoCoLoss(config.temperature)
+
     def forward(self, X, training=False):
         if not training: return self.encoder(X)
 
@@ -96,24 +99,13 @@ class MoCo(BaseMomentumModel):
 
         self.queue_ptr[0] = (ptr + batch_size) % self.queue_size
 
-    def _moco_loss(self, query, key, queue):
-        N, _ = query.size()
-
-        pos = torch.einsum('nc,nc->n', (query, key)).unsqueeze(-1)
-        neg = torch.einsum("nc,ck->nk", (query, queue))
-        logits = torch.cat((pos, neg), dim=1) / self.temperature
-
-        labels = torch.zeros(N, device=query.device, dtype=torch.long)
-
-        return F.cross_entropy(logits, labels)
-
     def train_step(self, Z):
         Q, K = Z
 
         Q = F.normalize(Q, p=2, dim=1)
         K = F.normalize(K, p=2, dim=1)
 
-        loss = self._moco_loss(Q, K, self.queue.clone().detach())
+        loss = self.loss_fn(Q, K, self.queue.clone().detach())
 
         self._enqueue(K)
 

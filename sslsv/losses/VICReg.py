@@ -17,9 +17,7 @@ class VICRegLoss(nn.Module):
         self.var_weight = var_weight
         self.cov_weight = cov_weight
 
-    def forward(self, data):
-        Z_a, Z_b = data
-
+    def forward(self, Z_a, Z_b):
         N, D = Z_a.size()
 
         # Invariance loss

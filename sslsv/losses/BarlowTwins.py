@@ -11,9 +11,7 @@ class BarlowTwinsLoss(nn.Module):
         self.lamda = lamda
         self.scale = scale
 
-    def forward(self, data):
-        Z_a, Z_b = data
-
+    def forward(self, Z_a, Z_b):
         N, D = Z_a.size()
 
         bn = nn.BatchNorm1d(D, affine=False).to(Z_a.device)

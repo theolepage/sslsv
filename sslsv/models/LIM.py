@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from dataclasses import dataclass
 from enum import Enum
 
-from sslsv.models.BaseModel import BaseModel, BaseModelConfig
+from sslsv.losses.LIM import LIMLoss
+from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 
 
 class LIMLossFnEnum(Enum):
@@ -18,7 +19,7 @@ class LIMLossFnEnum(Enum):
 @dataclass
 class LIMConfig(BaseModelConfig):
 
-    loss_fn: LIMLossFnEnum = 'bce'
+    loss_name: LIMLossFnEnum = 'bce'
     context_length: int = 1
 
 
@@ -27,7 +28,7 @@ class LIM(BaseModel):
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
 
-        self.loss_fn = config.loss_fn
+        self.loss_name = config.loss_name
         self.context_length = config.context_length
 
         self.discriminator = nn.Sequential(
@@ -35,6 +36,8 @@ class LIM(BaseModel):
             nn.ReLU(),
             nn.Linear(256, 1),
         )
+
+        self.loss_fn = LIMLoss(self.loss_name)
 
     def forward(self, X, training=False):
         if not training: return self.encoder(X).mean(dim=2)
@@ -66,31 +69,13 @@ class LIM(BaseModel):
 
         return C1, C2, CR
 
-    def _bce_loss(self, pos, neg, eps=1e-07):
-        pos = torch.clamp(torch.sigmoid(pos), eps, 1.0 - eps)
-        neg = torch.clamp(torch.sigmoid(neg), eps, 1.0 - eps)
-        loss = torch.mean(torch.log(pos)) + torch.mean(torch.log(1 - neg))
-        return -loss
-
-    def _mine_loss(self, pos, neg):
-        loss = torch.mean(pos) - torch.log(torch.mean(torch.exp(neg)))
-        return -loss
-
-    def _nce_loss(self, pos, neg):
-        loss = torch.log(torch.exp(pos) + torch.sum(torch.exp(neg)))
-        loss = torch.mean(pos - loss)
-        return -loss
-
     def train_step(self, Y):
         C1, C2, CR = self._extract_chunks(Y)
 
         pos = self.discriminator(torch.cat((C1, C2), dim=1))
         neg = self.discriminator(torch.cat((C1, CR), dim=1))
 
-        loss = 0
-        if self.loss_fn == 'bce': loss = self._bce_loss(pos, neg)
-        elif self.loss_fn == 'mine': loss = self._mine_loss(pos, neg)
-        elif self.loss_fn == 'nce': loss = self._nce_loss(pos, neg)
+        loss = self.loss_fn(pos, neg)
 
         accuracy = torch.sum(pos > neg) / Y.size(0)
             

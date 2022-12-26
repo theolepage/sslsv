@@ -8,8 +8,10 @@ from typing import List
 from sslsv.losses.InfoNCE import InfoNCELoss
 from sslsv.losses.VICReg import VICRegLoss
 from sslsv.losses.BarlowTwins import BarlowTwinsLoss
-from sslsv.models.SimCLR import SimCLR, SimCLRConfig
-from sslsv.configs import ModelConfig
+from sslsv.models._BaseSiameseModel import (
+    BaseSiameseModel,
+    BaseSiameseModelConfig
+)
 
 
 @dataclass
@@ -20,13 +22,13 @@ class ElementMultiLossesConfig:
 
 
 @dataclass
-class MultiLossesConfig(SimCLRConfig):
+class MultiLossesConfig(BaseSiameseModelConfig):
 
     Y_losses: List[ElementMultiLossesConfig] = None
     Z_losses: List[ElementMultiLossesConfig] = None
 
 
-class MultiLosses(SimCLR):
+class MultiLosses(BaseSiameseModel):
 
     LOSS_FUNCTIONS = {
         'infonce':     InfoNCELoss(),
@@ -39,14 +41,28 @@ class MultiLosses(SimCLR):
 
         self.config = config
 
+    def forward(self, X, training=False):
+        if not training: return self.encoder(X)
+
+        X_1 = X[:, 0, :]
+        X_2 = X[:, 1, :]
+
+        Y_1 = self.encoder(X_1)
+        Y_2 = self.encoder(X_2)
+
+        Z_1 = self.projector(Y_1) if self.enable_projector else None
+        Z_2 = self.projector(Y_2) if self.enable_projector else None
+
+        return Y_1, Y_2, Z_1, Z_2
+
     def compute_loss(self, Z_1, Z_2, losses):
         loss = 0
         for l in losses:
-            loss += l.weight * MultiLosses.LOSS_FUNCTIONS[l.name]((Z_1, Z_2))
+            loss += l.weight * MultiLosses.LOSS_FUNCTIONS[l.name](Z_1, Z_2)
         return loss
 
     def train_step(self, Z):
-        Z_1, Z_2 = Z
+        Y_1, Y_2, Z_1, Z_2 = Z
 
         loss = 0
         metrics = {}

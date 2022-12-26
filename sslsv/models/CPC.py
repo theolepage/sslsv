@@ -4,8 +4,9 @@ import torch.nn.functional as F
 
 from dataclasses import dataclass
 
+from sslsv.losses.CPC import CPCLoss
 from sslsv.losses.InfoNCE import InfoNCELoss
-from sslsv.models.BaseModel import BaseModel, BaseModelConfig
+from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 
 
 @dataclass
@@ -102,6 +103,8 @@ class CPC(BaseModel):
                 self.nb_t_to_predict
             )
 
+        self.loss_fn = CPCLoss(self.nb_t_to_predict)
+
     def forward(self, X, training=False):
         Y = self.encoder(X)
         Y_r = (
@@ -131,21 +134,6 @@ class CPC(BaseModel):
             ]
         return super().get_learnable_params() + extra_learnable_params
 
-    def _cpc_loss(self, Y_future_preds, Y_future):
-        # Shape: (N, encoded_dim, nb_t_to_predict)
-    
-        losses = 0
-        for t in range(self.nb_t_to_predict):
-            dot = Y_future[:, :, t] @ Y_future_preds[:, :, t].T
-            log_softmax_dot = torch.nn.functional.log_softmax(dot, dim=1)
-            diag = torch.diagonal(log_softmax_dot)
-            losses += diag
-
-        losses /= self.nb_t_to_predict
-        loss = -torch.mean(losses)
-
-        return loss
-
     def train_step_(self, Y):
         # Y: (N, encoded_dim, frame_length / 160)
 
@@ -168,7 +156,7 @@ class CPC(BaseModel):
         Y_future_preds = self.predictor(C)
         # (N, encoded_dim, nb_t_to_predict)
         
-        loss = self._cpc_loss(Y_future_preds, Y_future)
+        loss = self.loss_fn(Y_future_preds, Y_future)
 
         # Determine accuracy only for the last timestep
         accuracy = InfoNCELoss.determine_accuracy(

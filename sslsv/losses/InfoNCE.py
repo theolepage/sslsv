@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 class InfoNCELoss(nn.Module):
 
-    def __init__(self, temperature=0.07):
+    def __init__(self, temperature=0.2):
         super().__init__()
 
         self.temperature = temperature
@@ -28,9 +28,7 @@ class InfoNCELoss(nn.Module):
         accuracy = torch.count_nonzero(preds_acc) / N
         return accuracy
 
-    def forward(self, data):
-        Z_a, Z_b = data
-
+    def forward(self, Z_a, Z_b):
         N, D = Z_a.size()
 
         dot = InfoNCELoss.dot(Z_a, Z_b) / self.temperature
