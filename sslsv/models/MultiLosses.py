@@ -39,8 +39,6 @@ class MultiLosses(BaseSiameseModel):
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
 
-        self.config = config
-
     def forward(self, X, training=False):
         if not training: return self.encoder(X)
 
@@ -50,8 +48,8 @@ class MultiLosses(BaseSiameseModel):
         Y_1 = self.encoder(X_1)
         Y_2 = self.encoder(X_2)
 
-        Z_1 = self.projector(Y_1) if self.enable_projector else None
-        Z_2 = self.projector(Y_2) if self.enable_projector else None
+        Z_1 = self.projector(Y_1) if self.config.enable_projector else None
+        Z_2 = self.projector(Y_2) if self.config.enable_projector else None
 
         return Y_1, Y_2, Z_1, Z_2
 
@@ -78,7 +76,7 @@ class MultiLosses(BaseSiameseModel):
         loss += Y_loss
 
         # Embeddings
-        if self.enable_projector:
+        if self.config.enable_projector:
             Z_loss = self.compute_loss(Z_1, Z_2, self.config.Z_losses)
             Z_accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)
             metrics = {

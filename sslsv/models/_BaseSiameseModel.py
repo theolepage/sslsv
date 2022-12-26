@@ -12,7 +12,9 @@ from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 class BaseSiameseModelConfig(BaseModelConfig):
     
     enable_projector: bool = True
-    projector_dim: int = 2048
+
+    projector_hidden_dim: int = 2048
+    projector_output_dim: int = 2048
 
 
 class BaseSiameseModel(BaseModel):
@@ -20,17 +22,16 @@ class BaseSiameseModel(BaseModel):
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
 
-        self.enable_projector = config.enable_projector
-        self.projector_dim = config.projector_dim
+        self.config = config
 
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
+            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+            nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
+            nn.Linear(config.projector_hidden_dim, config.projector_hidden_dim),
+            nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
         )
 
     def forward(self, X, training=False):
@@ -42,8 +43,8 @@ class BaseSiameseModel(BaseModel):
         Y_1 = self.encoder(X_1)
         Y_2 = self.encoder(X_2)
 
-        Z_1 = self.projector(Y_1) if self.enable_projector else Y_1
-        Z_2 = self.projector(Y_2) if self.enable_projector else Y_2
+        Z_1 = self.projector(Y_1) if self.config.enable_projector else Y_1
+        Z_2 = self.projector(Y_2) if self.config.enable_projector else Y_2
 
         return Z_1, Z_2
 

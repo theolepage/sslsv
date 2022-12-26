@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from dataclasses import dataclass
 
-from sslsv.losses.InfoNCE import InfoNCELoss
+from sslsv.losses.SimCLR import SimCLRLoss
 from sslsv.models._BaseSiameseModel import (
     BaseSiameseModel,
     BaseSiameseModelConfig
@@ -14,10 +14,10 @@ from sslsv.models._BaseSiameseModel import (
 @dataclass
 class SimCLRConfig(BaseSiameseModelConfig):
     
-    temperature: float = 0.07
+    temperature: float = 0.2
 
-    enable_projector: bool = True
-    projector_dim: int = 2048
+    projector_hidden_dim: int = 2048
+    projector_output_dim: int = 256
 
 
 class SimCLR(BaseSiameseModel):
@@ -25,17 +25,10 @@ class SimCLR(BaseSiameseModel):
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
 
-        self.enable_projector = config.enable_projector
-        self.projector_dim = config.projector_dim
-
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
+            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
-            nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
         )
 
-        self.loss_fn = InfoNCELoss(config.temperature)
+        self.loss_fn = SimCLRLoss(config.temperature)

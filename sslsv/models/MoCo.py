@@ -18,11 +18,12 @@ class MoCoConfig(BaseMomentumModelConfig):
     
     end_tau: float = 0.999
 
-    temperature: float = 0.07
+    temperature: float = 0.2
 
     queue_size: int = 65536
 
-    projector_dim: int = 2048
+    projector_hidden_dim: int = 2048
+    projector_output_dim: int = 256
 
 
 class MoCo(BaseMomentumModel):
@@ -30,34 +31,24 @@ class MoCo(BaseMomentumModel):
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
 
-        self.temperature = config.temperature
         self.queue_size = config.queue_size
-        self.projector_dim = config.projector_dim
 
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
+            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
-            nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
         )
 
         self.projector_momentum = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
+            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
-            nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
         )
         initialize_momentum_params(self.projector, self.projector_momentum)
 
         self.register_buffer(
             'queue',
-            torch.randn(self.projector_dim, self.queue_size)
+            torch.randn(config.projector_output_dim, self.queue_size)
         )
         self.queue = F.normalize(self.queue, dim=1)
 

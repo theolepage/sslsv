@@ -16,10 +16,10 @@ from sslsv.models._BaseMomentumModel import (
 @dataclass
 class BYOLConfig(BaseMomentumModelConfig):
 
-    proj_hidden_dim: int = 4096
-    proj_output_dim: int = 256
+    projector_hidden_dim: int = 4096
+    projector_output_dim: int = 256
 
-    pred_hidden_dim: int = 4096
+    predictor_hidden_dim: int = 4096
 
 
 class BYOL(BaseMomentumModel):
@@ -28,25 +28,25 @@ class BYOL(BaseMomentumModel):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, config.proj_hidden_dim),
-            nn.BatchNorm1d(config.proj_hidden_dim),
+            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+            nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.proj_hidden_dim, config.proj_output_dim)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
         )
 
         self.projector_momentum = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, config.proj_hidden_dim),
-            nn.BatchNorm1d(config.proj_hidden_dim),
+            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+            nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.proj_hidden_dim, config.proj_output_dim)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
         )
         initialize_momentum_params(self.projector, self.projector_momentum)
 
         self.predictor = nn.Sequential(
-            nn.Linear(config.proj_output_dim, config.pred_hidden_dim),
-            nn.BatchNorm1d(config.pred_hidden_dim),
+            nn.Linear(config.projector_output_dim, config.predictor_hidden_dim),
+            nn.BatchNorm1d(config.predictor_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.pred_hidden_dim, config.proj_output_dim)
+            nn.Linear(config.predictor_hidden_dim, config.projector_output_dim)
         )
 
         self.loss_fn = BYOLLoss()

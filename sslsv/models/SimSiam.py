@@ -14,8 +14,8 @@ from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 @dataclass
 class SimSiamConfig(BaseModelConfig):
 
-    proj_hidden_dim: int = 2048
-    proj_output_dim: int = 2048
+    projector_hidden_dim: int = 2048
+    projector_output_dim: int = 2048
 
     pred_hidden_dim: int = 512
 
@@ -26,23 +26,23 @@ class SimSiam(BaseModel):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, config.proj_hidden_dim, bias=False),
-            nn.BatchNorm1d(config.proj_hidden_dim),
+            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim, bias=False),
+            nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.proj_hidden_dim, config.proj_hidden_dim, bias=False),
-            nn.BatchNorm1d(config.proj_hidden_dim),
+            nn.Linear(config.projector_hidden_dim, config.projector_hidden_dim, bias=False),
+            nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.proj_hidden_dim, config.proj_output_dim),
-            nn.BatchNorm1d(config.proj_output_dim, affine=False)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
+            nn.BatchNorm1d(config.projector_output_dim, affine=False)
         )
         # hack: not use bias as it is followed by BN
         self.projector[6].bias.requires_grad = False
 
         self.predictor = nn.Sequential(
-            nn.Linear(config.proj_output_dim, config.pred_hidden_dim, bias=False),
+            nn.Linear(config.projector_output_dim, config.pred_hidden_dim, bias=False),
             nn.BatchNorm1d(config.pred_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.pred_hidden_dim, config.proj_output_dim)
+            nn.Linear(config.pred_hidden_dim, config.projector_output_dim)
         )
 
         self.loss_fn = SimSiamLoss()

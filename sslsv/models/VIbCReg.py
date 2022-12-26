@@ -26,14 +26,14 @@ class VIbCReg(BaseSiameseModel):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
+            nn.Linear(self.encoder.encoder_dim, self.projector_hidden_dim),
+            nn.BatchNorm1d(self.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim),
-            nn.BatchNorm1d(self.projector_dim),
+            nn.Linear(self.projector_hidden_dim, self.projector_hidden_dim),
+            nn.BatchNorm1d(self.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim),
-            IterNorm(self.projector_dim, nb_groups=64, T=5, dim=2, affine=True)
+            nn.Linear(self.projector_hidden_dim, self.projector_output_dim),
+            IterNorm(self.projector_output_dim, nb_groups=64, T=5, dim=2, affine=True)
         )
 
         self.loss_fn = VIbCRegLoss(
