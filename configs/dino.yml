@@ -1,0 +1,10 @@
+encoder:
+  type: 'thinresnet34'
+model:
+  type: 'dino'
+  small_frame_length: 32000
+data:
+  train: './data/voxceleb1_train_list'
+  frame_length: 64000
+  wav_augment:
+    enable: true

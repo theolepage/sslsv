@@ -39,6 +39,12 @@ class BaseModel(nn.Module):
     def train_step(self, X):
         raise NotImplementedError
 
+    def on_train_epoch_start(self, epoch, max_epochs):
+        pass
+
+    def on_train_epoch_end(self, epoch, max_epochs):
+        pass
+
     def on_train_step_start(self, step, max_steps):
         pass
 

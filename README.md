@@ -52,6 +52,10 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   Exploring Simple Siamese Representation Learning ([arXiv](https://arxiv.org/abs/2011.10566))  
   *Xinlei Chen, Kaiming He*
 
+- **DINO** (`sslsv.models.DINO`)  
+  Emerging Properties in Self-Supervised Vision Transformers ([arXiv](https://arxiv.org/abs/2104.14294))  
+  *Mathilde Caron, Hugo Touvron, Ishan Misra, Hervé Jégou, Julien Mairal, Piotr Bojanowski, Armand Joulin*
+
 ## Datasets
 
 [VoxCeleb1](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1.html) and [VoxCeleb2](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox2.html) are used for our experiments and we rely on [MUSAN](http://www.openslr.org/17/) and [Room Impulse Response and Noise Database](https://www.openslr.org/28/) for data augmentation.

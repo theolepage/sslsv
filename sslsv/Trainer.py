@@ -141,8 +141,12 @@ class Trainer:
     def train_epoch_loop(self, first_epoch=0):
         self.nb_epochs_remaining = 0
 
-        for epoch in range(first_epoch, self.config.training.epochs):
+        max_epochs = self.config.training.epochs
+
+        for epoch in range(first_epoch, max_epochs):
             self.start_epoch(epoch)
+
+            self.model.module.on_train_epoch_start(self.epoch, max_epochs)
         
             if is_main_process(): print(f'\nEpoch {self.epoch}')
 
@@ -150,11 +154,13 @@ class Trainer:
                 self.optimizer,
                 self.config.training.learning_rate,
                 self.epoch,
-                self.config.training.epochs
+                max_epochs
             )
 
             self.model.train()
             train_metrics = self.train_step_loop()
+
+            self.model.module.on_train_epoch_end(self.epoch, max_epochs)
 
             self.model.eval()
             test_embeddings = extract_embeddings(self.model, self.config.data)
