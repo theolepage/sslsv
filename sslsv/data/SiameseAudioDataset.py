@@ -57,4 +57,4 @@ class SiameseAudioDataset(AudioDataset):
         ), axis=0)
         X = torch.FloatTensor(X)
 
-        return X, y
+        return i, X, y

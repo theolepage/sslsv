@@ -69,7 +69,7 @@ class LIM(BaseModel):
 
         return C1, C2, CR
 
-    def train_step(self, Y):
+    def train_step(self, Y, step, samples):
         C1, C2, CR = self._extract_chunks(Y)
 
         pos = self.discriminator(torch.cat((C1, C2), dim=1))

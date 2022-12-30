@@ -59,7 +59,7 @@ class MultiLosses(BaseSiameseModel):
             loss += l.weight * MultiLosses.LOSS_FUNCTIONS[l.name](Z_1, Z_2)
         return loss
 
-    def train_step(self, Z):
+    def train_step(self, Z, step, samples):
         Y_1, Y_2, Z_1, Z_2 = Z
 
         loss = 0

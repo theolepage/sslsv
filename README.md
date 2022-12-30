@@ -56,6 +56,10 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   Emerging Properties in Self-Supervised Vision Transformers ([arXiv](https://arxiv.org/abs/2104.14294))  
   *Mathilde Caron, Hugo Touvron, Ishan Misra, Hervé Jégou, Julien Mairal, Piotr Bojanowski, Armand Joulin*
 
+- **DeepCluster** (`sslsv.models.DeepCluster`)  
+  Deep Clustering for Unsupervised Learning of Visual Features ([arXiv](https://arxiv.org/abs/1807.05520))  
+  *Mathilde Caron, Piotr Bojanowski, Armand Joulin, Matthijs Douze*
+
 ## Datasets
 
 [VoxCeleb1](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1.html) and [VoxCeleb2](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox2.html) are used for our experiments and we rely on [MUSAN](http://www.openslr.org/17/) and [Room Impulse Response and Noise Database](https://www.openslr.org/28/) for data augmentation.

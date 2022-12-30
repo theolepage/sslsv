@@ -166,7 +166,7 @@ class CPC(BaseModel):
 
         return loss, accuracy
 
-    def train_step(self, Y):
+    def train_step(self, Y, step, samples):
         Y, Y_r = Y
 
         loss, accuracy = self.train_step_(Y)

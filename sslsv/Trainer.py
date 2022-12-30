@@ -43,10 +43,10 @@ class Trainer:
 
         max_steps = self.config.training.epochs * len(self.train_dataloader)
 
-        for i, (X, Y) in enumerate(self.train_dataloader):
-            step = self.epoch * len(self.train_dataloader) + i
+        for step, (idx, X, Y) in enumerate(self.train_dataloader):
+            step_abs = self.epoch * len(self.train_dataloader) + step
 
-            self.model.module.on_train_step_start(step, max_steps)
+            self.model.module.on_train_step_start(step_abs, max_steps)
 
             X = X.to(self.device)
             Y = Y.to(self.device)
@@ -54,7 +54,11 @@ class Trainer:
             # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):
                 Z = self.model(X, training=True)
-                loss, metrics = self.model.module.train_step(Z)
+                loss, metrics = self.model.module.train_step(
+                    Z,
+                    step=step,
+                    samples=idx
+                )
 
             # Update metrics (average for epoch)
             if not train_metrics:
@@ -79,9 +83,9 @@ class Trainer:
             else:
                 self.optimizer.step()
 
-            self.model.module.on_train_step_end(step, max_steps)
+            self.model.module.on_train_step_end(step_abs, max_steps)
 
-            if is_main_process(): self.print_progress_bar(i)
+            if is_main_process(): self.print_progress_bar(step)
 
         if is_main_process(): print()
 

@@ -32,6 +32,7 @@ from sslsv.models.MultiLosses import MultiLosses, MultiLossesConfig
 from sslsv.models.BYOL import BYOL, BYOLConfig
 from sslsv.models.SimSiam import SimSiam, SimSiamConfig
 from sslsv.models.DINO import DINO, DINOConfig
+from sslsv.models.DeepCluster import DeepCluster, DeepClusterConfig
 
 
 REGISTERED_ENCODERS = {
@@ -52,6 +53,7 @@ REGISTERED_MODELS = {
     'byol':        (BYOL,        BYOLConfig),
     'simsiam':     (SimSiam,     SimSiamConfig),
     'dino':        (DINO,        DINOConfig),
+    'deepcluster': (DeepCluster, DeepClusterConfig),
 }
 
 

@@ -59,4 +59,4 @@ class AudioDataset(Dataset):
 
         y = self.labels[i]
 
-        return X, y
+        return i, X, y

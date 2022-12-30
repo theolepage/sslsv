@@ -78,7 +78,7 @@ class BYOL(BaseMomentumModel):
         ]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
-    def train_step(self, Z):
+    def train_step(self, Z, step, samples):
         Z_1, Z_2, P_1, P_2 = Z
 
         loss = self.loss_fn(P_1, Z_2) + self.loss_fn(P_2, Z_1)

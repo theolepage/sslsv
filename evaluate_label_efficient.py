@@ -38,7 +38,7 @@ class Classifier(nn.Module):
 
         return Z_1, Z_2
 
-    def train_step(self, Z):
+    def train_step(self, Z, step, samples):
         Z_1, Z_2 = Z
 
         loss, accuracy = self.infonce((Z_1, Z_2))

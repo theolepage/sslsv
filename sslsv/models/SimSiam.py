@@ -80,7 +80,7 @@ class SimSiam(BaseModel):
                 param_group['lr'] = lr
         return lr
 
-    def train_step(self, Z):
+    def train_step(self, Z, step, samples):
         Z_1, Z_2, P_1, P_2 = Z
 
         loss = (
