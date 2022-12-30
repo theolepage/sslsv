@@ -28,7 +28,7 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   A Simple Framework for Contrastive Learning of Visual Representations ([arXiv](https://arxiv.org/abs/2002.05709))  
   *Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton*
 
-- **MoCo** (`sslsv.models.MoCo`)  
+- **MoCo v2** (`sslsv.models.MoCo`)  
   Improved Baselines with Momentum Contrastive Learning ([arXiv](https://arxiv.org/abs/2003.04297))  
   *Xinlei Chen, Haoqi Fan, Ross Girshick, Kaiming He*
 
@@ -56,9 +56,13 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   Emerging Properties in Self-Supervised Vision Transformers ([arXiv](https://arxiv.org/abs/2104.14294))  
   *Mathilde Caron, Hugo Touvron, Ishan Misra, Hervé Jégou, Julien Mairal, Piotr Bojanowski, Armand Joulin*
 
-- **DeepCluster** (`sslsv.models.DeepCluster`)  
+- **DeepCluster v2** (`sslsv.models.DeepCluster`)  
   Deep Clustering for Unsupervised Learning of Visual Features ([arXiv](https://arxiv.org/abs/1807.05520))  
   *Mathilde Caron, Piotr Bojanowski, Armand Joulin, Matthijs Douze*
+
+- **SwAV** (`sslsv.models.SwAV`)  
+  Unsupervised Learning of Visual Features by Contrasting Cluster Assignments ([arXiv](https://arxiv.org/abs/2006.09882))  
+  *Mathilde Caron, Ishan Misra, Julien Mairal, Priya Goyal, Piotr Bojanowski, Armand Joulin*
 
 ## Datasets
 

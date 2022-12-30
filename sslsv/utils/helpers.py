@@ -33,6 +33,7 @@ from sslsv.models.BYOL import BYOL, BYOLConfig
 from sslsv.models.SimSiam import SimSiam, SimSiamConfig
 from sslsv.models.DINO import DINO, DINOConfig
 from sslsv.models.DeepCluster import DeepCluster, DeepClusterConfig
+from sslsv.models.SwAV import SwAV, SwAVConfig
 
 
 REGISTERED_ENCODERS = {
@@ -54,6 +55,7 @@ REGISTERED_MODELS = {
     'simsiam':     (SimSiam,     SimSiamConfig),
     'dino':        (DINO,        DINOConfig),
     'deepcluster': (DeepCluster, DeepClusterConfig),
+    'swav':        (SwAV,        SwAVConfig),
 }
 
 
