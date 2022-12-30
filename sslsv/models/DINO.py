@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from dataclasses import dataclass
 
 from sslsv.losses.DINO import DINOLoss
-from sslsv.losses.InfoNCE import InfoNCELoss
 from sslsv.models._BaseMomentumModel import (
     BaseMomentumModel,
     BaseMomentumModelConfig,
@@ -158,7 +157,7 @@ class DINO(BaseMomentumModel):
         self.current_epoch = epoch
         self.loss_fn.epoch = epoch
 
-    def on_train_step_end(self, step, max_steps):
+    def on_after_backward(self):
         # Perform gradient clipping on encoder
         if self.clip_grad:
             for p in self.encoder.parameters():

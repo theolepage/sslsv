@@ -45,12 +45,13 @@ class Trainer:
 
         for i, (X, Y) in enumerate(self.train_dataloader):
             step = self.epoch * len(self.train_dataloader) + i
-            
+
             self.model.module.on_train_step_start(step, max_steps)
 
             X = X.to(self.device)
             Y = Y.to(self.device)
 
+            # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):
                 Z = self.model(X, training=True)
                 loss, metrics = self.model.module.train_step(Z)
@@ -62,12 +63,20 @@ class Trainer:
                 train_metrics[metric_name] += metric_value
 
             self.optimizer.zero_grad()
+
+            # Backward
+            self.model.module.on_before_backward()
             if self.scaler is not None:
                 self.scaler.scale(loss).backward()
+            else:
+                loss.backward()
+            self.model.module.on_after_backward()
+
+            # Optimizer step
+            if self.scaler is not None:
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
             else:
-                loss.backward()
                 self.optimizer.step()
 
             self.model.module.on_train_step_end(step, max_steps)
@@ -249,7 +258,11 @@ class Trainer:
             if os.getenv('WANDB_MODE') != 'offline':
                 print(f'WandB url: {self.wandb_url}')
 
+        self.model.module.on_train_start(self)
+
         first_epoch = 0 if checkpoint is None else checkpoint['epoch']
         self.train_epoch_loop(first_epoch)
+
+        self.model.module.on_train_end(self)
 
         wandb.finish()
