@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from sslsv.losses.LIM import LIMLoss
+from sslsv.losses.InfoNCE import InfoNCELoss
 from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 
 
@@ -20,7 +21,6 @@ class LIMLossFnEnum(Enum):
 class LIMConfig(BaseModelConfig):
 
     loss_name: LIMLossFnEnum = 'bce'
-    context_length: int = 1
 
 
 class LIM(BaseModel):
@@ -28,56 +28,33 @@ class LIM(BaseModel):
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
 
-        self.loss_name = config.loss_name
-        self.context_length = config.context_length
-
-        self.discriminator = nn.Sequential(
-            nn.Linear(2 * self.encoder.encoder_dim, 256),
-            nn.ReLU(),
-            nn.Linear(256, 1),
-        )
-
-        self.loss_fn = LIMLoss(self.loss_name)
+        self.loss_fn = LIMLoss(config.loss_name)
 
     def forward(self, X, training=False):
-        if not training: return self.encoder(X).mean(dim=2)
+        if not training: return self.encoder(X)
         
-        return self.encoder(X)
+        X_1 = X[:, 0, :]
+        X_2 = X[:, 1, :]
 
-    def get_learnable_params(self):
-        extra_learnable_params = [
-            {'params': self.discriminator.parameters()}
-        ]
-        return super().get_learnable_params() + extra_learnable_params
+        Y_1 = self.encoder(X_1)
+        Y_2 = self.encoder(X_2)
 
-    def _extract_chunks(self, Y):
-        N, C, L = Y.size()
-
-        max_idx = L - self.context_length + 1
-        idx1, idx2, idx3 = torch.randint(0, max_idx, size=(3,))
-        shift = torch.randint(1, N, size=(1,)).item()
-
-        C1 = Y[:, :, idx1:idx1+self.context_length]
-        C1 = torch.mean(C1, dim=2)
-
-        C2 = Y[:, :, idx2:idx2+self.context_length]
-        C2 = torch.mean(C2, dim=2)
-
-        CR = Y[:, :, idx3:idx3+self.context_length]
-        CR = torch.mean(CR, dim=2)
-        CR = torch.roll(CR, shifts=shift, dims=0)
-
-        return C1, C2, CR
+        return Y_1, Y_2
 
     def train_step(self, Y, step, samples):
-        C1, C2, CR = self._extract_chunks(Y)
+        Y_1, Y_2 = Y
+        
+        N, _ = Y_1.size()
 
-        pos = self.discriminator(torch.cat((C1, C2), dim=1))
-        neg = self.discriminator(torch.cat((C1, CR), dim=1))
+        shift = torch.randint(1, N, size=(1,)).item()
+        Y_R = torch.roll(Y_2, shifts=shift, dims=0)
+
+        pos = F.cosine_similarity(Y_1, Y_2, dim=-1)
+        neg = F.cosine_similarity(Y_1, Y_R, dim=-1)
 
         loss = self.loss_fn(pos, neg)
 
-        accuracy = torch.sum(pos > neg) / Y.size(0)
+        accuracy = InfoNCELoss.determine_accuracy(Y_1, Y_2)
             
         metrics = {
             'train_loss': loss,

@@ -1,10 +1,9 @@
 encoder:
-  type: 'simpleaudiocnn'
-  encoder_dim: 512
+  type: 'thinresnet34'
 model:
   type: 'lim'
 data:
-  siamese: false
+  siamese: true
   train: './data/voxceleb1_train_list'
   wav_augment:
     enable: true
