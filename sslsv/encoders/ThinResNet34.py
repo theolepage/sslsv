@@ -73,7 +73,7 @@ class ResNetBlock(nn.Module):
         Z = self.conv2(Z)
         Z = self.bn2(Z)
         Z = self.se(Z)
-        
+
         Z += residual
         Z = self.relu(Z)
         return Z
@@ -122,7 +122,7 @@ class SAP(nn.Module):
 
 @dataclass
 class ThinResNet34Config(EncoderConfig):
-    pass
+    pooling: bool = True
 
 
 class ThinResNet34(nn.Module):
@@ -131,6 +131,7 @@ class ThinResNet34(nn.Module):
         super().__init__()
 
         self.encoder_dim = config.encoder_dim
+        self.pooling = config.pooling
 
         self.features_extractor = nn.Sequential(
             AudioPreEmphasis(),
@@ -194,7 +195,12 @@ class ThinResNet34(nn.Module):
         Z = self.block3(Z)
         Z = self.block4(Z)
 
-        Z = self.sap(Z)
-        Z = self.fc(Z)
+        if self.pooling:
+            Z = self.sap(Z)
+            Z = self.fc(Z)
+        else:
+            B, C, H, W = Z.size()
+            Z = Z.reshape((B, -1, W))
+            Z = self.fc(Z.transpose(1, 2)).transpose(2, 1)
 
         return Z
