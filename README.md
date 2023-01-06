@@ -6,6 +6,10 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
 
 ### Encoders
 
+- **TDNN** (`sslsv.encoders.TDNN`)  
+  X-vectors: Robust dnn embeddings for speaker recognition ([PDF](https://www.danielpovey.com/files/2018_icassp_xvectors.pdf))  
+  *David Snyder, Daniel Garcia-Romero, Gregory Sell, Daniel Povey, Sanjeev Khudanpur*
+
 - **Simple Audio CNN** (`sslsv.encoders.SimpleAudioCNN`)  
   Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
   *Aaron van den Oord, Yazhe Li, Oriol Vinyals*

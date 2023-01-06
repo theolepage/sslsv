@@ -5,12 +5,13 @@ from torchaudio.transforms import MelSpectrogram
 
 from dataclasses import dataclass
 
-from sslsv.configs import EncoderConfig
+from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
 
 @dataclass
-class SimpleAudioCNNConfig(EncoderConfig):
-    pass
+class SimpleAudioCNNConfig(BaseEncoderConfig):
+    
+    extract_mel_features: bool = False
 
 
 class SimpleAudioCNNBlock(nn.Module):
@@ -33,12 +34,10 @@ class SimpleAudioCNNBlock(nn.Module):
         return self.act(self.ln(self.conv(X)))
 
 
-class SimpleAudioCNN(nn.Module):
+class SimpleAudioCNN(BaseEncoder):
 
     def __init__(self, config):
-        super().__init__()
-
-        self.encoder_dim = config.encoder_dim
+        super().__init__(config)
 
         nb_filters = [512, 512, 512, 512, self.encoder_dim]
         kernel_sizes = [10, 8, 4, 4, 4]
@@ -62,6 +61,11 @@ class SimpleAudioCNN(nn.Module):
         self.blocks = nn.Sequential(*self.blocks)
 
     def forward(self, X):
-        X = X.unsqueeze(1) # (N, 1, L)
-        Z = self.blocks(X)
+        Z = super().forward(X)
+
+        Z = Z.unsqueeze(1)
+        # Z: (N, 1, L)
+        
+        Z = self.blocks(Z)
+        
         return Z

@@ -18,6 +18,7 @@ from sslsv.data.SiameseAudioDataset import SiameseAudioDataset
 from sslsv.data.SupervisedSampler import SupervisedSampler
 from sslsv.utils.distributed import is_main_process
 
+from sslsv.encoders.TDNN import TDNN, TDNNConfig
 from sslsv.encoders.ThinResNet34 import ThinResNet34, ThinResNet34Config
 from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 
@@ -37,6 +38,7 @@ from sslsv.models.SwAV import SwAV, SwAVConfig
 
 
 REGISTERED_ENCODERS = {
+    'tdnn':           (TDNN,           TDNNConfig),
     'thinresnet34':   (ThinResNet34,   ThinResNet34Config),
     'simpleaudiocnn': (SimpleAudioCNN, SimpleAudioCNNConfig),
 }

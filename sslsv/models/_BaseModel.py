@@ -10,6 +10,7 @@ from sslsv.configs import ModelConfig
 
 @dataclass
 class BaseModelConfig(ModelConfig):
+
     pass
 
 

@@ -4,6 +4,7 @@ from typing import Tuple
 
 @dataclass
 class TrainingConfig:
+
     epochs: int = 300
     batch_size: int = 256
     learning_rate: float = 0.001
@@ -17,6 +18,7 @@ class TrainingConfig:
 
 @dataclass
 class WavAugmentConfig:
+
     enable: bool = True
     rir: bool = True
     musan: bool = True
@@ -27,6 +29,7 @@ class WavAugmentConfig:
 
 @dataclass
 class DataConfig:
+
     siamese: bool = True
     wav_augment: WavAugmentConfig = None
     frame_length: int = 32000
@@ -41,17 +44,19 @@ class DataConfig:
 
 @dataclass
 class EncoderConfig:
+
     __type__: str = None
-    encoder_dim: int = 1024
 
 
 @dataclass
 class ModelConfig:
+
     __type__: str = None
 
 
 @dataclass
 class Config:
+
     training: TrainingConfig = TrainingConfig()
     data: DataConfig = DataConfig()
     encoder: EncoderConfig = EncoderConfig()

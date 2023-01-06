@@ -1,0 +1,87 @@
+import torch
+from torch import nn
+import torch.nn.functional as F
+from torchaudio.transforms import MelSpectrogram
+
+from dataclasses import dataclass
+
+from sslsv.configs import EncoderConfig
+
+
+class AudioPreEmphasis(nn.Module):
+
+    def __init__(self, coeff=0.97):
+        super().__init__()
+
+        self.w = torch.FloatTensor([-coeff, 1.0]).unsqueeze(0).unsqueeze(0)
+
+    def forward(self, audio):
+        audio = audio.unsqueeze(1)
+        audio = F.pad(audio, (1, 0), 'reflect')
+        return F.conv1d(audio, self.w.to(audio.device)).squeeze(1)
+
+
+class MelFeaturesExtractor(nn.Module):
+
+    def __init__(self, n_mels, n_fft, win_length, hop_length):
+        super().__init__()
+
+        self.features_extractor = nn.Sequential(
+            AudioPreEmphasis(),
+            MelSpectrogram(
+                n_fft=n_fft,
+                win_length=win_length,
+                hop_length=hop_length,
+                window_fn=torch.hamming_window,
+                n_mels=n_mels
+            )
+        )
+
+        self.instance_norm = nn.InstanceNorm1d(n_mels)
+
+    def forward(self, X):
+        with torch.no_grad():
+            X = self.features_extractor(X) + 1e-6
+            X = X.log()
+            X = self.instance_norm(X)
+            # X = X.unsqueeze(1)
+        return X
+
+
+@dataclass
+class BaseEncoderConfig(EncoderConfig):
+
+    encoder_dim: int = 1024
+
+    extract_mel_features: bool = True
+    mel_n_mels = 40
+    mel_n_fft = 512
+    mel_win_length = 400 # 25ms
+    mel_hop_length = 160 # 10ms
+
+
+class BaseEncoder(nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+
+        self.encoder_dim = config.encoder_dim
+
+        self.features_extractor = (
+            MelFeaturesExtractor(
+                n_mels=config.mel_n_mels,
+                n_fft=config.mel_n_fft,
+                win_length=config.mel_win_length,
+                hop_length=config.mel_hop_length
+            )
+            if config.extract_mel_features
+            else nn.Identity()
+        )
+
+    def forward(self, X):
+        # X: (B, 32000)
+
+        Z = self.features_extractor(X)
+        # X: (B, C, H, W) = (B, 40, 200)
+
+        return Z

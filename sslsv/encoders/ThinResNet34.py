@@ -1,24 +1,10 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torchaudio.transforms import MelSpectrogram
 
 from dataclasses import dataclass
 
-from sslsv.configs import EncoderConfig
-
-
-class AudioPreEmphasis(nn.Module):
-
-    def __init__(self, coeff=0.97):
-        super().__init__()
-
-        self.w = torch.FloatTensor([-coeff, 1.0]).unsqueeze(0).unsqueeze(0)
-
-    def forward(self, audio):
-        audio = audio.unsqueeze(1)
-        audio = F.pad(audio, (1, 0), 'reflect')
-        return F.conv1d(audio, self.w.to(audio.device)).squeeze(1)
+from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
 
 class ResNetBlock(nn.Module):
@@ -121,29 +107,17 @@ class SAP(nn.Module):
 
 
 @dataclass
-class ThinResNet34Config(EncoderConfig):
+class ThinResNet34Config(BaseEncoderConfig):
+
     pooling: bool = True
 
 
-class ThinResNet34(nn.Module):
+class ThinResNet34(BaseEncoder):
 
-    def __init__(self, config, n_mels=40):
-        super().__init__()
+    def __init__(self, config):
+        super().__init__(config)
 
-        self.encoder_dim = config.encoder_dim
         self.pooling = config.pooling
-
-        self.features_extractor = nn.Sequential(
-            AudioPreEmphasis(),
-            MelSpectrogram(
-                n_fft=512,
-                win_length=400,
-                hop_length=160,
-                window_fn=torch.hamming_window,
-                n_mels=n_mels
-            )
-        )
-        self.instance_norm = nn.InstanceNorm1d(n_mels)
 
         self.conv = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
         self.relu = nn.ReLU(inplace=True)
@@ -154,7 +128,7 @@ class ThinResNet34(nn.Module):
         self.block3 = self.__make_block(6, 64, 128, 2)
         self.block4 = self.__make_block(3, 128, 256, 2)
 
-        sap_out_size = int(n_mels / 8 * 256)
+        sap_out_size = int(config.mel_n_mels / 8 * 256)
         self.sap = SAP(sap_out_size)
 
         self.fc = nn.Linear(sap_out_size, self.encoder_dim)
@@ -177,16 +151,13 @@ class ThinResNet34(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, X):
-        # X shape: (B, T) = (B, 200)
+        Z = super().forward(X)
+        # Z: (B, C, L) = (B, 40, 200)
 
-        with torch.no_grad():
-            X = self.features_extractor(X) + 1e-6
-            X = X.log()
-            X = self.instance_norm(X)
-            X = X.unsqueeze(1)
-            # X shape: (B, C, H, W) = (B, 1, 40, 200)
+        Z = Z.unsqueeze(1)
+        # Z: (B, C, H, W) = (B, 1, 40, 200)
 
-        Z = self.conv(X)
+        Z = self.conv(Z)
         Z = self.relu(Z)
         Z = self.bn(Z)
 
