@@ -249,6 +249,9 @@ class Trainer:
 
     def start(self):
         self.setup()
+
+        self.model.module.on_train_start(self)
+        
         checkpoint = self.load_checkpoint()
 
         if is_main_process():
@@ -261,8 +264,6 @@ class Trainer:
             print(f'Checkpoint: {self.checkpoint_dir}')
             if os.getenv('WANDB_MODE') != 'offline':
                 print(f'WandB url: {self.wandb_url}')
-
-        self.model.module.on_train_start(self)
 
         first_epoch = 0 if checkpoint is None else checkpoint['epoch']
         self.train_epoch_loop(first_epoch)
