@@ -86,8 +86,8 @@ class DeepCluster(BaseModel):
         Z_1 = F.normalize(self.projector(self.encoder(X_1)), dim=-1)
         Z_2 = F.normalize(self.projector(self.encoder(X_2)), dim=-1)
 
-        P_1 = torch.stack([layer(Z_1) for layer in self.prototypes])
-        P_2 = torch.stack([layer(Z_2) for layer in self.prototypes])
+        P_1 = torch.stack([layer(Z_1) for layer in self.prototypes], dim=1)
+        P_2 = torch.stack([layer(Z_2) for layer in self.prototypes], dim=1)
 
         return Z_1, Z_2, P_1, P_2
 
@@ -109,8 +109,12 @@ class DeepCluster(BaseModel):
 
     def train_step(self, Z, step, samples):
         Z_1, Z_2, P_1, P_2 = Z
+        # P: (N, P, C)
 
-        preds = torch.stack((P_1, P_2), dim=1)
+        preds = torch.stack((
+            P_1.transpose(0, 1),
+            P_2.transpose(0, 1)
+        ), dim=1) # preds: (P, V, N, C)
         assignments = self.assignments[:, samples]
 
         loss = self.loss_fn(preds, assignments)

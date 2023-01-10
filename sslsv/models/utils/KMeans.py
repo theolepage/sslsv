@@ -56,6 +56,7 @@ class KMeans:
             (len(self.nb_prototypes), N),
             dtype=torch.long
         )
+        assignments = assignments.to(embeddings.device, non_blocking=True)
         centroids = []
 
         with torch.no_grad():
