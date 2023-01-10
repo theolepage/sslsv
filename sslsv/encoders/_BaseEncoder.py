@@ -21,33 +21,6 @@ class AudioPreEmphasis(nn.Module):
         return F.conv1d(audio, self.w.to(audio.device)).squeeze(1)
 
 
-class MelFeaturesExtractor(nn.Module):
-
-    def __init__(self, n_mels, n_fft, win_length, hop_length):
-        super().__init__()
-
-        self.features_extractor = nn.Sequential(
-            AudioPreEmphasis(),
-            MelSpectrogram(
-                n_fft=n_fft,
-                win_length=win_length,
-                hop_length=hop_length,
-                window_fn=torch.hamming_window,
-                n_mels=n_mels
-            )
-        )
-
-        self.instance_norm = nn.InstanceNorm1d(n_mels)
-
-    def forward(self, X):
-        with torch.no_grad():
-            X = self.features_extractor(X) + 1e-6
-            X = X.log()
-            X = self.instance_norm(X)
-            # X = X.unsqueeze(1)
-        return X
-
-
 @dataclass
 class BaseEncoderConfig(EncoderConfig):
 
@@ -67,21 +40,27 @@ class BaseEncoder(nn.Module):
 
         self.encoder_dim = config.encoder_dim
 
-        self.features_extractor = (
-            MelFeaturesExtractor(
-                n_mels=config.mel_n_mels,
-                n_fft=config.mel_n_fft,
-                win_length=config.mel_win_length,
-                hop_length=config.mel_hop_length
+        if config.extract_mel_features:
+            self.features_extractor = nn.Sequential(
+                AudioPreEmphasis(),
+                MelSpectrogram(
+                    n_fft=config.mel_n_fft,
+                    win_length=config.mel_win_length,
+                    hop_length=config.mel_hop_length,
+                    window_fn=torch.hamming_window,
+                    n_mels=config.mel_n_mels
+                )
             )
-            if config.extract_mel_features
-            else nn.Identity()
-        )
+            self.instance_norm = nn.InstanceNorm1d(config.mel_n_mels)
 
     def forward(self, X):
         # X: (B, 32000)
 
-        Z = self.features_extractor(X)
-        # X: (B, C, H, W) = (B, 40, 200)
+        if self.features_extractor:
+            with torch.no_grad():
+                Z = self.features_extractor(X) + 1e-6
+                Z = Z.log()
+                Z = self.instance_norm(Z)
+            # Z: (B, C, L) = (B, 40, 200)
 
         return Z
