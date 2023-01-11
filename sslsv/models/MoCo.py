@@ -15,8 +15,9 @@ from sslsv.models._BaseMomentumModel import (
 
 @dataclass
 class MoCoConfig(BaseMomentumModelConfig):
-    
-    end_tau: float = 0.999
+
+    start_tau: float = 0.999
+    tau_scheduler: bool = False
 
     temperature: float = 0.2
 
@@ -30,6 +31,8 @@ class MoCo(BaseMomentumModel):
 
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
+
+        self.epoch = 0
 
         self.queue_size = config.queue_size
 
@@ -48,7 +51,7 @@ class MoCo(BaseMomentumModel):
 
         self.register_buffer(
             'queue',
-            torch.randn(config.projector_output_dim, self.queue_size)
+            torch.randn(2, config.projector_output_dim, self.queue_size)
         )
         self.queue = F.normalize(self.queue, dim=1)
 
@@ -56,16 +59,22 @@ class MoCo(BaseMomentumModel):
 
         self.loss_fn = MoCoLoss(config.temperature)
 
-    def forward(self, X, training=False):
+    def forward(self, X, X_s=None, training=False):
         if not training: return self.encoder(X)
 
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
 
-        Q = self.projector(self.encoder(X_1))
-        K = self.projector_momentum(self.encoder_momentum(X_2))
+        Q_1 = self.projector(self.encoder(X_1))
+        Q_2 = self.projector(self.encoder(X_2))
 
-        return Q, K
+        X_1_s = X_s[:, 0, :]
+        X_2_s = X_s[:, 1, :]
+
+        K_1 = self.projector_momentum(self.encoder_momentum(X_1_s))
+        K_2 = self.projector_momentum(self.encoder_momentum(X_2_s))
+
+        return Q_1, K_2, Q_2, K_1
 
     def get_learnable_params(self):
         extra_learnable_params = [
@@ -79,32 +88,42 @@ class MoCo(BaseMomentumModel):
         ]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
+    def on_train_epoch_start(self, epoch, max_epochs):
+        self.epoch = epoch
+
     @torch.no_grad()
     def _enqueue(self, keys):
-        batch_size = keys.size(0)
+        batch_size = keys.size(1)
 
         assert self.queue_size % batch_size == 0
 
         ptr = int(self.queue_ptr)
-        self.queue[:, ptr:ptr+batch_size] = keys.T
+        self.queue[:, :, ptr:ptr+batch_size] = keys.permute(0, 2, 1)
 
         self.queue_ptr[0] = (ptr + batch_size) % self.queue_size
 
     def train_step(self, Z, step, samples):
-        Q, K = Z
+        Q_1, K_2, Q_2, K_1 = Z
 
-        Q = F.normalize(Q, p=2, dim=1)
-        K = F.normalize(K, p=2, dim=1)
+        Q_1 = F.normalize(Q_1, p=2, dim=1)
+        K_2 = F.normalize(K_2, p=2, dim=1)
+        Q_2 = F.normalize(Q_2, p=2, dim=1)
+        K_1 = F.normalize(K_1, p=2, dim=1)
 
-        loss = self.loss_fn(Q, K, self.queue.clone().detach())
+        queue = self.queue.clone().detach()
 
-        self._enqueue(K)
+        loss = self.loss_fn(Q_1, K_2, queue[1])
+        loss += self.loss_fn(Q_2, K_1, queue[0])
+        loss /= 2
 
-        accuracy = InfoNCELoss.determine_accuracy(Q, K)
+        self._enqueue(torch.stack((K_1, K_2)))
+
+        accuracy = InfoNCELoss.determine_accuracy(Q_1, Q_2)
 
         metrics = {
             'train_loss': loss,
-            'train_accuracy': accuracy
+            'train_accuracy': accuracy,
+            'tau': self.momentum_updater.tau
         }
 
         return loss, metrics

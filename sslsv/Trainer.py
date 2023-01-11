@@ -53,12 +53,23 @@ class Trainer:
 
             # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):
-                Z = self.model(X, training=True)
-                loss, metrics = self.model.module.train_step(
-                    Z,
-                    step=step,
-                    samples=idx
-                )
+                # FIXME: Handle BN shuffling for MoCo
+                if self.config.model.__type__ == 'moco':
+                    idx = torch.randperm(X.size(0), device=X.device)
+                    r_idx = torch.argsort(idx)
+                    Q_1, K_2, Q_2, K_1 = self.model(X, X[idx], training=True)
+                    loss, metrics = self.model.module.train_step(
+                        (Q_1, K_2[r_idx], Q_2, K_1[r_idx]),
+                        step=step,
+                        samples=idx
+                    )
+                else:
+                    Z = self.model(X, training=True)
+                    loss, metrics = self.model.module.train_step(
+                        Z,
+                        step=step,
+                        samples=idx
+                    )
 
             # Update metrics (average for epoch)
             if not train_metrics:
