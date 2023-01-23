@@ -14,9 +14,9 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
   *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
 
-- **Thin-ResNet34** (`sslsv.encoders.ThinResNet34`)  
-  Delving into VoxCeleb: environment invariant speaker recognition ([arXiv](https://arxiv.org/abs/1910.11238))  
-  *Joon Son Chung, Jaesung Huh, Seongkyu Mun*
+- **ResNet-34** (`sslsv.encoders.ResNet34`)  
+  VoxCeleb2: Deep Speaker Recognition ([arXiv](https://arxiv.org/abs/1806.05622))  
+  *Joon Son Chung, Arsha Nagrani, Andrew Zisserman*
 
 - **ECAPA-TDNN** (`sslsv.encoders.ECAPATDNN`)  
   ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification ([PDF](https://arxiv.org/abs/2005.07143))  

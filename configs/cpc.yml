@@ -1,5 +1,5 @@
 encoder:
-  type: 'thinresnet34'
+  type: 'resnet34'
   pooling: false
 model:
   type: 'cpc'

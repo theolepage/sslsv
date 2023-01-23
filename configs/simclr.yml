@@ -1,5 +1,5 @@
 encoder:
-  type: 'thinresnet34'
+  type: 'resnet34'
 model:
   type: 'simclr'
 data:

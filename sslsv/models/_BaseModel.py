@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 
-from sslsv.encoders.ThinResNet34 import ThinResNet34
-
 from dataclasses import dataclass
 
 from sslsv.configs import ModelConfig

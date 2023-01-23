@@ -85,7 +85,7 @@ class SELayer(nn.Module):
         return X * Y
 
 
-class SAP(nn.Module):
+class SelfAttentivePooling(nn.Module):
 
     def __init__(self, out_size, dim=128):
         super().__init__()
@@ -106,32 +106,57 @@ class SAP(nn.Module):
         return torch.sum(W * X, dim=2)
 
 
+class StatsPooling(nn.Module):
+
+    def __init__(self, out_size):
+        super().__init__()
+
+    def forward(self, X):
+        mean = torch.mean(X, dim=-1)
+        std = torch.std(X, dim=-1)
+        stats = torch.cat((mean, std), dim=1)
+        return stats
+
+
 @dataclass
-class ThinResNet34Config(BaseEncoderConfig):
+class ResNet34Config(BaseEncoderConfig):
 
     pooling: bool = True
+    pooling_mode: str = 'sap'
+
+    base_dim: int = 32
 
 
-class ThinResNet34(BaseEncoder):
+class ResNet34(BaseEncoder):
+
+    _POOLING_MODULES = {
+        'sap': SelfAttentivePooling,
+        'stats': StatsPooling
+    }
 
     def __init__(self, config):
         super().__init__(config)
 
         self.pooling = config.pooling
 
-        self.conv = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
+        base_dim = config.base_dim
+
+        self.conv = nn.Conv2d(1, base_dim, kernel_size=3, stride=1, padding=1)
         self.relu = nn.ReLU(inplace=True)
-        self.bn = nn.BatchNorm2d(32)
+        self.bn = nn.BatchNorm2d(base_dim)
 
-        self.block1 = self.__make_block(3, 32, 32, 1)
-        self.block2 = self.__make_block(4, 32, 64, 2)
-        self.block3 = self.__make_block(6, 64, 128, 2)
-        self.block4 = self.__make_block(3, 128, 256, 2)
+        self.block1 = self.__make_block(3, base_dim, base_dim, 1)
+        self.block2 = self.__make_block(4, base_dim, base_dim * 2, 2)
+        self.block3 = self.__make_block(6, base_dim * 2, base_dim * 4, 2)
+        self.block4 = self.__make_block(3, base_dim * 4, base_dim * 8, 2)
 
-        sap_out_size = int(config.mel_n_mels / 8 * 256)
-        self.sap = SAP(sap_out_size)
+        out_size = int(config.mel_n_mels / 8 * (base_dim * 8))
+        
+        self.pooling = self._POOLING_MODULES[config.pooling_mode](out_size)
 
-        self.fc = nn.Linear(sap_out_size, self.encoder_dim)
+        if config.pooling_mode == 'stats': out_size *= 2
+
+        self.fc = nn.Linear(out_size, self.encoder_dim)
 
         self.__init_weights()
 
@@ -167,7 +192,7 @@ class ThinResNet34(BaseEncoder):
         Z = self.block4(Z)
 
         if self.pooling:
-            Z = self.sap(Z)
+            Z = self.pooling(Z)
             Z = self.fc(Z)
         else:
             B, C, H, W = Z.size()
