@@ -18,6 +18,10 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   Delving into VoxCeleb: environment invariant speaker recognition ([arXiv](https://arxiv.org/abs/1910.11238))  
   *Joon Son Chung, Jaesung Huh, Seongkyu Mun*
 
+- **ECAPA-TDNN** (`sslsv.encoders.ECAPATDNN`)  
+  ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification ([PDF](https://arxiv.org/abs/2005.07143))  
+  *Brecht Desplanques, Jenthe Thienpondt, Kris Demuynck*
+
 ### Models
 
 - **CPC** (`sslsv.models.CPC`)  

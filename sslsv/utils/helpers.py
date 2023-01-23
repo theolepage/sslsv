@@ -21,6 +21,7 @@ from sslsv.utils.distributed import is_main_process
 from sslsv.encoders.TDNN import TDNN, TDNNConfig
 from sslsv.encoders.ThinResNet34 import ThinResNet34, ThinResNet34Config
 from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
+from sslsv.encoders.ECAPATDNN import ECAPATDNN, ECAPATDNNConfig
 
 from sslsv.models.CPC import CPC, CPCConfig
 from sslsv.models.LIM import LIM, LIMConfig
@@ -41,6 +42,7 @@ REGISTERED_ENCODERS = {
     'tdnn':           (TDNN,           TDNNConfig),
     'thinresnet34':   (ThinResNet34,   ThinResNet34Config),
     'simpleaudiocnn': (SimpleAudioCNN, SimpleAudioCNNConfig),
+    'ecapatdnn':      (ECAPATDNN,      ECAPATDNNConfig),
 }
 
 
