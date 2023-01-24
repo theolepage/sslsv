@@ -30,7 +30,7 @@ class WavAugmentConfig:
 @dataclass
 class DataConfig:
 
-    siamese: bool = True
+    siamese: bool = False
     wav_augment: WavAugmentConfig = None
     frame_length: int = 32000
     max_samples: int = None

@@ -3,6 +3,7 @@ encoder:
 model:
   type: 'moco'
 data:
+  siamese: true
   train: './data/voxceleb1_train_list'
   wav_augment:
     enable: true

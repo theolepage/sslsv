@@ -55,8 +55,8 @@ class AudioDataset(Dataset):
             frame_length=self.config.frame_length
         ) # (1, T)
 
-        X = torch.FloatTensor(self.preprocess_data(data)).squeeze(0)
+        x = torch.FloatTensor(self.preprocess_data(data)).squeeze(0)
 
         y = self.labels[i]
 
-        return i, X, y
+        return i, x, y

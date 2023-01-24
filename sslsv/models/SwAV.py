@@ -115,7 +115,7 @@ class SwAV(BaseModel):
         
         return assignments
 
-    def train_step(self, Z, step, samples):
+    def train_step(self, Z, labels, step, samples):
         Z_1, Z_2, P_1, P_2 = Z
 
         N, _ = Z_1.size()

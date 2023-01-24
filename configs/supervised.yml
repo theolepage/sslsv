@@ -1,9 +1,9 @@
 encoder:
   type: 'resnet34'
 model:
-  type: 'vicreg'
+  type: 'supervised'
+  nb_speakers: 1211
 data:
-  siamese: true
   train: './data/voxceleb1_train_list'
   wav_augment:
     enable: true
