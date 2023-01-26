@@ -24,6 +24,7 @@ from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 from sslsv.encoders.ECAPATDNN import ECAPATDNN, ECAPATDNNConfig
 
 from sslsv.models.Supervised import Supervised, SupervisedConfig
+from sslsv.models.Custom import Custom, CustomConfig
 from sslsv.models.CPC import CPC, CPCConfig
 from sslsv.models.LIM import LIM, LIMConfig
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
@@ -49,6 +50,7 @@ REGISTERED_ENCODERS = {
 
 REGISTERED_MODELS = {
     'supervised':  (Supervised,  SupervisedConfig),
+    'custom':      (Custom,      CustomConfig),
     'cpc':         (CPC,         CPCConfig),
     'lim':         (LIM,         LIMConfig),
     'simclr':      (SimCLR,      SimCLRConfig),
