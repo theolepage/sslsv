@@ -22,9 +22,13 @@ class WavAugmentConfig:
     enable: bool = True
     rir: bool = True
     musan: bool = True
-    musan_noise_snr: Tuple[int, int] = (0, 15)
+    musan_nb_iters: int = 1
+    musan_noise_snr:  Tuple[int, int] = (0, 15)
     musan_speech_snr: Tuple[int, int] = (13, 20)
-    musan_music_snr: Tuple[int, int] = (5, 15)
+    musan_music_snr:  Tuple[int, int] = (5, 15)
+    musan_noise_num:  Tuple[int, int] = (1, 1)
+    musan_speech_num: Tuple[int, int] = (1, 1) # (3, 7)
+    musan_music_num:  Tuple[int, int] = (1, 1)
 
 
 @dataclass

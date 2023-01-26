@@ -33,35 +33,55 @@ class AudioAugmentation:
         
         return convolve(audio, rir, mode='full')[:, :audio.shape[1]]
 
-    def get_noise_snr(self, category):
-        min_, max_ = self.config.musan_noise_snr # category == 'noise'
-        if category == 'speech':
-            min_, max_ = self.config.musan_speech_snr
-        elif category == 'music':
-            min_, max_ = self.config.musan_music_snr
+    def _get_noise_snr(self, category):
+        CATEGORY_TO_SNR = {
+            'noise': self.config.musan_noise_snr,
+            'speech': self.config.musan_speech_snr,
+            'music': self.config.musan_music_snr
+        }
+        min_, max_ = CATEGORY_TO_SNR[category]
         return random.uniform(min_, max_)
 
-    def add_noise(self, audio, category):
-        noise_file = random.choice(self.musan_files[category])
-        noise = load_audio(noise_file, audio.shape[1])
-        
-        # Determine noise scale factor according to desired SNR
-        clean_db = 10 * np.log10(np.mean(audio ** 2) + 1e-4) 
-        noise_db = 10 * np.log10(np.mean(noise[0] ** 2) + 1e-4) 
-        noise_snr = self.get_noise_snr(category)
-        noise_scale = np.sqrt(10 ** ((clean_db - noise_db - noise_snr) / 10))
+    def _get_noise_num(self, category):
+        CATEGORY_TO_NUM = {
+            'noise': self.config.musan_noise_num,
+            'speech': self.config.musan_speech_num,
+            'music': self.config.musan_music_num
+        }
+        min_, max_ = CATEGORY_TO_NUM[category]
+        return random.randint(min_, max_)
 
-        return noise * noise_scale + audio
+    def add_noise(self, audio, category):
+        noise_files = random.sample(
+            self.musan_files[category],
+            self._get_noise_num(category)
+        )
+
+        noises = []
+        for noise_file in noise_files:
+            noise = load_audio(noise_file, audio.shape[1])
+            
+            # Determine noise scale factor according to desired SNR
+            clean_db = 10 * np.log10(np.mean(audio ** 2) + 1e-4)
+            noise_db = 10 * np.log10(np.mean(noise[0] ** 2) + 1e-4)
+            noise_snr = self._get_noise_snr(category)
+            noise_scale = np.sqrt(10 ** ((clean_db - noise_db - noise_snr) / 10))
+
+            noises.append(noise * noise_scale)
+
+        noises = np.sum(np.concatenate(noises, axis=0), axis=0, keepdims=True)
+        return noises + audio
 
     def __call__(self, audio):
         if self.config.musan:
-            transform_type = random.randint(0, 2)
-            if transform_type == 0:
-                audio = self.add_noise(audio, 'music')
-            elif transform_type == 1:
-                audio = self.add_noise(audio, 'speech')
-            elif transform_type == 2:
-                audio = self.add_noise(audio, 'noise')
+            for _ in range(self.config.musan_nb_iters):
+                musan_category = random.randint(0, 2)
+                if musan_category == 0:
+                    audio = self.add_noise(audio, 'music')
+                elif musan_category == 1:
+                    audio = self.add_noise(audio, 'speech')
+                elif musan_category == 2:
+                    audio = self.add_noise(audio, 'noise')
         if self.config.rir:
             audio = self.reverberate(audio)
         return audio
