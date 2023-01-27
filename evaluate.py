@@ -18,7 +18,7 @@ def evaluate(args):
 
     # Exract and save embeddings
     embeddings_save_path = checkpoint_dir + '/embeddings.pkl'
-    embeddings = extract_embeddings(model, config.data)
+    embeddings = extract_embeddings(model, config)
     with open(embeddings_save_path, 'wb') as f:
         pickle.dump(embeddings, f, protocol=pickle.HIGHEST_PROTOCOL)
     print('Speaker embeddings saved to {}'.format(embeddings_save_path))

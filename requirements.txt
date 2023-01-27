@@ -4,7 +4,6 @@ torchaudio
 
 soundfile
 scikit-learn
-scipy
 tensorboard
 wandb
 

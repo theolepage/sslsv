@@ -47,6 +47,16 @@ class DataConfig:
 
 
 @dataclass
+class EvaluateConfig:
+
+    batch_size: int = 64
+    num_frames: int = 6
+    frame_length: int = 32000
+    mean_of_features: bool = True
+    average_with_full_length: bool = False
+
+
+@dataclass
 class EncoderConfig:
 
     __type__: str = None
@@ -63,6 +73,7 @@ class Config:
 
     training: TrainingConfig = TrainingConfig()
     data: DataConfig = DataConfig()
+    evaluate: EvaluateConfig = EvaluateConfig()
     encoder: EncoderConfig = EncoderConfig()
     model: ModelConfig = ModelConfig()
     name: str = 'test'

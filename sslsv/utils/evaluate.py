@@ -2,41 +2,42 @@ import os
 from operator import itemgetter
 
 import torch
+import torch.nn.functional as F
+
 import numpy as np
 import soundfile as sf
 
-from scipy.spatial.distance import cosine
-from sklearn.preprocessing import normalize
 from sklearn.metrics import roc_curve
 
 from sslsv.data.utils import load_audio
 
 
-def extract_embeddings_from_batch(curr_batch_data, model):
-    batch = np.array(curr_batch_data)
+def extract_embeddings__(curr_batch_data, model, config):
+    batch = torch.stack(curr_batch_data, dim=0)
     B, N, T = batch.shape
     batch = batch.reshape((B * N, T))
 
-
     with torch.no_grad():
-        batch = torch.FloatTensor(batch)
         batch = batch.cuda() if torch.cuda.is_available() else batch
-        feats = model(batch).detach().cpu().numpy()
-    feats = normalize(feats, axis=1)
+        feats = model(batch).detach().cpu()
+
     feats = feats.reshape((B, N, -1))
-    feats = feats.mean(axis=1)
+    if config.evaluate.mean_of_features:
+        feats = feats.mean(axis=1, keepdim=True)
+    feats = F.normalize(feats, p=2, dim=-1)
     return feats
 
 
-def extract_embeddings(
+def extract_embeddings_(
     model,
-    dataset_config,
-    batch_size=64,
-    num_frames=6
+    config,
+    frame_length,
+    batch_size,
+    num_frames
 ):
     # Get a list of unique utterances
     utterances = set()
-    for line in open(dataset_config.trials):
+    for line in open(config.data.trials):
         target, a, b = line.rstrip().split(' ')
         utterances.add(a)
         utterances.add(b)
@@ -47,21 +48,21 @@ def extract_embeddings(
     curr_batch_data = []
     for utterance in utterances:
         if len(curr_batch_ids) == batch_size:
-            feats = extract_embeddings_from_batch(curr_batch_data, model)
+            feats = extract_embeddings__(curr_batch_data, model, config)
             for i in range(len(curr_batch_ids)):
                 uttid, data = curr_batch_ids[i], feats[i]
                 embeddings[uttid] = data
             curr_batch_ids, curr_batch_data = [], []
 
         # Store current utterance id and data
-        audio_path = os.path.join(dataset_config.base_path, 'voxceleb1', utterance)
-        data = load_audio(audio_path, dataset_config.frame_length, num_frames=num_frames)
+        audio_path = os.path.join(config.data.base_path, 'voxceleb1', utterance)
+        data = load_audio(audio_path, frame_length, num_frames)
         curr_batch_ids.append(utterance)
-        curr_batch_data.append(data)
+        curr_batch_data.append(torch.FloatTensor(data))
 
-    # Register remaining samples (if nb samples % 64 != 0)
+    # Register remaining samples (if nb samples % batch_size != 0)
     if len(curr_batch_ids) != 0:
-        feats = extract_embeddings_from_batch(curr_batch_data, model)
+        feats = extract_embeddings__(curr_batch_data, model, config)
         for i in range(len(curr_batch_ids)):
             uttid, data = curr_batch_ids[i], feats[i]
             embeddings[uttid] = data
@@ -69,12 +70,38 @@ def extract_embeddings(
     return embeddings
 
 
+def extract_embeddings(model, config):
+    embeddings = []
+    embeddings.append(
+        extract_embeddings_(
+            model,
+            config,
+            frame_length=config.evaluate.frame_length,
+            batch_size=config.evaluate.batch_size,
+            num_frames=config.evaluate.num_frames
+        )
+    )
+    if config.evaluate.average_with_full_length:
+        embeddings.append(
+            extract_embeddings_(
+                model,
+                config,
+                frame_length=None,
+                batch_size=1,
+                num_frames=1
+            )
+        )
+    return embeddings
+
 def score_trials(trials_path, embeddings):
     scores, labels = [], []
     for line in open(trials_path):
         target, a, b = line.rstrip().split(' ')
 
-        score = 1 - cosine(embeddings[a], embeddings[b])
+        score = 0
+        for embeddings_ in embeddings:
+            score += torch.mean(embeddings_[a] @ embeddings_[b].T)
+        score /= len(embeddings)
         label = int(target)
 
         scores.append(score)
@@ -85,7 +112,7 @@ def score_trials(trials_path, embeddings):
 
 def compute_eer(scores, labels):
     fpr, tpr, thresholds = roc_curve(labels, scores, pos_label=1)
-    fnr = 1 - tpr    
+    fnr = 1 - tpr
     idxE = np.nanargmin(np.abs(fnr - fpr))
     eer  = max(fpr[idxE], fnr[idxE]) * 100
     return eer
@@ -98,7 +125,7 @@ def compute_error_rates(scores, labels):
           [(index, threshold) for index, threshold in enumerate(scores)],
           key=itemgetter(1)))
       labels = [labels[i] for i in sorted_indexes]
-      
+
       # Determine false negative rates and false positive rates for each threshold.
       fnrs = []
       fprs = []
@@ -129,7 +156,7 @@ def compute_min_dcf(fnrs, fprs, p_target=0.01, c_miss=1, c_fa=1):
         c_det = c_miss * fnrs[i] * p_target + c_fa * fprs[i] * (1 - p_target)
         if c_det < min_c_det:
             min_c_det = c_det
-    
+
     # Equations (3) and (4)
     c_def = min(c_miss * p_target, c_fa * (1 - p_target))
     min_dcf = min_c_det / c_def

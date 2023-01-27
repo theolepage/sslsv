@@ -196,7 +196,7 @@ class Trainer:
             self.model.module.on_train_epoch_end(self.epoch, max_epochs)
 
             self.model.eval()
-            test_embeddings = extract_embeddings(self.model, self.config.data)
+            test_embeddings = extract_embeddings(self.model, self.config)
             test_metrics = evaluate(test_embeddings, self.config.data.trials)
 
             metrics = {**train_metrics, 'lr': lr, **test_metrics}
