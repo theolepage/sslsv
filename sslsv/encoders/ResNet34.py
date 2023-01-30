@@ -151,8 +151,10 @@ class ResNet34(BaseEncoder):
         self.block4 = self.__make_block(3, base_dim * 4, base_dim * 8, 2)
 
         out_size = int(config.mel_n_mels / 8 * (base_dim * 8))
-        
-        self.pooling = self._POOLING_MODULES[config.pooling_mode](out_size)
+
+        self.pooling = None
+        if config.pooling:        
+            self.pooling = self._POOLING_MODULES[config.pooling_mode](out_size)
 
         if config.pooling_mode == 'stats': out_size *= 2
 
