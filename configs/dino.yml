@@ -3,6 +3,7 @@ encoder:
 model:
   type: 'dino'
 training:
+  epochs: 100
   weight_decay: 0.00001
 data:
   siamese: true
