@@ -80,3 +80,4 @@ class Config:
     seed: int = 1717
     reproducibility: bool = False
     wandb_id: str = None
+    wandb_project: str = 'sslsv'

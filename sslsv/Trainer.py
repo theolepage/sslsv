@@ -238,7 +238,7 @@ class Trainer:
         # Init tensorboard and wandb
         self.writer = SummaryWriter(log_dir=self.checkpoint_dir + '/logs')
         self.wandb_url = wandb.init(
-            project='sslsv',
+            project=self.config.wandb_project,
             id=(self.config.wandb_id if self.config.wandb_id else self.config.name),
             resume='allow',
             dir=self.checkpoint_dir,
