@@ -1,0 +1,13 @@
+encoder:
+  type: 'resnet34'
+model:
+  type: 'multilosses'
+  Y_losses: []
+  Z_losses:
+  - name: 'infonce'
+    weight: 1.0
+data:
+  siamese: true
+  train: './data/voxceleb1_train_list'
+  wav_augment:
+    enable: true
