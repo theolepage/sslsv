@@ -72,12 +72,12 @@ class TripletLoss(BaseLoss):
         return loss
 
 
-class ContrastiveLoss(BaseLoss):
+class NormalizedSoftmaxLoss(BaseLoss):
 
     def __init__(self, config):
         super().__init__()
 
-        self.temperature = config.loss_temperature
+        self.scale = config.loss_scale
 
     def _determine_labels(self, logits, nb_positives):
         labels = torch.zeros(logits.size(), device=logits.device)
@@ -91,7 +91,7 @@ class ContrastiveLoss(BaseLoss):
         return neg
 
     def _process_logits(self, logits):
-        return logits / self.temperature
+        return self.scale * logits
 
     def forward(self, A, B, discard_diag=True):
         pos, neg = self._determine_logits(A, B, discard_diag)
@@ -111,7 +111,7 @@ class ContrastiveLoss(BaseLoss):
         return loss
 
 
-class ContrastiveAngularLoss(ContrastiveLoss):
+class AngularLoss(NormalizedSoftmaxLoss):
 
     def __init__(self, config):
         super().__init__(config)
@@ -123,7 +123,7 @@ class ContrastiveAngularLoss(ContrastiveLoss):
         return self.w * logits + self.b
 
 
-class ContrastiveAngularDistinctiveLoss(ContrastiveLoss):
+class AngularDistinctiveLoss(NormalizedSoftmaxLoss):
 
     def __init__(self, config):
         super().__init__(config)
@@ -140,7 +140,7 @@ class ContrastiveAngularDistinctiveLoss(ContrastiveLoss):
         return self.w_neg * neg + self.b_neg
 
 
-class AMSoftmaxLoss(ContrastiveLoss):
+class AMSoftmaxLoss(NormalizedSoftmaxLoss):
 
     def __init__(self, config):
         super().__init__(config)
@@ -155,9 +155,6 @@ class AMSoftmaxLoss(ContrastiveLoss):
     def _process_pos(self, pos):
         return pos - self.margin
 
-    def _process_logits(self, logits):
-        return self.scale * logits
-
 
 class AAMSoftmaxLoss(AMSoftmaxLoss):
 
@@ -166,7 +163,7 @@ class AAMSoftmaxLoss(AMSoftmaxLoss):
 
     def _process_pos(self, pos):
         sine = torch.sqrt((1.0 - torch.mul(pos, pos)).clamp(0, 1))
-        
+
         phi = pos * math.cos(self.margin) - sine * math.sin(self.margin)
         
         th = math.cos(math.pi - self.margin)
@@ -179,10 +176,10 @@ class AAMSoftmaxLoss(AMSoftmaxLoss):
 class CustomLoss(nn.Module):
 
     _LOSS_METHODS = {
-        'contrastive': ContrastiveLoss,
+        'nsoftmax': NormalizedSoftmaxLoss,
         'triplet': TripletLoss,
-        'angular': ContrastiveAngularLoss,
-        'angular_distinctive': ContrastiveAngularDistinctiveLoss,
+        'angular': AngularLoss,
+        'angular_distinctive': AngularDistinctiveLoss,
         'amsoftmax': AMSoftmaxLoss,
         'aamsoftmax': AAMSoftmaxLoss
     }

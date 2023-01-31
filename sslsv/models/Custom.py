@@ -12,14 +12,13 @@ from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 @dataclass
 class CustomConfig(BaseModelConfig):
     
-    loss_name: str = 'contrastive'
+    loss_name: str = 'nsoftmax'
 
     enable_multi_views: bool = False
 
     loss_learnable_hyperparams: bool = False
     loss_margin: float = 0.2
-    loss_scale: float = 30
-    loss_temperature: float = 0.2
+    loss_scale: float = 5
     loss_init_w: float = 10
     loss_init_b: float = -5
     loss_vicreg_scale: float = 1.0
