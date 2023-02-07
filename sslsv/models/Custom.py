@@ -16,16 +16,13 @@ class CustomConfig(BaseModelConfig):
 
     enable_multi_views: bool = False
 
-    loss_learnable_hyperparams: bool = False
+    loss_margin_learnable: bool = False
     loss_margin: float = 0.2
     loss_scale: float = 5
-    loss_init_w: float = 10
-    loss_init_b: float = -5
-    loss_vicreg_scale: float = 1.0
-    loss_vicreg_inv_weight: float = 1.0
-    loss_vicreg_var_weight: float = 1.0
-    loss_vicreg_cov_weight: float = 0.04
 
+    loss_reg_weight: float = 0.0
+
+    enable_projector: bool = True
     projector_hidden_dim: int = 2048
     projector_output_dim: int = 256
 
@@ -44,6 +41,14 @@ class Custom(BaseModel):
         )
 
         self.loss_fn = CustomLoss(config)
+    
+    def _compute_embeddings(self, X):
+        Y = self.encoder(X)
+
+        if self.config.enable_projector:
+            return self.projector(Y)
+
+        return Y
 
     def forward(self, X, training=False):
         if not training: return self.encoder(X)
@@ -56,13 +61,13 @@ class Custom(BaseModel):
         # Extract local views
         if self.config.enable_multi_views:
             small_frame_length = X.size(-1) // 2
-            views += X_1[:, :small_frame_length]
-            views += X_1[:, small_frame_length:]
-            views += X_2[:, :small_frame_length]
-            views += X_2[:, small_frame_length:]
+            views.append(X_1[:, :small_frame_length])
+            views.append(X_1[:, small_frame_length:])
+            views.append(X_2[:, :small_frame_length])
+            views.append(X_2[:, small_frame_length:])
 
         Z = torch.stack(
-            [self.projector(self.encoder(V)) for V in views],
+            [self._compute_embeddings(V) for V in views],
             dim=1
         )
 

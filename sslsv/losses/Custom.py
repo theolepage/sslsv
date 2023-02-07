@@ -3,9 +3,6 @@ from torch import nn
 import torch.nn.functional as F
 
 import math
-import random
-
-from .VICReg import VICRegLoss
 
 
 class BaseLoss(nn.Module):
@@ -52,23 +49,18 @@ class BaseLoss(nn.Module):
         raise NotImplementedError
 
 
-class TripletLoss(BaseLoss):
+class MHERegularization(BaseLoss):
 
     def __init__(self, config):
         super().__init__(logits_fn=lambda A, B : torch.cdist(A, B))
 
-        self.margin = config.loss_margin
+        self.weight = config.loss_reg_weight
 
-        if config.loss_learnable_hyperparams:
-            self.margin = nn.Parameter(torch.tensor(self.margin))
+    def forward(self, A, B, discard_diag=True):
+        _, neg = self._determine_logits(A, B, discard_diag)
 
-    def forward(self, Z_1, Z_2):
-        pos, neg = self._determine_logits(Z_1, Z_2)
+        loss = self.weight * torch.mean(1 / (neg ** 2))
 
-        pos = torch.mean(pos, dim=-1)
-        neg = torch.mean(neg, dim=-1)
-
-        loss = torch.mean(F.relu(pos ** 2 - neg ** 2 + self.margin))
         return loss
 
 
@@ -108,36 +100,8 @@ class NormalizedSoftmaxLoss(BaseLoss):
         )
 
         loss = F.cross_entropy(logits, labels)
+
         return loss
-
-
-class AngularLoss(NormalizedSoftmaxLoss):
-
-    def __init__(self, config):
-        super().__init__(config)
-
-        self.w = nn.Parameter(torch.tensor(config.loss_init_w))
-        self.b = nn.Parameter(torch.tensor(config.loss_init_b))
-
-    def _process_logits(self, logits):
-        return self.w * logits + self.b
-
-
-class AngularDistinctiveLoss(NormalizedSoftmaxLoss):
-
-    def __init__(self, config):
-        super().__init__(config)
-
-        self.w_pos = nn.Parameter(torch.tensor(config.loss_init_w))
-        self.b_pos = nn.Parameter(torch.tensor(config.loss_init_b))
-        self.w_neg = nn.Parameter(torch.tensor(config.loss_init_w))
-        self.b_neg = nn.Parameter(torch.tensor(config.loss_init_b))
-
-    def _process_pos(self, pos):
-        return self.w_pos * pos + self.b_pos
-
-    def _process_neg(self, neg):
-        return self.w_neg * neg + self.b_neg
 
 
 class AMSoftmaxLoss(NormalizedSoftmaxLoss):
@@ -148,9 +112,8 @@ class AMSoftmaxLoss(NormalizedSoftmaxLoss):
         self.margin = config.loss_margin
         self.scale = config.loss_scale
 
-        if config.loss_learnable_hyperparams:
+        if config.loss_margin_learnable:
             self.margin = nn.Parameter(torch.tensor(self.margin))
-            self.scale = nn.Parameter(torch.tensor(self.scale))
 
     def _process_pos(self, pos):
         return pos - self.margin
@@ -177,9 +140,6 @@ class CustomLoss(nn.Module):
 
     _LOSS_METHODS = {
         'nsoftmax': NormalizedSoftmaxLoss,
-        'triplet': TripletLoss,
-        'angular': AngularLoss,
-        'angular_distinctive': AngularDistinctiveLoss,
         'amsoftmax': AMSoftmaxLoss,
         'aamsoftmax': AAMSoftmaxLoss
     }
@@ -189,14 +149,13 @@ class CustomLoss(nn.Module):
 
         self.enable_multi_views = config.enable_multi_views
 
-        self.loss_fn = self._LOSS_METHODS[config.loss_name](config)
-
-        self.vicreg_scale = config.loss_vicreg_scale
-        self.vicreg_loss_fn = VICRegLoss(
-            config.loss_vicreg_inv_weight,
-            config.loss_vicreg_var_weight,
-            config.loss_vicreg_cov_weight
+        self.reg = (
+            MHERegularization(config)
+            if config.loss_reg_weight > 0
+            else None
         )
+
+        self.loss_fn = self._LOSS_METHODS[config.loss_name](config)
 
     def forward(self, Z):
         # Z shape: (N, V, C)
@@ -205,12 +164,12 @@ class CustomLoss(nn.Module):
         LOCAL_VIEWS = Z[:, 2:]
 
         loss = self.loss_fn(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_diag=True)
+        if self.reg:
+            loss += self.reg(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_diag=True)
 
-        # Multi views
         if self.enable_multi_views:
             loss += self.loss_fn(LOCAL_VIEWS, GLOBAL_VIEWS, discard_diag=False)
-            loss /= 2
+            if self.reg:
+                loss += self.reg(LOCAL_VIEWS, GLOBAL_VIEWS, discard_diag=False)
 
-        loss += self.vicreg_scale * self.vicreg_loss_fn(Z[:, 0], Z[:, 1])
-        
         return loss
