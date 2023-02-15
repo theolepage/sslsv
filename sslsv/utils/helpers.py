@@ -79,7 +79,7 @@ def get_sub_config(data, key, registered_dict):
     return res
 
 
-def load_config(path):
+def load_config(path, verbose=True):
     load_dotenv()
     
     data = ruamel.yaml.safe_load(open(path, 'r'))
@@ -105,7 +105,7 @@ def load_config(path):
     Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
     # Print config
-    if is_main_process():
+    if is_main_process() and verbose:
         pp.install_extras(include=['dataclasses'])
         pp.pprint(config)
 

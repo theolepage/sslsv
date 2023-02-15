@@ -57,8 +57,8 @@ class LIM(BaseModel):
         accuracy = InfoNCELoss.determine_accuracy(Y_1, Y_2)
             
         metrics = {
-            'train_loss': loss,
-            'train_accuracy': accuracy
+            'train/loss': loss,
+            'train/accuracy': accuracy
         }
 
         return loss, metrics

@@ -44,8 +44,8 @@ class Classifier(nn.Module):
         loss, accuracy = self.infonce((Z_1, Z_2))
 
         metrics = {
-            'train_loss': loss,
-            'train_accuracy': accuracy
+            'train/loss': loss,
+            'train/accuracy': accuracy
         }
 
         return loss, metrics

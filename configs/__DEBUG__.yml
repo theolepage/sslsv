@@ -14,7 +14,8 @@ evaluate:
   batch_size: 16
 data:
   siamese: true
-  train: './data/voxceleb1_train_list'
+  train: 'voxceleb1_train'
+  val: 'voxceleb1_test_O_DEBUG'
   max_samples: 12
   wav_augment:
     enable: false

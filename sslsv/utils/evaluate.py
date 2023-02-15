@@ -1,6 +1,3 @@
-import os
-from operator import itemgetter
-
 import torch
 import torch.nn.functional as F
 
@@ -30,6 +27,7 @@ def extract_embeddings__(curr_batch_data, model, config):
 
 def extract_embeddings_(
     model,
+    trials,
     config,
     frame_length,
     batch_size,
@@ -37,10 +35,11 @@ def extract_embeddings_(
 ):
     # Get a list of unique utterances
     utterances = set()
-    for line in open(config.data.trials):
-        target, a, b = line.rstrip().split(' ')
-        utterances.add(a)
-        utterances.add(b)
+    for trial_file in trials:
+        for line in open(config.data.base_path / trial_file):
+            target, a, b = line.rstrip().split(' ')
+            utterances.add(a)
+            utterances.add(b)
 
     # Determine embeddings for each unique utterance
     embeddings = {}
@@ -55,7 +54,7 @@ def extract_embeddings_(
             curr_batch_ids, curr_batch_data = [], []
 
         # Store current utterance id and data
-        audio_path = os.path.join(config.data.base_path, 'voxceleb1', utterance)
+        audio_path = config.data.base_path / 'voxceleb1' / utterance
         data = load_audio(audio_path, frame_length, num_frames)
         curr_batch_ids.append(utterance)
         curr_batch_data.append(torch.FloatTensor(data))
@@ -70,11 +69,12 @@ def extract_embeddings_(
     return embeddings
 
 
-def extract_embeddings(model, config):
+def extract_embeddings(model, trials, config):
     embeddings = []
     embeddings.append(
         extract_embeddings_(
             model,
+            trials,
             config,
             frame_length=config.evaluate.frame_length,
             batch_size=config.evaluate.batch_size,
@@ -85,6 +85,7 @@ def extract_embeddings(model, config):
         embeddings.append(
             extract_embeddings_(
                 model,
+                trials,
                 config,
                 frame_length=None,
                 batch_size=1,
@@ -136,18 +137,35 @@ def compute_min_dcf(fprs, fnrs, p_target=0.01, c_miss=1, c_fa=1):
     return min_dcf, min_c_det_idx
 
 
-def evaluate(embeddings, trials):
-    scores, labels = score_trials(trials, embeddings)
+def evaluate(model, config, validation=False):
+    trials = [config.data.val] if validation else config.data.test
 
-    fprs, tprs, thresholds = roc_curve(
-        labels,
-        scores,
-        pos_label=1,
-        drop_intermediate=False
-    )
-    fnrs = 1 - tprs
+    embeddings = extract_embeddings(model, trials, config)
 
-    eer, _ = compute_eer(fprs, fnrs)
-    min_dcf, _ = compute_min_dcf(fprs, fnrs, p_target=0.01)
+    # Determine metrics
+    metrics = {}
+    for trial_file in trials:
+        scores, labels = score_trials(
+            config.data.base_path / trial_file,
+            embeddings
+        )
 
-    return { 'test_eer': eer, 'test_min_dcf_001': min_dcf }
+        fprs, tprs, thresholds = roc_curve(
+            labels,
+            scores,
+            pos_label=1,
+            drop_intermediate=False
+        )
+        fnrs = 1 - tprs
+
+        eer, _ = compute_eer(fprs, fnrs)
+        mindcf, _ = compute_min_dcf(fprs, fnrs, p_target=0.01)
+
+        key = 'val' if validation else f'test/{trial_file}'
+        metrics = {
+            **metrics,
+            f'{key}/eer': eer,
+            f'{key}/mindcf': mindcf
+        }
+
+    return metrics, embeddings

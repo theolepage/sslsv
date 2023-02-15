@@ -134,8 +134,8 @@ class DINO(BaseMomentumModel):
         loss = self.loss_fn(S, T)
 
         metrics = {
-            'train_loss': loss,
-            'tau': self.momentum_updater.tau
+            'train/loss': loss,
+            'train/tau': self.momentum_updater.tau
         }
 
         return loss, metrics

@@ -4,6 +4,6 @@ model:
   type: 'supervised'
   nb_speakers: 1211
 data:
-  train: './data/voxceleb1_train_list'
+  train: 'voxceleb1_train'
   wav_augment:
     enable: true

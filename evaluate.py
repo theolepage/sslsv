@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 
 from sslsv.utils.helpers import load_config, load_model
-from sslsv.utils.evaluate import extract_embeddings, evaluate as evaluate_
+from sslsv.utils.evaluate import evaluate as evaluate_
 
 
 def evaluate(args):
@@ -16,16 +16,15 @@ def evaluate(args):
     model.cuda()
     model.eval()
 
-    # Exract and save embeddings
+    # Show metrics on speaker verification
+    metrics, embeddings = evaluate_(model, config)
+    print('Metrics:', metrics)
+
+    # Save embeddings
     embeddings_save_path = checkpoint_dir + '/embeddings.pkl'
-    embeddings = extract_embeddings(model, config)
     with open(embeddings_save_path, 'wb') as f:
         pickle.dump(embeddings, f, protocol=pickle.HIGHEST_PROTOCOL)
     print('Speaker embeddings saved to {}'.format(embeddings_save_path))
-
-    # Show metrics on speaker verification
-    test_metrics = evaluate_(embeddings, config.data.trials)
-    print('Metrics:', test_metrics)
 
 
 if __name__ == "__main__":

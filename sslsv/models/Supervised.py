@@ -57,8 +57,8 @@ class Supervised(BaseModel):
         loss, accuracy = self.loss_fn(Z, labels)
 
         metrics = {
-            'train_loss': loss,
-            'train_accuracy': accuracy
+            'train/loss': loss,
+            'train/accuracy': accuracy
         }
 
         return loss, metrics

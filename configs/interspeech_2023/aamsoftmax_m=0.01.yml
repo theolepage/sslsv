@@ -11,6 +11,6 @@ training:
   epochs: 200
 data:
   siamese: true
-  train: './data/voxceleb1_train_list'
+  train: 'voxceleb1_train'
   wav_augment:
     enable: true

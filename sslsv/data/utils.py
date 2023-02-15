@@ -1,39 +1,10 @@
 import numpy as np
 import soundfile as sf
-from io import BytesIO
-import os
-from tqdm import tqdm
-from glob import glob
 
-class AudioCache:
-    data = {}
-
-def create_audio_cache(dataset_config, verbose=False):
-    if not dataset_config.enable_cache:
-        return
-
-    base_path = dataset_config.base_path
-
-    files = []
-    files += glob(os.path.join(base_path, 'simulated_rirs', '*/*/*.wav'))
-    files += glob(os.path.join(base_path, 'musan_split', '*/*/*.wav'))
-    files += glob(os.path.join(base_path, 'voxceleb1', '*/*/*.wav'))
-    if 'voxceleb2' in dataset_config.trials:
-        glob(os.path.join(base_path, 'voxceleb2', '*/*/*.wav'))
-    
-    print('Creating cache of audio files...')
-    if verbose: files = tqdm(files)
-    for path in files:
-        with open(path, 'rb') as file_data:
-            AudioCache.data[path] = file_data.read()
 
 def read_audio(path):
-    if AudioCache.data:
-        if path in AudioCache.data:
-            return sf.read(BytesIO(AudioCache.data[path]))
-        else:
-            raise Exception(f'File {path} was not cached')
     return sf.read(path)
+
 
 def load_audio(path, frame_length, num_frames=1, min_length=None):
     audio, sr = read_audio(path)

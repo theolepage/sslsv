@@ -70,8 +70,8 @@ class MultiLosses(BaseSiameseModel):
         Y_accuracy = InfoNCELoss.determine_accuracy(Y_1, Y_2)
         metrics = {
             **metrics,
-            'train_Y_loss': Y_loss,
-            'train_Y_accuracy': Y_accuracy
+            'train/Y_loss': Y_loss,
+            'train/Y_accuracy': Y_accuracy
         }
         loss += Y_loss
 
@@ -81,14 +81,14 @@ class MultiLosses(BaseSiameseModel):
             Z_accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)
             metrics = {
                 **metrics,
-                'train_Z_loss': Z_loss,
-                'train_Z_accuracy': Z_accuracy
+                'train/Z_loss': Z_loss,
+                'train/Z_accuracy': Z_accuracy
             }
             loss += Z_loss
 
         metrics = {
             **metrics,
-            'train_loss': loss
+            'train/loss': loss
         }
 
         return loss, metrics

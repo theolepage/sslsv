@@ -7,6 +7,6 @@ training:
   weight_decay: 0.00001
 data:
   siamese: true
-  train: './data/voxceleb1_train_list'
+  train: 'voxceleb1_train'
   wav_augment:
     enable: true

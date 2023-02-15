@@ -1,5 +1,6 @@
-from dataclasses import dataclass
-from typing import Tuple
+from dataclasses import dataclass, field
+from typing import Tuple, List
+from pathlib import Path
 
 
 @dataclass
@@ -9,7 +10,7 @@ class TrainingConfig:
     batch_size: int = 256
     learning_rate: float = 0.001
     patience: int = 300
-    tracked_metric: str = 'test_eer'
+    tracked_metric: str = 'val/eer'
     tracked_mode: str = 'min'
     optimizer: str = 'adam'
     weight_decay: float = 0
@@ -38,9 +39,15 @@ class DataConfig:
     wav_augment: WavAugmentConfig = None
     frame_length: int = 32000
     max_samples: int = None
-    train: str = './data/voxceleb2_train_list'
-    trials: str = './data/trials'
-    base_path: str = './data/'
+    train: str = 'voxceleb2_train'
+    val: str = 'voxceleb1_test_O'
+    test: List[str] = field(default_factory=lambda: [
+        'voxceleb1_test_O',
+        'voxceleb1_test_H',
+        'voxceleb1_test_E',
+        'voxsrc2021_val'
+    ])
+    base_path: Path = Path('./data/')
     enable_cache: bool = False
     num_workers: int = 8
     pin_memory: bool = False

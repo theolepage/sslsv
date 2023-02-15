@@ -29,11 +29,10 @@ class AudioDataset(Dataset):
         self.labels = []
         self.nb_classes = 0
         labels_id = {}
-        for line in open(self.config.train):
+        for line in open(self.config.base_path / self.config.train):
             label, file = line.rstrip().split()
 
-            path = os.path.join(self.config.base_path, file)
-            self.files.append(path)
+            self.files.append(self.config.base_path / file)
 
             if label not in labels_id:
                 labels_id[label] = self.nb_classes

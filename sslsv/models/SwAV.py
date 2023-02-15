@@ -132,7 +132,7 @@ class SwAV(BaseModel):
             self.queue[1, :N] = Z_2.detach()
 
         metrics = {
-            'train_loss': loss
+            'train/loss': loss
         }
 
         return loss, metrics

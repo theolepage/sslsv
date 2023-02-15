@@ -45,9 +45,14 @@ AUG_EXTRACT = [
 ]
 
 TRIALS_URL      = 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test2.txt'
-TRIALS_FILENAME = 'trials'
-VOX1_TRAIN_LIST = 'voxceleb1_train_list'
-VOX2_TRAIN_LIST = 'voxceleb2_train_list'
+TRIALS = [
+    ('voxceleb1_test_O', 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test2.txt'),
+    ('voxceleb1_test_H', 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/list_test_hard2.txt'),
+    ('voxceleb1_test_E', 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/list_test_all2.txt'),
+    ('voxsrc2021_val',   'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/data_workshop_2021/voxsrc2021_val.txt')
+]
+VOX1_TRAIN_LIST = 'voxceleb1_train'
+VOX2_TRAIN_LIST = 'voxceleb2_train'
 
 
 def get_md5(path):
@@ -152,9 +157,9 @@ def split_2_ssd():
         shutil.copytree(src, dst)
 
 
-def create_vox1_train_list_file():
+def create_vox1_train_file():
     test_speakers = set()
-    with open(TRIALS_FILENAME) as trials:
+    with open(TRIALS[0][0]) as trials:
         for line in trials.readlines():
             parts = line.rstrip().split()
             spkr_id_a = parts[1].split('/')[0]
@@ -174,7 +179,7 @@ def create_vox1_train_list_file():
     out_file.close()
 
 
-def create_vox2_train_list_file():
+def create_vox2_train_file():
     files = glob.glob('voxceleb2/*/*/*.wav')
     files.sort()
     out_file = open(VOX2_TRAIN_LIST, 'w')
@@ -186,10 +191,11 @@ def create_vox2_train_list_file():
     out_file.close()
 
 
-def download_trials_file():
-    status = subprocess.call('wget %s -O %s' % (TRIALS_URL, TRIALS_FILENAME), shell=True)
-    if status != 0:
-        raise Exception('Download of %s failed' % TRIALS_FILENAME)
+def download_trials_files():
+    for filename, url in TRIALS:
+        status = subprocess.call('wget %s -O %s' % (url, filename), shell=True)
+        if status != 0:
+            raise Exception('Download of %s failed' % filename)
 
 
 if __name__ == "__main__":
@@ -212,6 +218,6 @@ if __name__ == "__main__":
     fix_aug_structure()
     split_musan()
 
-    download_trials_file()
-    create_vox1_train_list_file()
-    create_vox2_train_list_file()
+    download_trials_files()
+    create_vox1_train_file()
+    create_vox2_train_file()

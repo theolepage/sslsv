@@ -127,7 +127,7 @@ class DeepCluster(BaseModel):
         self.local_memory_embeddings[1, start_idx:end_idx] = Z_2.detach()
 
         metrics = {
-            'train_loss': loss
+            'train/loss': loss
         }
 
         return loss, metrics

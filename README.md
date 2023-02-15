@@ -84,21 +84,23 @@ data
 ├── simulated_rirs/
 ├── voxceleb1/
 ├── voxceleb2/
-├── trials
-├── voxceleb1_train_list
-└── voxceleb2_train_list
+├── voxceleb1_test_O
+├── voxceleb1_test_H
+├── voxceleb1_test_E
+├── voxceleb1_train
+└── voxceleb2_train
 ```
 
-Trials and train lists files are also automatically created with the following formats.
+Train and test lists files are also automatically created with the following formats.
 
-- `trials`
+- `voxceleb1_test_O`
     ```
     1 id10270/x6uYqmx31kE/00001.wav id10270/8jEAjG6SegY/00008.wav
     ...
     0 id10309/0cYFdtyWVds/00005.wav id10296/Y-qKARMSO7k/00001.wav
     ```
 
-- `voxceleb1_train_list` and `voxceleb2_train_list`
+- `voxceleb1_train` and `voxceleb2_train`
     ```
     id00012 voxceleb2/id00012/21Uxsk56VDQ/00001.wav
     ...
