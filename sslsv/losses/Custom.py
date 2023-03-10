@@ -104,6 +104,15 @@ class SNTXent(BaseLoss):
         return loss
 
 
+class NTXent(SNTXent):
+
+    def __init__(self, config):
+        super().__init__(config)
+
+    def forward(self, A, B, discard_diag):
+       return super().forward(A[:, 0:1], B[:, 1:2], discard_diag=False)
+
+
 class SNTXentAM(SNTXent):
 
     def __init__(self, config):
@@ -139,6 +148,7 @@ class SNTXentAAM(SNTXentAM):
 class CustomLoss(nn.Module):
 
     _LOSS_METHODS = {
+        'nt-xent': NTXent,
         'snt-xent': SNTXent,
         'snt-xent-am': SNTXentAM,
         'snt-xent-aam': SNTXentAAM
