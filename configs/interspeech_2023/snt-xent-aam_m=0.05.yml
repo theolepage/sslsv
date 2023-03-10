@@ -1,0 +1,14 @@
+wandb_project: 'sslsv_interspeech_2023'
+encoder:
+  type: 'resnet34'
+model:
+  type: 'custom'
+  loss_name: 'snt-xent-aam'
+  loss_margin: 0.05
+training:
+  epochs: 200
+data:
+  siamese: true
+  train: 'voxceleb1_train'
+  wav_augment:
+    enable: true

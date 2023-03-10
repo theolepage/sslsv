@@ -1,3 +1,5 @@
+import math
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -12,7 +14,7 @@ from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 @dataclass
 class CustomConfig(BaseModelConfig):
     
-    loss_name: str = 'nsoftmax'
+    loss_name: str = 'snt-xent'
 
     enable_multi_views: bool = False
 
@@ -31,6 +33,9 @@ class Custom(BaseModel):
 
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
+
+        self.epoch = 0
+        self.max_epochs = 0
 
         self.config = config
 
@@ -79,14 +84,35 @@ class Custom(BaseModel):
         ]
         return super().get_learnable_params() + extra_learnable_params
 
+    def on_train_epoch_start(self, epoch, max_epochs):
+        self.epoch = epoch
+        self.max_epochs = max_epochs
+
+    def _loss_margin_scheduler(self):
+        if self.config.loss_name != 'nt-xent-aam':
+            return self.config.loss_margin
+
+        if self.epoch > (self.max_epochs // 2):
+            return self.config.loss_margin
+
+        return (
+            self.config.loss_margin -
+            self.config.loss_margin *
+            (math.cos(math.pi * self.epoch / (self.max_epochs // 2)) + 1) / 2
+        )
+
     def train_step(self, Z, labels, step, samples):
+        loss_margin = self._loss_margin_scheduler()
+        self.loss_fn.loss_fn.margin = loss_margin
+
         loss = self.loss_fn(Z)
 
         accuracy = InfoNCELoss.determine_accuracy(Z[:, 0], Z[:, 1])
 
         metrics = {
             'train/loss': loss,
-            'train/accuracy': accuracy
+            'train/accuracy': accuracy,
+            'margin': loss_margin
         }
 
         return loss, metrics

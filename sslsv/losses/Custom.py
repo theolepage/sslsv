@@ -40,8 +40,8 @@ class BaseLoss(nn.Module):
         pos = logits[labels.bool()].view(V_A * N, -1)
         neg = logits[~labels.bool()].view(V_A * N, -1)
 
-        # pos: (V_A*N, 2) -> 2 positives or 1 positive (if discard_diag)
-        # neg: (V_A*N, V_B*N-2) -> V_B*N - 2 negatives
+        # pos: (V_A*N, V_B) -> V_B positives or V_B-1 positives (if discard_diag)
+        # neg: (V_A*N, V_B*N-V_B) -> V_B*(N-1) negatives 
 
         return pos, neg
 
@@ -64,7 +64,7 @@ class MHERegularization(BaseLoss):
         return loss
 
 
-class NormalizedSoftmaxLoss(BaseLoss):
+class SNTXent(BaseLoss):
 
     def __init__(self, config):
         super().__init__()
@@ -104,7 +104,7 @@ class NormalizedSoftmaxLoss(BaseLoss):
         return loss
 
 
-class AMSoftmaxLoss(NormalizedSoftmaxLoss):
+class SNTXentAM(SNTXent):
 
     def __init__(self, config):
         super().__init__(config)
@@ -119,7 +119,7 @@ class AMSoftmaxLoss(NormalizedSoftmaxLoss):
         return pos - self.margin
 
 
-class AAMSoftmaxLoss(AMSoftmaxLoss):
+class SNTXentAAM(SNTXentAM):
 
     def __init__(self, config):
         super().__init__(config)
@@ -139,9 +139,9 @@ class AAMSoftmaxLoss(AMSoftmaxLoss):
 class CustomLoss(nn.Module):
 
     _LOSS_METHODS = {
-        'nsoftmax': NormalizedSoftmaxLoss,
-        'amsoftmax': AMSoftmaxLoss,
-        'aamsoftmax': AAMSoftmaxLoss
+        'snt-xent': SNTXent,
+        'snt-xent-am': SNTXentAM,
+        'snt-xent-aam': SNTXentAAM
     }
 
     def __init__(self, config):

@@ -24,7 +24,7 @@ class AudioPreEmphasis(nn.Module):
 @dataclass
 class BaseEncoderConfig(EncoderConfig):
 
-    encoder_dim: int = 1024
+    encoder_dim: int = 512
 
     extract_mel_features: bool = True
     mel_n_mels = 40

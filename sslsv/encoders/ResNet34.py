@@ -124,7 +124,7 @@ class ResNet34Config(BaseEncoderConfig):
     pooling: bool = True
     pooling_mode: str = 'sap'
 
-    base_dim: int = 32
+    base_dim: int = 16
 
 
 class ResNet34(BaseEncoder):

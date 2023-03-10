@@ -1,16 +1,15 @@
 wandb_project: 'sslsv_interspeech_2023'
 encoder:
   type: 'resnet34'
-  base_dim: 16
-  encoder_dim: 512
 model:
   type: 'custom'
-  loss_name: 'aamsoftmax'
-  loss_margin: 0.01
+  loss_name: 'snt-xent-am'
+  loss_margin: 0.0
+  loss_margin_learnable: true
 training:
   epochs: 200
 data:
   siamese: true
   train: 'voxceleb1_train'
   wav_augment:
-    enable: false
+    enable: true
