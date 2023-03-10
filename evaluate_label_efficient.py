@@ -1,70 +1,43 @@
+from dataclasses import dataclass
 import argparse
 from pathlib import Path
 
 import torch
 from torch import nn
 
-from sslsv.losses.InfoNCE import InfoNCE
+from sslsv.models.Supervised import Supervised
+from sslsv.configs import EncoderConfig
 from sslsv.utils.helpers import load_config, load_dataloader, load_model
 from sslsv.Trainer import Trainer
 
 
-class Classifier(nn.Module):
+@dataclass
+class ClassifierConfig:
 
-    def __init__(self, model, add_last_layer=False):
-        super().__init__()
-
-        self.add_last_layer = add_last_layer
-        self.model = model
-
-        self.infonce = InfoNCE()
-        if self.add_last_layer:
-            self.classifier_fc = nn.Linear(1024, 1024)
-
-    def forward(self, X, training=False):
-        if not training:
-            Z = self.model(X)
-            Z = self.classifier_fc(Z) if self.add_last_layer else Z
-            return Z
-
-        X_1 = X[:, 0, :]
-        X_2 = X[:, 1, :]
-
-        Z_1 = self.model(X_1)
-        Z_2 = self.model(X_2)
-
-        Z_1 = self.classifier_fc(Z_1) if self.add_last_layer else Z_1
-        Z_2 = self.classifier_fc(Z_2) if self.add_last_layer else Z_2
-
-        return Z_1, Z_2
-
-    def train_step(self, Z, step, samples):
-        Z_1, Z_2 = Z
-
-        loss, accuracy = self.infonce((Z_1, Z_2))
-
-        metrics = {
-            'train/loss': loss,
-            'train/accuracy': accuracy
-        }
-
-        return loss, metrics
+    nb_speakers: int = 1211
 
 
-def get_checkpoint_name(checkpoint_dir, nb_labels_per_spk, fine_tune, supervised):
-    checkpoint_dir += '_label-efficient-'
-    checkpoint_dir += str(nb_labels_per_spk) + '-'
+class Classifier(Supervised):
+
+    def __init__(self, config, model):
+        super().__init__(ClassifierConfig(), lambda: model.encoder)
+
+
+def get_config_name(config_name, nb_labels_per_spk, fine_tune, supervised):
+    config_name += '_label-efficient-'
+    config_name += str(nb_labels_per_spk) + '-'
     if supervised:
-        checkpoint_dir += 'supervised'
+        config_name += 'supervised'
     else:
-        checkpoint_dir += 'finetuned' if fine_tune else 'frozen'
-    return checkpoint_dir
+        config_name += 'finetuned' if fine_tune else 'frozen'
+    return config_name
 
 
 def train(args, nb_labels_per_spk, fine_tune=False, supervised=False):
     config, checkpoint_dir = load_config(args.config)
 
     config.data.wav_augment.enable = False
+    config.data.siamese = False
     config.training.optimizer = 'adam'
     config.training.epochs = args.epochs
     config.training.batch_size = args.batch_size
@@ -83,16 +56,16 @@ def train(args, nb_labels_per_spk, fine_tune=False, supervised=False):
 
     # Create classifier
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    add_last_layer = not fine_tune and not supervised
-    classifier = Classifier(model, add_last_layer).to(device)
+    classifier = Classifier(config, model).to(device)
     classifier = torch.nn.DataParallel(classifier)
 
-    checkpoint_dir = get_checkpoint_name(
-        checkpoint_dir,
+    config.name = get_config_name(
+        config.name,
         nb_labels_per_spk,
         fine_tune,
         supervised
     )
+    checkpoint_dir = './checkpoints/' + config.name
     Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(

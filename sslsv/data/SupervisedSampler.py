@@ -18,7 +18,7 @@ class SupervisedSampler(Sampler):
         self.epoch = epoch
 
     def __iter__(self):
-        rng = np.random.default_rng(seed=self.epoch)
+        rng = np.random.default_rng(seed=0)
         indices = rng.permutation(len(self.labels))
 
         # Create list of utterances for each speaker
@@ -38,11 +38,10 @@ class SupervisedSampler(Sampler):
             utterances = spk_to_utterances[key]
 
             nb_utt = min(len(utterances), self.nb_labels_per_spk)
-            nb_utt = nb_utt - nb_utt % 2
+            # nb_utt = nb_utt - nb_utt % 2
 
-            indices = np.arange(nb_utt).reshape((-1, 2))
-            for idx in indices:
-                x.append([utterances[i] for i in idx])
+            for idx in range(nb_utt):
+                x.append(utterances[idx])
                 y.append(i)
 
         # Shuffle indices and avoid having two pairs
@@ -50,10 +49,10 @@ class SupervisedSampler(Sampler):
         x_ = []
         y_ = []
         for i in rng.permutation(len(y)):
-            batch_start_i = len(y_) - len(y_) % self.batch_size
-            if y[i] not in y_[batch_start_i:]:
-                x_.append(x[i])
-                y_.append(y[i])
+            # batch_start_i = len(y_) - len(y_) % self.batch_size
+            # if y[i] not in y_[batch_start_i:]:
+            x_.append(x[i])
+            y_.append(y[i])
 
         self.count = len(x_) - len(x_) % self.batch_size
         return iter(x_[:self.count])
