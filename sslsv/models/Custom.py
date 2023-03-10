@@ -112,7 +112,7 @@ class Custom(BaseModel):
         metrics = {
             'train/loss': loss,
             'train/accuracy': accuracy,
-            'margin': loss_margin
+            'train/margin': loss_margin
         }
 
         return loss, metrics

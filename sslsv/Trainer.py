@@ -202,7 +202,7 @@ class Trainer:
                 validation=True
             )
 
-            metrics = {**train_metrics, 'lr': lr, **test_metrics}
+            metrics = {**train_metrics, 'train/lr': lr, **test_metrics}
 
             if is_main_process():
                 self.log_metrics(metrics)
