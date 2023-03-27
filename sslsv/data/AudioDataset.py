@@ -10,52 +10,56 @@ from sslsv.data.utils import load_audio
 
 class AudioDataset(Dataset):
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(
+        self,
+        base_path,
+        files,
+        labels=None,
+        frame_length=32000,
+        num_frames=1,
+        augmentation_config=None,
+        max_samples=None
+    ):
+        super().__init__()
+        
+        self.base_path = base_path
+        self.files = files
+        self.labels = labels
+        self.frame_length = frame_length
+        self.num_frames = num_frames
+        self.max_samples = max_samples
+        self.augmentation_config = augmentation_config
 
         # Create augmentation module
-        self.wav_augment = None
-        if self.config.wav_augment.enable:
-            self.wav_augment = AudioAugmentation(
-                self.config.wav_augment,
-                self.config.base_path
+        self.augmentation = None
+        if augmentation_config and augmentation_config.enable:
+            self.augmentation = AudioAugmentation(
+                augmentation_config,
+                self.base_path
             )
 
-        self.load_data()
-
-    def load_data(self):
-        # Create lists of audio paths and labels
-        self.files = []
-        self.labels = []
-        self.nb_classes = 0
-        labels_id = {}
-        for line in open(self.config.base_path / self.config.train):
-            label, file = line.rstrip().split()
-
-            self.files.append(self.config.base_path / file)
-
-            if label not in labels_id:
-                labels_id[label] = self.nb_classes
-                self.nb_classes += 1
-            self.labels.append(labels_id[label])
-
     def __len__(self):
-        if self.config.max_samples: return self.config.max_samples
-        return len(self.labels)
+        if self.max_samples:
+            return min(len(self.files), self.max_samples)
+        return len(self.files)
 
     def preprocess_data(self, data, augment=True):
-        assert data.ndim == 2 and data.shape[0] == 1 # (1, T)
-        if augment and self.wav_augment: data = self.wav_augment(data)        
+        if augment and self.augmentation:
+            assert data.ndim == 2 and data.shape[0] == 1 # (1, T)
+            data = self.augmentation(data)        
         return data
 
     def __getitem__(self, i):
         data = load_audio(
-            self.files[i],
-            frame_length=self.config.frame_length
-        ) # (1, T)
+            self.base_path / self.files[i],
+            frame_length=self.frame_length,
+            num_frames=self.num_frames
+        ) # (N, T)
 
         x = torch.FloatTensor(self.preprocess_data(data)).squeeze(0)
 
-        y = self.labels[i]
+        info = {'files': self.files[i]}
+        if self.labels:
+            info.update({'labels': self.labels[i]})
 
-        return i, x, y
+        return i, x, info

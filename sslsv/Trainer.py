@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, SGD
 from torch.cuda.amp import GradScaler, autocast
 
-from sslsv.utils.evaluate import extract_embeddings, evaluate
+from sslsv.utils.evaluate import evaluate
 from sslsv.utils.distributed import is_main_process, is_dist_initialized
 
 
@@ -43,13 +43,13 @@ class Trainer:
 
         max_steps = self.config.training.epochs * len(self.train_dataloader)
 
-        for step, (idx, X, labels) in enumerate(self.train_dataloader):
+        for step, (idx, X, info) in enumerate(self.train_dataloader):
             step_abs = self.epoch * len(self.train_dataloader) + step
 
             self.model.module.on_train_step_start(step_abs, max_steps)
 
             X = X.to(self.device)
-            labels = labels.to(self.device)
+            labels = info['labels'].to(self.device)
 
             # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):
@@ -155,7 +155,7 @@ class Trainer:
         else:
             print(
                 f'\n=> {self.config.training.tracked_metric}'
-                f' did not improved from {self.best_metric}'
+                f' did not improve from {self.best_metric}'
             )
             self.nb_epochs_remaining += 1
         self.save_checkpoint('latest')
@@ -199,10 +199,12 @@ class Trainer:
             test_metrics, _ = evaluate(
                 self.model,
                 self.config,
-                validation=True
+                self.device,
+                validation=True,
+                verbose=False
             )
 
-            metrics = {**train_metrics, 'train/lr': lr, **test_metrics}
+            metrics = {**train_metrics, 'lr': lr, **test_metrics}
 
             if is_main_process():
                 self.log_metrics(metrics)

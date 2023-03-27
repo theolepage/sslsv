@@ -12,3 +12,5 @@ dacite
 prettyprinter
 tqdm
 python-dotenv
+
+speechbrain

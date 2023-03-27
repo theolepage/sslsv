@@ -3,11 +3,11 @@ encoder:
   type: 'resnet34'
 model:
   type: 'custom'
-  loss_name: 'aamsoftmax'
-  loss_reg_weight: 0.1
-  enable_projector: false
-  enable_multi_views: true
-  loss_margin_learnable: true
+  loss_name: 'nt-xent'
+  loss_reg_weight: 0.0
+  enable_projector: true
+  enable_multi_views: false
+  loss_margin_learnable: false
 training:
   batch_size: 4
 evaluate:
@@ -17,5 +17,5 @@ data:
   train: 'voxceleb1_train'
   val: 'voxceleb1_test_O_DEBUG'
   max_samples: 12
-  wav_augment:
+  augmentation:
     enable: false

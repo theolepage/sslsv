@@ -5,5 +5,5 @@ model:
   nb_speakers: 1211
 data:
   train: 'voxceleb1_train'
-  wav_augment:
+  augmentation:
     enable: true

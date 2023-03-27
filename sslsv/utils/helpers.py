@@ -67,6 +67,10 @@ REGISTERED_MODELS = {
 }
 
 
+def get_checkpoint_dir(config):
+    return './checkpoints/' + config.name
+
+
 def get_sub_config(data, key, registered_dict):
     type_ = data[key]['type']
     if type_ not in registered_dict.keys():
@@ -101,7 +105,7 @@ def load_config(path, verbose=True):
     torch.manual_seed(seed)
 
     # Create checkpoint dir
-    checkpoint_dir = './checkpoints/' + config.name
+    checkpoint_dir = get_checkpoint_dir(config)
     Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
     # Print config
@@ -119,11 +123,34 @@ def seed_dataloader_worker(worker_id):
 
 
 def load_dataloader(config, nb_labels_per_spk=None):
-    train_dataset = (
-        SiameseAudioDataset(config.data)
-        if config.data.siamese
-        else AudioDataset(config.data)
+    train_files = []
+    train_labels = []
+    nb_classes = 0
+    labels_id = {}
+    for line in open(config.data.base_path / config.data.train):
+        label, file = line.rstrip().split()
+
+        train_files.append(file)
+
+        if label not in labels_id:
+            labels_id[label] = nb_classes
+            nb_classes += 1
+        train_labels.append(labels_id[label])
+    
+    train_dataset_cls = (
+        SiameseAudioDataset if config.data.siamese
+        else AudioDataset
     )
+    train_dataset = train_dataset_cls(
+        base_path=config.data.base_path,
+        files=train_files,
+        labels=train_labels,
+        frame_length=config.data.frame_length,
+        num_frames=1,
+        augmentation_config=config.data.augmentation,
+        max_samples=config.data.max_samples
+    )
+
     shuffle = True
     batch_size = config.training.batch_size
     sampler = None

@@ -36,7 +36,7 @@ def get_config_name(config_name, nb_labels_per_spk, fine_tune, supervised):
 def train(args, nb_labels_per_spk, fine_tune=False, supervised=False):
     config, checkpoint_dir = load_config(args.config)
 
-    config.data.wav_augment.enable = False
+    config.data.augmentation.enable = False
     config.data.siamese = False
     config.training.optimizer = 'adam'
     config.training.epochs = args.epochs

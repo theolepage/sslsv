@@ -18,7 +18,7 @@ class TrainingConfig:
 
 
 @dataclass
-class WavAugmentConfig:
+class AudioAugmentationConfig:
 
     enable: bool = True
     rir: bool = True
@@ -36,16 +36,16 @@ class WavAugmentConfig:
 class DataConfig:
 
     siamese: bool = False
-    wav_augment: WavAugmentConfig = None
+    augmentation: AudioAugmentationConfig = None
     frame_length: int = 32000
     max_samples: int = None
     train: str = 'voxceleb2_train'
     val: str = 'voxceleb1_test_O'
     test: List[str] = field(default_factory=lambda: [
         'voxceleb1_test_O',
-        'voxceleb1_test_H',
-        'voxceleb1_test_E',
-        'voxsrc2021_val'
+        # 'voxceleb1_test_H',
+        # 'voxceleb1_test_E',
+        # 'voxsrc2021_val'
     ])
     base_path: Path = Path('./data/')
     enable_cache: bool = False
@@ -56,11 +56,15 @@ class DataConfig:
 @dataclass
 class EvaluateConfig:
 
+    method: str = 'plda'
     batch_size: int = 64
     num_frames: int = 6
     frame_length: int = 32000
     mean_of_features: bool = True
-    average_with_full_length: bool = False
+
+    mindcf_p_target: float = 0.01
+    mindcf_c_miss: float = 1
+    mindcf_c_fa: float = 1
 
 
 @dataclass

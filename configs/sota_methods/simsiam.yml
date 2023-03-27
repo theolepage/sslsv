@@ -6,5 +6,5 @@ model:
 data:
   siamese: true
   train: 'voxceleb1_train'
-  wav_augment:
+  augmentation:
     enable: true

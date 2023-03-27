@@ -34,27 +34,37 @@ def sample_frames(audio, frame_length):
 
 class SiameseAudioDataset(AudioDataset):
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def __getitem__(self, i):
         if isinstance(i, int):
             data = load_audio(
-                self.files[i],
+                self.base_path / self.files[i],
                 frame_length=None,
-                min_length=2*self.config.frame_length
+                min_length=2*self.frame_length
             ) # (1, T)
-            frame1, frame2 = sample_frames(data, self.config.frame_length)
+            frame1, frame2 = sample_frames(data, self.frame_length)
             y = self.labels[i]
         else:
-            frame1 = load_audio(self.files[i[0]], self.config.frame_length)
-            frame2 = load_audio(self.files[i[1]], self.config.frame_length)
+            frame1 = load_audio(
+                self.base_path / self.files[i[0]],
+                frame_length=self.frame_length
+            )
+            frame2 = load_audio(
+                self.base_path / self.files[i[1]],
+                frame_length=self.frame_length
+            )
             y = self.labels[i[0]]
 
-        X = np.concatenate((
+        x = np.concatenate((
             self.preprocess_data(frame1),
             self.preprocess_data(frame2)
         ), axis=0)
-        X = torch.FloatTensor(X)
+        x = torch.FloatTensor(x)
 
-        return i, X, y
+        info = {'files': self.files[i]}
+        if self.labels:
+            info.update({'labels': self.labels[i]})
+
+        return i, x, info
