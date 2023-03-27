@@ -56,11 +56,14 @@ class DataConfig:
 @dataclass
 class EvaluateConfig:
 
-    method: str = 'plda'
+    method: str = 'cosine'
     batch_size: int = 64
     num_frames: int = 6
     frame_length: int = 32000
     mean_of_features: bool = True
+
+    score_norm: str = None#'s-norm'
+    score_norm_cohort_size: int = 20000
 
     mindcf_p_target: float = 0.01
     mindcf_c_miss: float = 1
