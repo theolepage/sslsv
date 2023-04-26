@@ -45,7 +45,8 @@ class DataConfig:
         'voxceleb1_test_O',
         # 'voxceleb1_test_H',
         # 'voxceleb1_test_E',
-        # 'voxsrc2021_val'
+        # 'voxsrc2021_val',
+        # 'voices2019_dev'
     ])
     base_path: Path = Path('./data/')
     enable_cache: bool = False

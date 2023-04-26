@@ -76,23 +76,23 @@ class BaseEvaluation:
         return embeddings
 
     def evaluate(self, trials_path):
-        scores, labels = [], []
-        
+        trials, all_scores, all_targets = {}, [], []
         with open(trials_path) as f:
-            trials = f.readlines()
-        
-        trials = tqdm(trials, desc='Computing scores') if self.verbose else trials
-        for trial in trials:
-            target, a, b = trial.rstrip().split(' ')
+            lines = f.readlines()
+        for line in lines: #tqdm(lines, desc='Computing scores')
+            target, enrol, test = line.rstrip().split(' ')
 
-            # FIXME: trials lists do not contain `voxceleb1` path prefix
-            a = f'voxceleb1/{a}'
-            b = f'voxceleb1/{b}'
+            score = self._get_score(enrol, test)
+            target = int(target)
 
-            scores.append(self._get_score(a, b))
-            labels.append(int(target))
+            all_scores.append(score)
+            all_targets.append(target)
 
-        return scores, labels
+            if enrol not in trials: trials[enrol] = ([], [])
+            trials[enrol][0].append(target)
+            trials[enrol][1].append(score)
+
+        return trials, all_scores, all_targets
 
 
 class CosineEvaluation(BaseEvaluation):
@@ -114,7 +114,7 @@ class CosineEvaluation(BaseEvaluation):
 
     def _extract_test_embeddings(self, trials):
         test_files = list(dict.fromkeys([
-            f'voxceleb1/{line.rstrip().split()[i]}'
+            line.rstrip().split()[i]
             for trial_file in trials
             for line in open(self.config.data.base_path / trial_file)
             for i in (1, 2)
@@ -268,13 +268,60 @@ class PLDAEvaluation(BaseEvaluation):
         return self.plda_scores.scoremat[i, j].item()
 
 
+def compute_error_rates(scores, targets):
+    scores = np.array(scores)
+    targets = np.array(targets)
+
+    nb_target_scores = len(scores[targets == 1])
+    nb_nontarget_scores = len(scores[targets == 0])
+
+    sorted_idx = np.argsort(scores)
+
+    # Determine the number of positives that will be classified
+    # as negatives as the score/threshold increases. 
+    sum_fn = np.cumsum(targets[sorted_idx])
+    
+    # Determine the number of negatives that will be classified
+    # as positives as the score/threshold increases. 
+    sum_fp = np.cumsum(np.where(targets[sorted_idx] == 0, 1, 0))
+
+    fnrs = np.empty(len(scores) + 1)
+    fnrs[0] = 0
+    fnrs[1:] = sum_fn / nb_target_scores
+    
+    fprs = np.empty(len(scores) + 1)
+    fprs[0] = 1
+    fprs[1:] = (nb_nontarget_scores - sum_fp) / nb_nontarget_scores
+
+    return fprs, fnrs, scores[sorted_idx]
+
+
+def compute_cllr(scores, labels):
+    scores = np.array(scores)
+    labels = np.array(labels)
+
+    target_llrs = scores[labels == 1]
+    nontarget_llrs = scores[labels == 0]
+
+    def neglogsigmoid(lodds):
+        # -log(sigmoid(x))
+        return np.log1p(np.exp(-lodds))
+
+    cllr = 0.5 * (
+        np.mean(neglogsigmoid(target_llrs)) +
+        np.mean(neglogsigmoid(-nontarget_llrs))
+    ) / np.log(2)
+
+    return cllr
+
+
 def compute_eer(fprs, fnrs):
     idx = np.nanargmin(np.abs(fnrs - fprs))
     eer  = max(fprs[idx], fnrs[idx]) * 100
     return eer, idx
 
 
-def compute_min_dcf(fprs, fnrs, p_target=0.01, c_miss=1, c_fa=1):
+def compute_mindcf(fprs, fnrs, p_target=0.01, c_miss=1, c_fa=1):
     # Equations are from Section 3 of
     # NIST 2016 Speaker Recognition Evaluation Plan
 
@@ -292,6 +339,35 @@ def compute_min_dcf(fprs, fnrs, p_target=0.01, c_miss=1, c_fa=1):
     min_dcf = min_c_det / c_def
 
     return min_dcf, min_c_det_idx
+
+
+def compute_actdcf(fprs, fnrs, sorted_scores, p_target=0.01, c_miss=1, c_fa=1):
+    beta = np.log((c_fa / c_miss) * (1 - p_target) / p_target)
+    i = sorted_scores.searchsorted(beta).item()
+
+    c_det = c_miss * fnrs[i] * p_target + c_fa * fprs[i] * (1 - p_target)
+
+    c_def = min(p_target, 1 - p_target)
+    act_dcf = c_det / c_def
+
+    return act_dcf
+
+
+def compute_avgrprec(trials):
+    rprec = []
+
+    for e, (targets, scores) in trials.items():
+        r = sum(targets)
+        if r == 0: continue
+
+        targets_sorted_by_scores = [
+            targets[i]
+            for i in np.argsort(scores)
+        ]
+        rprec.append(sum(targets_sorted_by_scores[-r:]) / r)
+
+    avgrprec = np.mean(rprec)
+    return avgrprec
 
 
 def evaluate(model, config, device, validation=False, verbose=True):
@@ -317,33 +393,40 @@ def evaluate(model, config, device, validation=False, verbose=True):
     evaluation.prepare(trials)
 
     metrics = {}
-    for trial_file in trials:
-        trial_file = config.data.base_path / trial_file
-        scores, labels = evaluation.evaluate(trial_file)
-
-        fprs, tprs, thresholds = roc_curve(
-            labels,
-            scores,
-            pos_label=1,
-            drop_intermediate=False
+    for file in trials:
+        trials, scores, targets = evaluation.evaluate(
+            config.data.base_path / file
         )
-        fnrs = 1 - tprs
+
+        fprs, fnrs, sorted_scores = compute_error_rates(scores, targets)
 
         eer, _ = compute_eer(fprs, fnrs)
-
-        mindcf, _ = compute_min_dcf(
+        mindcf, _ = compute_mindcf(
             fprs,
             fnrs,
             p_target=config.evaluate.mindcf_p_target,
             c_miss=config.evaluate.mindcf_c_miss,
             c_fa=config.evaluate.mindcf_c_fa
         )
+        actdcf = compute_actdcf(
+            fprs,
+            fnrs,
+            sorted_scores,
+            p_target=config.evaluate.mindcf_p_target,
+            c_miss=config.evaluate.mindcf_c_miss,
+            c_fa=config.evaluate.mindcf_c_fa
+        )
+        cllr = compute_cllr(scores, targets)
+        avgrprec = compute_avgrprec(trials)
 
-        key = 'val' if validation else f'test/{trial_file}'
+        key = 'val' if validation else f'test/{file}'
         metrics = {
             **metrics,
             f'{key}/eer': eer,
-            f'{key}/mindcf': mindcf
+            f'{key}/mindcf': mindcf,
+            f'{key}/cllr': cllr,
+            # f'{key}/actdcf': actdcf,
+            # f'{key}/avgrprec': avgrprec
         }
 
     return metrics, evaluation.test_embeddings

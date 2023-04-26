@@ -7,6 +7,21 @@ from sslsv.utils.helpers import load_config, load_model
 from sslsv.utils.evaluate import evaluate as evaluate_
 
 
+def print_metrics(metrics):
+    test_sets = set([k.split('/')[1] for k in metrics.keys()])
+    for test_set in test_sets:
+        print(f'- {test_set}')
+        for k, v in metrics.items():
+            metric_name = k.split('/')[2]
+            precision = 2 if metric_name == 'eer' else 4
+            space = ' ' * (
+                3 +
+                max([len(k.split('/')[2]) for k in metrics.keys()]) -
+                len(metric_name)
+            )
+            print(f'    {metric_name}:{space}{round(v, precision)}')
+
+
 def evaluate(args):
     config, checkpoint_dir = load_config(
         args.config,
@@ -29,10 +44,11 @@ def evaluate(args):
         device,
         verbose=not args.silent
     )
-    if not args.silent: print('Metrics', '=' * 35)
-    for k, v in metrics.items():
-        r = 2 if k.split('/')[-1] == 'eer' else 4
-        print(k, round(v, r))
+
+    if args.silent:
+        print(metrics)
+    else:
+        print_metrics(metrics)
 
     if args.save:
         embeddings_save_path = checkpoint_dir + '/embeddings.pkl'
