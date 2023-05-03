@@ -29,8 +29,9 @@ class BaseEncoderConfig(EncoderConfig):
     extract_mel_features: bool = True
     mel_n_mels = 40
     mel_n_fft = 512
-    mel_win_length = 400 # 25ms
-    mel_hop_length = 160 # 10ms
+    mel_win_length = 400     # 25ms
+    mel_hop_length = 160     # 10ms
+    mel_sample_rate = 16000  # 16kHz
 
 
 class BaseEncoder(nn.Module):
@@ -48,7 +49,8 @@ class BaseEncoder(nn.Module):
                     win_length=config.mel_win_length,
                     hop_length=config.mel_hop_length,
                     window_fn=torch.hamming_window,
-                    n_mels=config.mel_n_mels
+                    n_mels=config.mel_n_mels,
+                    sample_rate=config.mel_sample_rate
                 )
             )
             self.instance_norm = nn.InstanceNorm1d(config.mel_n_mels)

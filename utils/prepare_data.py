@@ -44,13 +44,13 @@ AUG_EXTRACT = [
     'musan.tar.gz'
 ]
 
-TRIALS_URL      = 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test2.txt'
 TRIALS = [
     ('voxceleb1_test_O', 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test2.txt'),
     ('voxceleb1_test_H', 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/list_test_hard2.txt'),
     ('voxceleb1_test_E', 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/list_test_all2.txt'),
     ('voxsrc2021_val',   'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/data_workshop_2021/voxsrc2021_val.txt')
 ]
+
 VOX1_TRAIN_LIST = 'voxceleb1_train'
 VOX2_TRAIN_LIST = 'voxceleb2_train'
 

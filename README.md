@@ -76,7 +76,7 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
 
 [VoxCeleb1](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1.html) and [VoxCeleb2](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox2.html) are used for our experiments and we rely on [MUSAN](http://www.openslr.org/17/) and [Room Impulse Response and Noise Database](https://www.openslr.org/28/) for data augmentation.
 
-To download, extract and prepare all datasets run `python prepare_data.py data/`.  The `data/` directory will have the structure detailed below.
+To download, extract and prepare all datasets run `python utils/prepare_data.py data/`.  The `data/` directory will have the structure detailed below.
 
 ```
 data
@@ -87,11 +87,12 @@ data
 ├── voxceleb1_test_O
 ├── voxceleb1_test_H
 ├── voxceleb1_test_E
+├── voxsrc2021_val
 ├── voxceleb1_train
 └── voxceleb2_train
 ```
 
-Train and test lists files are also automatically created with the following formats.
+Train and trials lists files are also automatically created with the following formats.
 
 - `voxceleb1_test_O`
     ```
@@ -100,14 +101,16 @@ Train and test lists files are also automatically created with the following for
     0 id10309/0cYFdtyWVds/00005.wav id10296/Y-qKARMSO7k/00001.wav
     ```
 
-- `voxceleb1_train` and `voxceleb2_train`
+- `voxceleb1_train`
     ```
     id00012 voxceleb2/id00012/21Uxsk56VDQ/00001.wav
     ...
     id09272 voxceleb2/id09272/u7VNkYraCw0/00027.wav
     ```
 
-*Please refer to `prepare_data.py` script if you want further details about data preparation.*
+*Please refer to `utils/prepare_data.py` script if you want further details about data preparation.*
+
+Additionally, you can manually download and create trials with scrips in `utils/` for [The Speakers in the Wild Speaker Recognition Database (SITW)](http://www.speech.sri.com/projects/sitw/) and [Voices Obscured in Complex Environmental Settings (VOiCES)](https://iqtlabs.github.io/voices/).
 
 ## Usage
 
@@ -116,13 +119,6 @@ Start self-supervised training with `python train.py configs/vicreg.yml`.
 ### wandb
 
 Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments you first need to provide your API key with `wandb login API_KEY`.
-
-## To-Do
-
-- [ ] Handle CPU training
-- [ ] DDP: adapt losses and supervised sampler
-- [ ] Refactor evaluation (use AudioDataset class for handling test data)
-- [ ] Documentation, comments, typing, tests
 
 ## Credits
 
