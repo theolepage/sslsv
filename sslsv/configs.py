@@ -63,6 +63,14 @@ class EvaluateConfig:
     frame_length: int = 32000
     mean_of_features: bool = True
 
+    metrics: List[str] = field(default_factory=lambda: [
+        'eer',
+        'mindcf',
+        # 'actdcf',
+        # 'cllr',
+        # 'avgrprec'
+    ])
+
     score_norm: str = None#'s-norm'
     score_norm_cohort_size: int = 20000
 

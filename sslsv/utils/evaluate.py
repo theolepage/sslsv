@@ -318,7 +318,7 @@ def compute_cllr(scores, labels):
 def compute_eer(fprs, fnrs):
     idx = np.nanargmin(np.abs(fnrs - fprs))
     eer  = max(fprs[idx], fnrs[idx]) * 100
-    return eer, idx
+    return eer
 
 
 def compute_mindcf(fprs, fnrs, p_target=0.01, c_miss=1, c_fa=1):
@@ -338,7 +338,7 @@ def compute_mindcf(fprs, fnrs, p_target=0.01, c_miss=1, c_fa=1):
     c_def = min(c_miss * p_target, c_fa * (1 - p_target))
     min_dcf = min_c_det / c_def
 
-    return min_dcf, min_c_det_idx
+    return min_dcf
 
 
 def compute_actdcf(fprs, fnrs, sorted_scores, p_target=0.01, c_miss=1, c_fa=1):
@@ -370,6 +370,43 @@ def compute_avgrprec(trials):
     return avgrprec
 
 
+def get_metrics(config, trials, scores, targets, validation, file):
+    metrics = {}
+    key = 'val' if validation else f'test/{file}'
+
+    fprs, fnrs, sorted_scores = compute_error_rates(scores, targets)
+
+    if 'eer' in config.evaluate.metrics:
+        metrics[f'{key}/eer'] = compute_eer(fprs, fnrs)
+
+    if 'mindcf' in config.evaluate.metrics:
+        metrics[f'{key}/mindcf'] = compute_mindcf(
+            fprs,
+            fnrs,
+            p_target=config.evaluate.mindcf_p_target,
+            c_miss=config.evaluate.mindcf_c_miss,
+            c_fa=config.evaluate.mindcf_c_fa
+        )
+
+    if 'actdcf' in config.evaluate.metrics:
+        metrics[f'{key}/actdcf'] = compute_actdcf(
+            fprs,
+            fnrs,
+            sorted_scores,
+            p_target=config.evaluate.mindcf_p_target,
+            c_miss=config.evaluate.mindcf_c_miss,
+            c_fa=config.evaluate.mindcf_c_fa
+        )
+
+    if 'cllr' in config.evaluate.metrics:
+        metrics[f'{key}/cllr'] = compute_cllr(scores, targets)
+
+    if 'avgrprec' in config.evaluate.metrics:
+        metrics[f'{key}/avgrprec'] = compute_avgrprec(trials)
+    
+    return metrics
+
+
 def evaluate(model, config, device, validation=False, verbose=True):
     trials = [config.data.val] if validation else config.data.test
 
@@ -398,35 +435,15 @@ def evaluate(model, config, device, validation=False, verbose=True):
             config.data.base_path / file
         )
 
-        fprs, fnrs, sorted_scores = compute_error_rates(scores, targets)
-
-        eer, _ = compute_eer(fprs, fnrs)
-        mindcf, _ = compute_mindcf(
-            fprs,
-            fnrs,
-            p_target=config.evaluate.mindcf_p_target,
-            c_miss=config.evaluate.mindcf_c_miss,
-            c_fa=config.evaluate.mindcf_c_fa
+        metrics_ = get_metrics(
+            config,
+            trials,
+            scores,
+            targets,
+            validation,
+            file
         )
-        actdcf = compute_actdcf(
-            fprs,
-            fnrs,
-            sorted_scores,
-            p_target=config.evaluate.mindcf_p_target,
-            c_miss=config.evaluate.mindcf_c_miss,
-            c_fa=config.evaluate.mindcf_c_fa
-        )
-        cllr = compute_cllr(scores, targets)
-        avgrprec = compute_avgrprec(trials)
 
-        key = 'val' if validation else f'test/{file}'
-        metrics = {
-            **metrics,
-            f'{key}/eer': eer,
-            f'{key}/mindcf': mindcf,
-            f'{key}/cllr': cllr,
-            # f'{key}/actdcf': actdcf,
-            # f'{key}/avgrprec': avgrprec
-        }
+        metrics = { **metrics, **metrics_ }
 
     return metrics, evaluation.test_embeddings
