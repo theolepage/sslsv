@@ -2,6 +2,7 @@ import argparse
 import pickle
 from pathlib import Path
 import torch
+import json
 
 from sslsv.utils.helpers import load_config, load_model
 from sslsv.utils.evaluate import evaluate as evaluate_
@@ -50,9 +51,11 @@ def evaluate(args):
     else:
         print_metrics(metrics)
 
-    if args.save:
-        embeddings_save_path = checkpoint_dir + '/embeddings.pkl'
-        with open(embeddings_save_path, 'wb') as f:
+    with open(Path(checkpoint_dir) / 'evaluation.json', 'w') as f:
+        json.dump(metrics, f, indent=4)
+    
+    if args.save_embeddings:
+        with open(Path(checkpoint_dir) / 'embeddings.pkl', 'wb') as f:
             pickle.dump(embeddings, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
@@ -68,7 +71,7 @@ if __name__ == "__main__":
         help='Whether to hide status messages and progress bars.'
     )
     parser.add_argument(
-        '--save',
+        '--save_embeddings',
         action='store_true',
         help='Whether to save embeddings of test utterances.'
     )
