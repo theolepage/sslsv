@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+import json
 
 import os
 os.environ["WANDB_SILENT"] = "true"
@@ -110,6 +111,7 @@ class Trainer:
         if is_main_process(): print()
 
         for name, value in train_metrics.items():
+            if isinstance(value, torch.Tensor): value = value.item()
             train_metrics[name] = value / len(self.train_dataloader)
 
         return train_metrics
@@ -133,6 +135,15 @@ class Trainer:
             print(f'{metric_name}: {metric_value}') 
             self.writer.add_scalar(metric_name, metric_value, self.epoch)
 
+        log_file_path = Path(self.checkpoint_dir) / 'training.json'
+        log_file_data = {}
+        if log_file_path.exists():
+            with open(log_file_path, 'r') as f:
+                log_file_data = json.load(f)
+        log_file_data[self.epoch] = metrics
+        with open(log_file_path, 'w') as f:
+            json.dump(log_file_data, f, indent=4)
+        
         wandb.log(metrics, step=self.epoch)
 
     def track_improvement(self, metrics):
