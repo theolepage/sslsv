@@ -67,8 +67,8 @@ REGISTERED_MODELS = {
 }
 
 
-def get_checkpoint_dir(config):
-    return './checkpoints/' + config.name
+def get_checkpoint_dir(config_name):
+    return './checkpoints/' + config_name
 
 
 def get_sub_config(data, key, registered_dict):
@@ -105,7 +105,7 @@ def load_config(path, verbose=True):
     torch.manual_seed(seed)
 
     # Create checkpoint dir
-    checkpoint_dir = get_checkpoint_dir(config)
+    checkpoint_dir = get_checkpoint_dir(config.name)
     Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
     # Print config

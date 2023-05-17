@@ -15,6 +15,7 @@ class TrainingConfig:
     optimizer: str = 'adam'
     weight_decay: float = 0
     mixed_precision: bool = False
+    init_weights: str = None
 
 
 @dataclass

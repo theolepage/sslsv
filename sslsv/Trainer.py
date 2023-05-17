@@ -263,13 +263,27 @@ class Trainer:
         ).get_url()
 
     def load_checkpoint(self):
+        init_weights = self.config.training.init_weights
         checkpoint_path = Path(self.checkpoint_dir) / 'model_latest.pt'
-        checkpoint = None
-        if checkpoint_path.exists():
-            checkpoint = torch.load(checkpoint_path, map_location='cpu')
-            self.best_metric = checkpoint['best_metric']
-            self.model.module.load_state_dict(checkpoint['model'])
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
+
+        if not checkpoint_path.exists():
+            if init_weights:
+                checkpoint_path = (
+                    Path(get_checkpoint_dir(init_weights)) /
+                    init_weights_path /
+                    'model_latest.pt'
+                )
+
+                checkpoint = torch.load(checkpoint_path, map_location='cpu')
+                self.model.module.load_state_dict(checkpoint['model'])
+
+            return None
+
+        # Resume training
+        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        self.best_metric = checkpoint['best_metric']
+        self.model.module.load_state_dict(checkpoint['model'])
+        self.optimizer.load_state_dict(checkpoint['optimizer'])
         return checkpoint
 
     def save_checkpoint(self, suffix):

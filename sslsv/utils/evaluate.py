@@ -182,7 +182,7 @@ class PLDAEvaluation(BaseEvaluation):
         super().__init__(model, config, device, verbose)
 
     def prepare_aux(self, trials, key):
-        stat_path = Path(get_checkpoint_dir(self.config)) / f'plda_{key}_stat.pkl'
+        stat_path = Path(get_checkpoint_dir(self.config.name)) / f'plda_{key}_stat.pkl'
 
         if stat_path.exists():
             with open(stat_path, "rb") as f:
