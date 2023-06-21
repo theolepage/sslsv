@@ -85,7 +85,9 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
 
         return stat
 
-    def _prepare_evaluation(self, trials):
+    def _prepare_evaluation(self):
+        trials = self.task_config.trials
+
         train_stat = self._prepare_evaluation_aux(trials, 'train')
 
         plda = PLDA()

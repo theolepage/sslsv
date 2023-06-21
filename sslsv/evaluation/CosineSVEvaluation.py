@@ -43,11 +43,11 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
             desc='Extracting test embeddings'
         )
 
-    def _prepare_evaluation(self, trials):
+    def _prepare_evaluation(self):
         if self.task_config.score_norm:
             self._extract_train_embeddings()
 
-        self._extract_test_embeddings(trials)
+        self._extract_test_embeddings(self.task_config.trials)
 
     def _compute_score(self, enrol, test):
         return torch.mean(enrol @ test.T, dim=(-2, -1))

@@ -31,8 +31,8 @@ class BaseEvaluation:
         model,
         config,
         task_config,
-        device,
-        verbose,
+        device='cpu',
+        verbose=False,
         validation=False
     ):
         self.model = model
