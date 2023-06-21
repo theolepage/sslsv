@@ -9,6 +9,10 @@ def read_audio(path):
 def load_audio(path, frame_length, num_frames=1, min_length=None):
     audio, sr = read_audio(path)
 
+    # Convert to mono if audio is stereo
+    if len(audio.shape) == 2:
+        audio = audio.mean(axis=-1)
+
     # Pad signal if it is shorter than min_length
     if min_length is None: min_length = frame_length
     if min_length and len(audio) < min_length:

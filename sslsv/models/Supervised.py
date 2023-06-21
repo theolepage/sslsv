@@ -11,16 +11,28 @@ from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 @dataclass
 class SupervisedConfig(BaseModelConfig):
     
-    nb_speakers: int = 1211
+    nb_classes: int = 1211
+    speaker_classification: bool = True
 
 
 class Classifier(nn.Module):
 
-    def __init__(self, input_dim, nb_speakers):
+    def __init__(self, input_dim, nb_classes):
+        super().__init__()
+
+        self.classifier = nn.Linear(input_dim, nb_classes)
+
+    def forward(self, Z):
+        return self.classifier(Z)
+
+
+class SpeakerClassifier(nn.Module):
+
+    def __init__(self, input_dim, nb_classes):
         super().__init__()
 
         self.classifier_weight = nn.Parameter(
-            torch.FloatTensor(nb_speakers, input_dim)
+            torch.FloatTensor(nb_classes, input_dim)
         )
         nn.init.xavier_uniform_(self.classifier_weight)
 
@@ -35,12 +47,22 @@ class Supervised(BaseModel):
 
         self.config = config
 
-        self.classifier = Classifier(
+        classifier_cls = (
+            SpeakerClassifier
+            if config.speaker_classification
+            else Classifier
+        )
+        self.classifier = classifier_cls(
             self.encoder.encoder_dim,
-            config.nb_speakers
+            config.nb_classes
         )
 
-        self.loss_fn = AAMSoftmaxLoss()
+        loss_cls = (
+            AAMSoftmaxLoss
+            if config.speaker_classification
+            else nn.CrossEntropyLoss()
+        )
+        self.loss_fn = loss_cls()
 
     def forward(self, X, training=False):
         if not training: return self.encoder(X)
@@ -54,11 +76,15 @@ class Supervised(BaseModel):
         return super().get_learnable_params() + extra_learnable_params
 
     def train_step(self, Z, labels, step, samples):
-        loss, accuracy = self.loss_fn(Z, labels)
-
-        metrics = {
-            'train/loss': loss,
-            'train/accuracy': accuracy
-        }
+        loss = self.loss_fn(Z, labels)
+        
+        if self.config.speaker_classification:
+            loss, accuracy = loss
+            metrics = {
+                'train/loss': loss,
+                'train/accuracy': accuracy
+            }
+        else:
+            metrics = { 'train/loss': loss }
 
         return loss, metrics

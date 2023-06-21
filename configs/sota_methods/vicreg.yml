@@ -4,6 +4,6 @@ model:
   type: 'vicreg'
 data:
   siamese: true
-  train: 'voxceleb1_train'
+  train: 'voxceleb1_train.csv'
   augmentation:
     enable: true

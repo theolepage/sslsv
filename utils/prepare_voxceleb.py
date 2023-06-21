@@ -1,11 +1,12 @@
 import argparse
 import subprocess
-import hashlib
 import os
 import shutil
-import glob
-import soundfile as sf
 from tqdm import tqdm
+import pandas as pd
+import numpy as np
+
+from prepare_dataset_utils import glob, download, extract, concatenate
 
 VOX_DOWNLOADS = [
     ('http://thor.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox1_dev_wav_partaa', 'e395d020928bc15670b570a21695ed96'),
@@ -34,16 +35,6 @@ VOX_EXTRACT = [
     'vox2_dev_aac.zip'
 ]
 
-AUG_DOWNLOAD = [
-    ('http://www.openslr.org/resources/28/rirs_noises.zip', 'e6f48e257286e05de56413b4779d8ffb'),
-    ('http://www.openslr.org/resources/17/musan.tar.gz',    '0c472d4fc0c5141eca47ad1ffeb2a7df')
-]
-
-AUG_EXTRACT = [
-    'rirs_noises.zip',
-    'musan.tar.gz'
-]
-
 TRIALS = [
     ('voxceleb1_test_O', 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test2.txt'),
     ('voxceleb1_test_H', 'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/list_test_hard2.txt'),
@@ -53,41 +44,6 @@ TRIALS = [
 
 VOX1_TRAIN_LIST = 'voxceleb1_train'
 VOX2_TRAIN_LIST = 'voxceleb2_train'
-
-
-def get_md5(path):
-    hash_md5 = hashlib.md5()
-    with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(4096), b""): hash_md5.update(chunk)
-    return hash_md5.hexdigest()
-
-
-def download(entries):
-    for url, md5 in entries:
-        filename = url.split('/')[-1]
-        status = subprocess.call('wget %s -O %s' % (url, filename), shell=True)
-        if status != 0:
-            raise Exception('Download of %s failed' % filename)
-
-        if md5 != get_md5(filename):
-            raise Warning('Checksum of %s failed' % filename)
-
-
-def concatenate(entries):
-    for src, dst, md5 in entries:
-        subprocess.call('cat %s > %s' % (src, dst), shell=True)
-        subprocess.call('rm %s' % (src), shell=True)
-
-        if md5 != get_md5(dst):
-            raise Warning('Checksum of %s failed' % dst)
-
-
-def extract(entries):
-    for filename in entries:
-        if filename.endswith('.tar.gz'):
-            subprocess.call('tar xf %s' % (filename), shell=True)
-        elif filename.endswith('.zip'):
-            subprocess.call('unzip %s' % (filename), shell=True)
 
 
 def fix_vox_structure():
@@ -101,7 +57,7 @@ def fix_vox_structure():
 
 
 def convert_vox2_to_wav():
-    files = glob.glob('voxceleb2/*/*/*.m4a')
+    files = glob('voxceleb2/*/*/*.m4a')
 
     for src in tqdm(files):
         dst = src.replace('.m4a', '.wav')
@@ -114,32 +70,8 @@ def convert_vox2_to_wav():
         subprocess.call('rm %s' % src, shell=True)
 
 
-def fix_aug_structure():
-    subprocess.call('mv RIRS_NOISES/simulated_rirs .', shell=True)
-    subprocess.call('rm -r RIRS_NOISES', shell=True)
-    subprocess.call('rm -r rirs_noises.zip', shell=True)
-    subprocess.call('rm -r musan.tar.gz', shell=True)
-
-
-def split_musan(length=16000*8, stride=16000*8):
-    files = glob.glob('musan/*/*/*.wav')
-
-    for file in tqdm(files):
-        audio, fs = sf.read(file)
-        
-        directory = os.path.dirname(file).replace('musan/', 'musan_split/')
-        os.makedirs(directory, exist_ok=True)
-        
-        for st in range(0, len(audio) - length, stride):
-            filename = os.path.basename(file)[:-4] + ('_%05d.wav' % (st / fs))
-            filename = directory + '/' + filename
-            sf.write(filename, audio[st:st+length], fs)
-
-    subprocess.call('rm -r musan', shell=True)
-
-
 def split_2_ssd():
-    dirs = glob.glob('dev/aac/*')
+    dirs = glob('dev/aac/*')
     
     for src in dirs:
         filename = src.split('/')[-1]
@@ -157,45 +89,133 @@ def split_2_ssd():
         shutil.copytree(src, dst)
 
 
-def create_vox1_train_file():
+def create_vox1_train_csv():
+    # Determine test speakers
     test_speakers = set()
     with open(TRIALS[0][0]) as trials:
         for line in trials.readlines():
             parts = line.rstrip().split()
-            spkr_id_a = parts[1].split('/')[0]
-            spkr_id_b = parts[2].split('/')[0]
+            spkr_id_a = parts[1].split('/')[1]
+            spkr_id_b = parts[2].split('/')[1]
             test_speakers.add(spkr_id_a)
             test_speakers.add(spkr_id_b)
 
-    files = glob.glob('voxceleb1/*/*/*.wav')
+    # Retrieve list of files excluding test speakers
+    all_files = glob('voxceleb1/*/*/*.wav')
+    all_files.sort()
+    files = [f for f in all_files if f.split('/')[-3] not in test_speakers]
+
+    df = pd.DataFrame({
+        'File': files,
+        'Speaker': [f.split('/')[-3] for f in files]
+    })
+
+    df.to_csv('voxceleb1_train.csv', index=False)
+
+
+def create_vox2_train_csv():
+    files = glob('voxceleb2/*/*/*.wav')
     files.sort()
-    out_file = open(VOX1_TRAIN_LIST, 'w')
-    for file in files:
-        spkr_id = file.split('/')[-3]
-        file = '/'.join(file.split('/')[-3:])
-        file = os.path.join('voxceleb1', file)
-        if spkr_id not in test_speakers:
-            out_file.write(spkr_id + ' ' + file + '\n')
-    out_file.close()
+
+    df = pd.DataFrame({
+        'File': files,
+        'Speaker': [f.split('/')[-3] for f in files]
+    })
+
+    df.to_csv('voxceleb2_train.csv', index=False)
 
 
-def create_vox2_train_file():
-    files = glob.glob('voxceleb2/*/*/*.wav')
-    files.sort()
-    out_file = open(VOX2_TRAIN_LIST, 'w')
-    for file in files:
-        spkr_id = file.split('/')[-3]
-        file = '/'.join(file.split('/')[-3:])
-        file = os.path.join('voxceleb2', file)
-        out_file.write(spkr_id + ' ' + file + '\n')
-    out_file.close()
+def create_vox1_train_csv_gender(test_split=0.7):
+    df = pd.read_csv('voxceleb1_train.csv')
+
+    # Add gender column
+    vox1_meta = pd.read_csv(
+        'https://www.openslr.org/resources/49/vox1_meta.csv',
+        sep='\t',
+        usecols=['VoxCeleb1 ID', 'Gender']
+    )
+    vox1_meta = vox1_meta.rename(columns={'VoxCeleb1 ID': 'Speaker'})
+    df = pd.merge(df, vox1_meta, on='Speaker', how='left')
+
+    # Add set column
+    all_speakers = df['Speaker'].unique()
+    train_speakers = np.random.choice(
+        all_speakers,
+        size=int(test_split*len(all_speakers)),
+        replace=False
+    )
+    df['Set'] = ['train' if spk in train_speakers else 'test' for spk in df['Speaker']]
+
+    df.to_csv('voxceleb1_train_gender.csv', index=False)
 
 
-def download_trials_files():
+def create_vox2_train_csv_age(test_split=0.7):
+    files = [line.strip().split()[1].replace('\\', '/') for line in lines]
+    videos = [file.split('/')[-2] for file in files]
+    speakers = [line.strip().split()[0] for line in lines]
+    
+    df = pd.read_csv('voxceleb2_train_age.csv')
+
+    df['Video'] = [f.spit('/')[-2] for f in df['File']]
+
+    df['_KEY'] = df['Video'] + '-' + df['Speaker']
+    
+    # Add age column
+    vox2_meta = pd.read_csv(
+        'https://raw.githubusercontent.com/hechmik/voxceleb_enrichment_age_gender/main/dataset/final_dataframe_extended.csv',
+        usecols=['VoxCeleb_ID', 'video_id', 'speaker_age']
+    )
+    vox2_meta = vox2_meta.rename(columns={
+        'VoxCeleb_ID': 'Speaker',
+        'video_id': 'Video',
+        'speaker_age': 'Age'
+    })
+    vox2_meta['_KEY'] = vox2_meta['Video'] + '-' + vox2_meta['Speaker']
+    df = pd.merge(df, vox2_meta, on='_KEY', how='left')
+    
+    # Clean df
+    df = df.drop(columns=['Video_x', 'Video_y', '_KEY', 'Speaker_y'])
+    df = df.rename(columns={'Speaker_x': 'Speaker'})
+    df.dropna(inplace=True)
+    
+    # Add set column
+    all_speakers = df['Speaker'].unique()
+    train_speakers = np.random.choice(
+        all_speakers,
+        size=int(test_split*len(all_speakers)),
+        replace=False
+    )
+    df['Set'] = ['train' if spk in train_speakers else 'test' for spk in df['Speaker']]
+    
+    df.to_csv('voxceleb2_train_age.csv', index=False)
+
+
+def create_vox_trials():
     for filename, url in TRIALS:
         status = subprocess.call('wget %s -O %s' % (url, filename), shell=True)
         if status != 0:
             raise Exception('Download of %s failed' % filename)
+
+    VOX_TRIALS = [
+        'voxceleb1_test_O',
+        'voxceleb1_test_E',
+        'voxceleb1_test_H',
+        'voxsrc2021_val'
+    ]
+
+    # Add voxceleb1 prefix to trial files
+    for trial in VOX_TRIALS:
+        res = []
+        with open(trial) as f:
+            for line in f.readlines():
+                target, a, b = line.split()
+
+                line_ = f'{target} voxceleb1/{a} voxceleb1/{b}'
+
+                res.append(line_)
+
+        with open(trial, 'w') as f:
+            f.write('\n'.join(res))
 
 
 if __name__ == "__main__":
@@ -205,19 +225,15 @@ if __name__ == "__main__":
 
     os.chdir(args.output_path)
 
-    # VoxCeleb1 and VoxCeleb2
     download(VOX_DOWNLOADS)
     concatenate(VOX_CONCATENATE)
     extract(VOX_EXTRACT)
     fix_vox_structure()
     convert_vox2_to_wav()
 
-    # Augmentation: MUSAN and simulated_rirs
-    download(AUG_DOWNLOAD)
-    extract(AUG_EXTRACT)
-    fix_aug_structure()
-    split_musan()
+    create_vox_trials()
+    create_vox1_train_csv()
+    create_vox2_train_csv()
 
-    download_trials_files()
-    create_vox1_train_file()
-    create_vox2_train_file()
+    # create_vox1_train_csv_gender()
+    # create_vox2_train_csv_age()

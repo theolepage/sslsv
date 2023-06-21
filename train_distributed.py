@@ -5,7 +5,7 @@ import torch
 from torch.nn.parallel import DistributedDataParallel
 
 from sslsv.Trainer import Trainer
-from sslsv.utils.helpers import load_config, load_dataloader, load_model
+from sslsv.utils.helpers import load_config, load_train_dataloader, load_model
 
 
 def train(args):
@@ -20,7 +20,7 @@ def train(args):
     torch.cuda.device(rank)
 
     config, checkpoint_dir = load_config(args.config)
-    train_dataloader = load_dataloader(config)
+    train_dataloader = load_train_dataloader(config)
 
     model = load_model(config).to(rank)
     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)

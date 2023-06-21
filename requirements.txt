@@ -3,6 +3,7 @@ torch
 torchaudio
 
 soundfile
+pandas
 scikit-learn
 tensorboard
 wandb

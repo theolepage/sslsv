@@ -7,14 +7,14 @@ from torch import nn
 
 from sslsv.models.Supervised import Supervised
 from sslsv.configs import EncoderConfig
-from sslsv.utils.helpers import load_config, load_dataloader, load_model
+from sslsv.utils.helpers import load_config, load_train_dataloader, load_model
 from sslsv.Trainer import Trainer
 
 
 @dataclass
 class ClassifierConfig:
 
-    nb_speakers: int = 1211
+    nb_classes: int = 1211
 
 
 class Classifier(Supervised):
@@ -45,7 +45,7 @@ def train(args, nb_labels_per_spk, fine_tune=False, supervised=False):
     config.training.learning_rate = args.lr
     if fine_tune: config.training.learning_rate /= 10
 
-    train_dataloader = load_dataloader(config, nb_labels_per_spk)
+    train_dataloader = load_train_dataloader(config, nb_labels_per_spk)
 
     # Load model (to use as an encoder)
     model = load_model(config)

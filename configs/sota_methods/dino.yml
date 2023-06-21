@@ -7,6 +7,6 @@ training:
   weight_decay: 0.00001
 data:
   siamese: true
-  train: 'voxceleb1_train'
+  train: 'voxceleb1_train.csv'
   augmentation:
     enable: true

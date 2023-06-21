@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, SGD
 from torch.cuda.amp import GradScaler, autocast
 
-from sslsv.utils.evaluate import evaluate
+from sslsv.utils.helpers import evaluate
 from sslsv.utils.distributed import is_main_process, is_dist_initialized
 
 
@@ -87,7 +87,7 @@ class Trainer:
             for metric_name, metric_value in metrics.items():
                 train_metrics[metric_name] += metric_value
 
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad(set_to_none=True)
 
             # Backward
             self.model.module.on_before_backward()
@@ -147,12 +147,13 @@ class Trainer:
         wandb.log(metrics, step=self.epoch)
 
     def track_improvement(self, metrics):
-        metric = metrics[self.config.training.tracked_metric]
-        mode = self.config.training.tracked_mode
-
         improved = False
-        if mode == 'max' and metric > self.best_metric: improved = True
-        if mode == 'min' and metric < self.best_metric: improved = True
+
+        if self.config.training.tracked_metric in metrics.keys():
+            metric = metrics[self.config.training.tracked_metric]
+            mode = self.config.training.tracked_mode
+            if mode == 'max' and metric > self.best_metric: improved = True
+            if mode == 'min' and metric < self.best_metric: improved = True
 
         if improved:
             print(
@@ -207,7 +208,7 @@ class Trainer:
             self.model.module.on_train_epoch_end(self.epoch, max_epochs)
 
             self.model.eval()
-            test_metrics, _ = evaluate(
+            val_metrics = evaluate(
                 self.model,
                 self.config,
                 self.device,
@@ -215,7 +216,7 @@ class Trainer:
                 verbose=False
             )
 
-            metrics = {**train_metrics, 'lr': lr, **test_metrics}
+            metrics = {**train_metrics, 'lr': lr, **val_metrics}
 
             if is_main_process():
                 self.log_metrics(metrics)

@@ -2,6 +2,9 @@ from dataclasses import dataclass, field
 from typing import Tuple, List
 from pathlib import Path
 
+from sslsv.evaluation._BaseEvaluation import EvaluationTaskConfig
+from sslsv.evaluation.CosineSVEvaluation import CosineSVEvaluationTaskConfig
+
 
 @dataclass
 class TrainingConfig:
@@ -10,7 +13,7 @@ class TrainingConfig:
     batch_size: int = 256
     learning_rate: float = 0.001
     patience: int = 300
-    tracked_metric: str = 'val/eer'
+    tracked_metric: str = 'val/sv_cosine/voxceleb1_test_O/eer'
     tracked_mode: str = 'min'
     optimizer: str = 'adam'
     weight_decay: float = 0
@@ -40,44 +43,28 @@ class DataConfig:
     augmentation: AudioAugmentationConfig = None
     frame_length: int = 32000
     max_samples: int = None
-    train: str = 'voxceleb2_train'
-    val: str = 'voxceleb1_test_O'
-    test: List[str] = field(default_factory=lambda: [
-        'voxceleb1_test_O',
-        # 'voxceleb1_test_H',
-        # 'voxceleb1_test_E',
-        # 'voxsrc2021_val',
-        # 'voices2019_dev'
-    ])
+    train: str = 'voxceleb2_train.csv'
+    label_key: str = 'Speaker'
     base_path: Path = Path('./data/')
-    enable_cache: bool = False
     num_workers: int = 8
     pin_memory: bool = False
 
 
 @dataclass
-class EvaluateConfig:
+class EvaluationConfig:
 
-    method: str = 'cosine'
     batch_size: int = 64
     num_frames: int = 6
     frame_length: int = 32000
     mean_of_features: bool = True
 
-    metrics: List[str] = field(default_factory=lambda: [
-        'eer',
-        'mindcf',
-        # 'actdcf',
-        # 'cllr',
-        # 'avgrprec'
+    validation: List[EvaluationTaskConfig] = field(default_factory=lambda: [
+        CosineSVEvaluationTaskConfig(__type__='sv_cosine')
     ])
 
-    score_norm: str = None#'s-norm'
-    score_norm_cohort_size: int = 20000
-
-    mindcf_p_target: float = 0.01
-    mindcf_c_miss: float = 1
-    mindcf_c_fa: float = 1
+    test: List[EvaluationTaskConfig] = field(default_factory=lambda: [
+        CosineSVEvaluationTaskConfig(__type__='sv_cosine')
+    ])
 
 
 @dataclass
@@ -97,7 +84,7 @@ class Config:
 
     training: TrainingConfig = TrainingConfig()
     data: DataConfig = DataConfig()
-    evaluate: EvaluateConfig = EvaluateConfig()
+    evaluation: EvaluationConfig = EvaluationConfig()
     encoder: EncoderConfig = EncoderConfig()
     model: ModelConfig = ModelConfig()
     name: str = 'test'

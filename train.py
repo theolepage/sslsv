@@ -3,12 +3,12 @@ import argparse
 import torch
 
 from sslsv.Trainer import Trainer
-from sslsv.utils.helpers import load_config, load_dataloader, load_model
+from sslsv.utils.helpers import load_config, load_train_dataloader, load_model
 
 
 def train(args):
     config, checkpoint_dir = load_config(args.config)
-    train_dataloader = load_dataloader(config)
+    train_dataloader = load_train_dataloader(config)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

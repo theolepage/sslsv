@@ -74,9 +74,23 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
 
 ## Datasets
 
-[VoxCeleb1](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1.html) and [VoxCeleb2](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox2.html) are used for our experiments and we rely on [MUSAN](http://www.openslr.org/17/) and [Room Impulse Response and Noise Database](https://www.openslr.org/28/) for data augmentation.
+**Speaker recognition**:
+- [VoxCeleb1](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1.html) (train and test)
+- [VoxCeleb2](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox2.html) (train)
+- [SITW](http://www.speech.sri.com/projects/sitw/) (test)
+- [VOiCES](https://iqtlabs.github.io/voices/) (test)
 
-To download, extract and prepare all datasets run `python utils/prepare_data.py data/`.  The `data/` directory will have the structure detailed below.
+**Language recognition**:
+- [VoxLingua107](https://bark.phon.ioc.ee/voxlingua107/)
+
+**Emotion recognition**:
+- [CREMA-D](https://github.com/CheyneyComputerScience/CREMA-D)
+
+**Data-augmentation**:
+- [MUSAN](http://www.openslr.org/17/)
+- [Room Impulse Response and Noise Database](https://www.openslr.org/28/)
+
+Data used for main experiments (conducted on VoxCeleb1 and VoxCeleb2 + data-augmentation) can be automatically downloaded, extracted and prepared using `utils/prepare_voxceleb.py` and `utils/prepare_augmentation.py`. The resulting `data` folder shoud have the following structure:
 
 ```
 data
@@ -88,29 +102,34 @@ data
 ├── voxceleb1_test_H
 ├── voxceleb1_test_E
 ├── voxsrc2021_val
-├── voxceleb1_train
-└── voxceleb2_train
+├── voxceleb1_train.csv
+└── voxceleb2_train.csv
 ```
 
-Train and trials lists files are also automatically created with the following formats.
+Other datasets have to be manually downloaded and extracted but their train and trials *(only for speaker verification)* files can be created using the corresponding script from the `utils` folder.
 
-- `voxceleb1_test_O`
-    ```
-    1 id10270/x6uYqmx31kE/00001.wav id10270/8jEAjG6SegY/00008.wav
-    ...
-    0 id10309/0cYFdtyWVds/00005.wav id10296/Y-qKARMSO7k/00001.wav
-    ```
+<details>
+  <summary>Example format of a train file</summary>
+  `voxceleb1_train.csv`
+  ```
+  File,Speaker
+  voxceleb1/id10001/1zcIwhmdeo4/00001.wav,id10001
+  ...
+  voxceleb1/id11251/s4R4hvqrhFw/00009.wav,id11251
+  ```
+</details>
 
-- `voxceleb1_train`
-    ```
-    id00012 voxceleb2/id00012/21Uxsk56VDQ/00001.wav
-    ...
-    id09272 voxceleb2/id09272/u7VNkYraCw0/00027.wav
-    ```
+<details>
+  <summary>Example format of a trials file</summary>
+  `voxceleb1_test_O`
+  ```
+  1 voxceleb1/id10270/x6uYqmx31kE/00001.wav voxceleb1/id10270/8jEAjG6SegY/00008.wav
+  ...
+  0 voxceleb1/id10309/0cYFdtyWVds/00005.wav voxceleb1/id10296/Y-qKARMSO7k/00001.wav
+  ```
+</details>
 
-*Please refer to `utils/prepare_data.py` script if you want further details about data preparation.*
-
-Additionally, you can manually download and create trials with scrips in `utils/` for [The Speakers in the Wild Speaker Recognition Database (SITW)](http://www.speech.sri.com/projects/sitw/) and [Voices Obscured in Complex Environmental Settings (VOiCES)](https://iqtlabs.github.io/voices/).
+*Please refer to the associated code if you want further details about data preparation.*
 
 ## Usage
 

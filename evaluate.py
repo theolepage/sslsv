@@ -4,23 +4,69 @@ from pathlib import Path
 import torch
 import json
 
-from sslsv.utils.helpers import load_config, load_model
-from sslsv.utils.evaluate import evaluate as evaluate_
+from sslsv.utils.helpers import load_config, load_model, evaluate as evaluate_
+
+
+def metrics_to_nested_dict(data):
+    res = {}
+
+    tasks = set([
+        k.split('/')[1]
+        for k in data.keys()
+        if k.split('/')[0] == 'test'
+    ])
+
+    for task in tasks:
+        res[task] = {}
+
+        datasets = set([
+            k.split('/')[2]
+            for k in data.keys()
+            if (
+                k.split('/')[0] == 'test' and
+                k.split('/')[1] == task
+            )
+        ])
+
+        for dataset in datasets:
+            res[task][dataset] = {}
+
+            metrics = set([
+                k.split('/')[3]
+                for k in data.keys()
+                if (
+                    k.split('/')[0] == 'test' and
+                    k.split('/')[1] == task and
+                    k.split('/')[2] == dataset
+                )
+            ])
+
+            for metric in metrics:
+                res[task][dataset][metric] = data[
+                    f'test/{task}/{dataset}/{metric}'
+                ]
+
+    return res
 
 
 def print_metrics(metrics):
-    test_sets = set([k.split('/')[1] for k in metrics.keys()])
-    for test_set in test_sets:
-        print(f'- {test_set}')
-        for k, v in metrics.items():
-            metric_name = k.split('/')[2]
-            precision = 2 if metric_name == 'eer' else 4
-            space = ' ' * (
-                3 +
-                max([len(k.split('/')[2]) for k in metrics.keys()]) -
-                len(metric_name)
-            )
-            print(f'    {metric_name}:{space}{round(v, precision)}')
+    metrics = metrics_to_nested_dict(metrics)
+
+    for task in metrics.keys():
+        print(f'\nEvaluation: {task}')
+        for dataset in metrics[task].keys():
+            print(f'  - {dataset}')
+            for metric_name, metric_value in metrics[task][dataset].items():
+                metric_value = round(
+                    metric_value,
+                    2 if metric_name == 'eer' else 4
+                )
+                space = ' ' * (
+                    3 +
+                    max([len(k) for k in metrics[task][dataset].keys()]) -
+                    len(metric_name)
+                )
+                print(f'      {metric_name}:{space}{metric_value}')
 
 
 def evaluate(args):
@@ -39,7 +85,7 @@ def evaluate(args):
 
     model = torch.nn.DataParallel(model)
 
-    metrics, embeddings = evaluate_(
+    metrics = evaluate_(
         model,
         config,
         device,
@@ -54,9 +100,10 @@ def evaluate(args):
     with open(Path(checkpoint_dir) / 'evaluation.json', 'w') as f:
         json.dump(metrics, f, indent=4)
     
-    if args.save_embeddings:
-        with open(Path(checkpoint_dir) / 'embeddings.pkl', 'wb') as f:
-            pickle.dump(embeddings, f, protocol=pickle.HIGHEST_PROTOCOL)
+    # FIXME
+    # if args.save_embeddings:
+    #     with open(Path(checkpoint_dir) / 'embeddings.pkl', 'wb') as f:
+    #         pickle.dump(embeddings, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
