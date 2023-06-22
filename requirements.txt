@@ -15,3 +15,7 @@ tqdm
 python-dotenv
 
 speechbrain
+
+plotnine
+plotly
+seaborn

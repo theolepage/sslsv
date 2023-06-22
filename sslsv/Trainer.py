@@ -298,12 +298,13 @@ class Trainer:
             self.checkpoint_dir + '/model_' + suffix + '.pt'
         )
 
-    def start(self):
+    def start(self, resume=True):
         self.setup()
 
         self.model.module.on_train_start(self)
         
-        checkpoint = self.load_checkpoint()
+        checkpoint = None
+        if resume: checkpoint = self.load_checkpoint()
 
         if is_main_process():
             print()
