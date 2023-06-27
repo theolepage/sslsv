@@ -3,18 +3,16 @@ import argparse
 from pathlib import Path
 
 import torch
-from torch import nn
 
-from sslsv.models.Supervised import Supervised
-from sslsv.configs import EncoderConfig
+from sslsv.models.Supervised import Supervised, SupervisedConfig
 from sslsv.utils.helpers import load_config, load_train_dataloader, load_model
 from sslsv.Trainer import Trainer
 
 
 @dataclass
-class ClassifierConfig:
+class ClassifierConfig(SupervisedConfig):
 
-    nb_classes: int = 1211
+    pass
 
 
 class Classifier(Supervised):

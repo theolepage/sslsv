@@ -13,7 +13,12 @@ from torch.optim import Adam, SGD
 from torch.cuda.amp import GradScaler, autocast
 
 from sslsv.utils.helpers import evaluate
-from sslsv.utils.distributed import is_main_process, is_dist_initialized
+from sslsv.utils.distributed import (
+    is_main_process,
+    is_dist_initialized,
+    get_rank,
+    get_world_size
+)
 
 
 class Trainer:
@@ -183,6 +188,17 @@ class Trainer:
         if callable(getattr(self.train_dataloader.sampler, 'set_epoch', None)):
             self.train_dataloader.sampler.set_epoch(epoch)
 
+    def gather_metrics(self, metrics):
+        for k, v in metrics.items():
+            metric = torch.tensor([v]).to(get_rank())
+            if is_main_process():
+                metric_all = [metric.clone() for _ in range(get_world_size())]
+                torch.distributed.gather(metric, metric_all, dst=0)
+                metrics[k] = torch.mean(torch.cat(metric_all)).item()
+            else:
+                torch.distributed.gather(metric, [], dst=0)
+        return metrics
+
     def train_epoch_loop(self, first_epoch=0):
         self.nb_epochs_remaining = 0
 
@@ -207,18 +223,21 @@ class Trainer:
 
             self.model.module.on_train_epoch_end(self.epoch, max_epochs)
 
-            self.model.eval()
-            val_metrics = evaluate(
-                self.model,
-                self.config,
-                self.device,
-                validation=True,
-                verbose=False
-            )
-
-            metrics = {**train_metrics, 'lr': lr, **val_metrics}
+            if is_dist_initialized():
+                train_metrics = self.gather_metrics(train_metrics)
 
             if is_main_process():
+                self.model.eval()
+                val_metrics = evaluate(
+                    self.model,
+                    self.config,
+                    self.device,
+                    validation=True,
+                    verbose=False
+                )
+
+                metrics = {**train_metrics, 'lr': lr, **val_metrics}
+
                 self.log_metrics(metrics)
                 if not self.track_improvement(metrics): break
 
@@ -322,4 +341,5 @@ class Trainer:
 
         self.model.module.on_train_end(self)
 
-        wandb.finish()
+        if is_main_process():
+            wandb.finish()

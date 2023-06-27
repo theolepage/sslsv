@@ -99,11 +99,6 @@ def evaluate(args):
 
     with open(Path(checkpoint_dir) / 'evaluation.json', 'w') as f:
         json.dump(metrics, f, indent=4)
-    
-    # FIXME
-    # if args.save_embeddings:
-    #     with open(Path(checkpoint_dir) / 'embeddings.pkl', 'wb') as f:
-    #         pickle.dump(embeddings, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
