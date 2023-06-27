@@ -10,16 +10,16 @@ from dacite import from_dict
 import prettyprinter as pp
 
 import torch
-import torch.distributed as dist
 from torch.utils.data import DataLoader, DistributedSampler
 
 from sslsv.configs import Config
-from sslsv.utils.distributed import is_main_process
+from sslsv.utils.distributed import is_dist_initialized, is_main_process, get_world_size
 
 # Datasets
 from sslsv.data.AudioDataset import AudioDataset
 from sslsv.data.SiameseAudioDataset import SiameseAudioDataset
 from sslsv.data.SupervisedSampler import SupervisedSampler
+from sslsv.data.DistributedSamplerWrapper import DistributedSamplerWrapper
 
 # Encoders
 from sslsv.encoders.TDNN import TDNN, TDNNConfig
@@ -224,17 +224,22 @@ def load_train_dataloader(config, nb_labels_per_spk=None):
         max_samples=config.data.max_samples
     )
 
+    batch_size = (
+        config.training.batch_size // get_world_size() if is_dist_initialized()
+        else config.training.batch_size
+    )
+
     shuffle = True
-    batch_size = config.training.batch_size
     sampler = None
 
-    if dist.is_available() and dist.is_initialized():
+    if is_dist_initialized():
         shuffle = False
-        batch_size = config.training.batch_size // dist.get_world_size()
         sampler = DistributedSampler(dataset, shuffle=True, seed=config.seed)
-    elif nb_labels_per_spk:
+
+    if nb_labels_per_spk:
         shuffle = False
         sampler = SupervisedSampler(dataset, batch_size, nb_labels_per_spk)
+        if is_dist_initialized(): sampler = DistributedSamplerWrapper(sampler)
 
     dataloader = DataLoader(
         dataset,
