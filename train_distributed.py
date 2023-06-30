@@ -23,7 +23,6 @@ def train(args):
     train_dataloader = load_train_dataloader(config)
 
     model = load_model(config).to(rank)
-    model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
     model = DistributedDataParallel(model, device_ids=[rank])
     
     trainer = Trainer(

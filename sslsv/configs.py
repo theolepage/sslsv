@@ -17,6 +17,7 @@ class TrainingConfig:
     tracked_mode: str = 'min'
     optimizer: str = 'adam'
     weight_decay: float = 0
+    ddp_sync_batchnorm: bool = True
     mixed_precision: bool = False
     init_weights: str = None
 

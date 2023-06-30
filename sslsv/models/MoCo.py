@@ -12,7 +12,8 @@ from sslsv.models._BaseMomentumModel import (
     initialize_momentum_params
 )
 
-from sslsv.utils.distributed import gather
+import torch.distributed as dist
+from sslsv.utils.distributed import gather, get_rank, get_world_size
 
 
 @dataclass
@@ -61,20 +62,40 @@ class MoCo(BaseMomentumModel):
 
         self.loss_fn = MoCoLoss(config.temperature)
 
-    def forward(self, X, X_s=None, training=False):
+    @torch.no_grad()
+    def _batch_shuffle_ddp(self, x):
+        x_gather = gather(x)
+
+        idx_shuffle = torch.randperm(x_gather.size(0)).cuda()
+        dist.broadcast(idx_shuffle, src=0)
+
+        idx_unshuffle = torch.argsort(idx_shuffle)
+
+        idx_this = idx_shuffle.view(get_world_size(), -1)[get_rank()]
+
+        return x_gather[idx_this], idx_unshuffle
+
+    @torch.no_grad()
+    def _batch_unshuffle_ddp(self, x, idx_unshuffle):
+        x_gather = gather(x)
+
+        idx_this = idx_unshuffle.view(get_world_size(), -1)[get_rank()]
+
+        return x_gather[idx_this]
+
+    def forward(self, X, training=False):
         if not training: return self.encoder(X)
 
-        X_1 = X[:, 0, :]
-        X_2 = X[:, 1, :]
+        # Queries
+        Q_1 = self.projector(self.encoder(X[:, 0, :]))
+        Q_2 = self.projector(self.encoder(X[:, 1, :]))
 
-        Q_1 = self.projector(self.encoder(X_1))
-        Q_2 = self.projector(self.encoder(X_2))
-
-        X_1_s = X_s[:, 0, :]
-        X_2_s = X_s[:, 1, :]
-
-        K_1 = self.projector_momentum(self.encoder_momentum(X_1_s))
-        K_2 = self.projector_momentum(self.encoder_momentum(X_2_s))
+        # Keys
+        X_s, idx_unshuffle = self._batch_shuffle_ddp(X)
+        K_1 = self.projector_momentum(self.encoder_momentum(X_s[:, 0, :]))
+        K_2 = self.projector_momentum(self.encoder_momentum(X_s[:, 1, :]))
+        K_1 = self._batch_unshuffle_ddp(K_1, idx_unshuffle)
+        K_2 = self._batch_unshuffle_ddp(K_2, idx_unshuffle)
 
         return Q_1, K_2, Q_2, K_1
 

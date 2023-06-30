@@ -59,32 +59,16 @@ class Trainer:
 
             # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):
-                # FIXME: Handle BN shuffling for MoCo
-                if self.config.model.__type__ == 'moco':
-                    idx_shuffled = torch.randperm(X.size(0), device=X.device)
-                    r_idx_shuffled = torch.argsort(idx_shuffled)
-                    Q_1, K_2, Q_2, K_1 = self.model(
-                        X,
-                        X[idx_shuffled],
-                        training=True
-                    )
-                    loss, metrics = self.model.module.train_step(
-                        (Q_1, K_2[r_idx_shuffled], Q_2, K_1[r_idx_shuffled]),
-                        labels=labels,
-                        step=step,
-                        samples=idx
-                    )
-                else:
-                    Z = self.model(
-                        X,
-                        training=True
-                    )
-                    loss, metrics = self.model.module.train_step(
-                        Z,
-                        labels=labels,
-                        step=step,
-                        samples=idx
-                    )
+                Z = self.model(
+                    X,
+                    training=True
+                )
+                loss, metrics = self.model.module.train_step(
+                    Z,
+                    labels=labels,
+                    step=step,
+                    samples=idx
+                )
 
             # Update metrics (average for epoch)
             if not train_metrics:
@@ -318,6 +302,9 @@ class Trainer:
         )
 
     def start(self, resume=True):
+        if is_dist_initialized() and self.config.training.ddp_sync_batchnorm:
+            self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
+
         self.setup()
 
         self.model.module.on_train_start(self)
