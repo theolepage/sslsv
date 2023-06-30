@@ -224,10 +224,7 @@ def load_train_dataloader(config, nb_labels_per_spk=None):
         max_samples=config.data.max_samples
     )
 
-    batch_size = (
-        config.training.batch_size // get_world_size() if is_dist_initialized()
-        else config.training.batch_size
-    )
+    batch_size = config.training.batch_size // get_world_size()
 
     shuffle = True
     sampler = None

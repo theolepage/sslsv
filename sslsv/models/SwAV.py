@@ -8,6 +8,8 @@ from sslsv.losses.SwAV import SwAVLoss
 from sslsv.models.utils.SinkhornKnopp import SinkhornKnopp
 from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 
+from sslsv.utils.distributed import get_world_size
+
 
 @dataclass
 class SwAVConfig(BaseModelConfig):
@@ -67,7 +69,7 @@ class SwAV(BaseModel):
                 'queue',
                 torch.zeros(
                     2,
-                    self.config.queue_size,
+                    self.config.queue_size // get_world_size(),
                     self.config.projector_output_dim,
                     device=trainer.device,
                 )

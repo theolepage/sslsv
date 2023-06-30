@@ -9,6 +9,8 @@ from sslsv.losses.DeepCluster import DeepClusterLoss
 from sslsv.models.utils.KMeans import KMeans
 from sslsv.models._BaseModel import BaseModel, BaseModelConfig
 
+from sslsv.utils.distributed import get_world_size
+
 
 @dataclass
 class DeepClusterConfig(BaseModelConfig):
@@ -47,17 +49,17 @@ class DeepCluster(BaseModel):
             for p in layer.parameters(): p.requires_grad = False
             layer.weight.copy_(F.normalize(layer.weight.data.clone(), dim=-1))
 
-        self.kmeans = KMeans(
-            nb_prototypes=config.nb_prototypes,
-            nb_iters=config.kmeans_nb_iters,
-            nb_views=2
-        )
-
         self.loss_fn = DeepClusterLoss(config.temperature)
 
     def on_train_start(self, trainer):
         self.dataset_size = len(trainer.train_dataloader.dataset)
         self.batch_size = trainer.config.training.batch_size
+
+        self.kmeans = KMeans(
+            nb_prototypes=self.config.nb_prototypes,
+            nb_iters=self.config.kmeans_nb_iters,
+            dataset_size=self.dataset_size
+        )
 
         self.assignments = -1 * torch.ones(
             (len(self.config.nb_prototypes), self.dataset_size),
@@ -65,14 +67,17 @@ class DeepCluster(BaseModel):
             device=trainer.device
         )
 
+        size_memory_per_process = (
+            len(trainer.train_dataloader) * self.batch_size // get_world_size()
+        )
         self.register_buffer(
             'local_memory_indexes',
-            torch.zeros(self.dataset_size).long().to(trainer.device, non_blocking=True)
+            torch.zeros(size_memory_per_process).long().to(trainer.device, non_blocking=True)
         )
         self.register_buffer(
             'local_memory_embeddings',
             F.normalize(
-                torch.randn(2, self.dataset_size, self.config.projector_output_dim),
+                torch.randn(2, size_memory_per_process, self.config.projector_output_dim),
                 dim=-1,
             ).to(trainer.device, non_blocking=True),
         )

@@ -1,3 +1,4 @@
+import torch
 import torch.distributed as dist
 
 
@@ -17,3 +18,22 @@ def get_rank():
 
 def is_main_process():
     return get_rank() == 0
+
+
+class GatherLayer(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, x):
+        output = [torch.zeros_like(x) for _ in range(torch.distributed.get_world_size())]
+        torch.distributed.all_gather(output, x)
+        return tuple(output)
+
+    @staticmethod
+    def backward(ctx, *grads):
+        all_gradients = torch.stack(grads)
+        torch.distributed.all_reduce(all_gradients)
+        return all_gradients[torch.distributed.get_rank()]
+
+
+def gather(X):
+    return torch.cat(GatherLayer.apply(X)) if is_dist_initialized() else X

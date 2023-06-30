@@ -3,6 +3,9 @@
 import torch
 from torch import nn
 
+import torch.distributed as dist
+from sslsv.utils.distributed import is_dist_initialized, get_world_size
+
 
 class SinkhornKnopp(nn.Module):
 
@@ -15,15 +18,22 @@ class SinkhornKnopp(nn.Module):
     @torch.no_grad()
     def forward(self, Q):
         B, K = Q.size()
+        B *= get_world_size()
 
         Q = torch.exp(Q / self.epsilon).T
 
         # make the matrix sums to 1
-        Q /= torch.sum(Q)
+        sum_Q = torch.sum(Q)
+        if is_dist_initialized():
+            dist.all_reduce(sum_Q)
+        Q /= sum_Q
 
         for _ in range(self.nb_iters):
             # normalize each row: total weight per prototype must be 1/K
-            Q /= torch.sum(Q, dim=1, keepdim=True)
+            sum_rows = torch.sum(Q, dim=1, keepdim=True)
+            if is_dist_initialized():
+                dist.all_reduce(sum_rows)
+            Q /= sum_rows
             Q /= K
 
             # normalize each column: total weight per sample must be 1/B

@@ -83,11 +83,9 @@ class SimSiam(BaseModel):
             self.loss_fn(P_2, Z_1)
         ) / 2
 
-        accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)
-
         metrics = {
             'train/loss': loss,
-            'train/accuracy': accuracy
+            # 'train/accuracy': InfoNCELoss.determine_accuracy(Z_1, Z_2)
         }
 
         return loss, metrics

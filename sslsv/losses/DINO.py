@@ -2,6 +2,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+import torch.distributed as dist
+from sslsv.utils.distributed import is_dist_initialized, get_world_size
+
 
 class DINOLoss(nn.Module):
 
@@ -57,7 +60,14 @@ class DINOLoss(nn.Module):
 
     @torch.no_grad()
     def update_center(self, T):
-        new_center = torch.mean(T, dim=(0, 1), keepdim=True)
+        new_center = torch.sum(T, dim=0, keepdim=True)
+
+        if is_dist_initialized():
+            dist.all_reduce(new_center)
+            new_center /= get_world_size()
+
+        new_center /= T.size(0)
+
         self.center = (
             self.center * self.center_momentum +
             new_center * (1 - self.center_momentum)

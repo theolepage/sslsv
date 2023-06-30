@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from sslsv.utils.distributed import gather
+
 import math
 
 
@@ -169,6 +171,8 @@ class CustomLoss(nn.Module):
 
     def forward(self, Z):
         # Z shape: (N, V, C)
+
+        Z = gather(Z)
 
         GLOBAL_VIEWS = Z[:, :2]
         LOCAL_VIEWS = Z[:, 2:]

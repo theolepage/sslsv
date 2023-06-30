@@ -153,10 +153,11 @@ class CPC(BaseModel):
         loss = self.loss_fn(Y_future_preds, Y_future)
 
         # Determine accuracy only for the last timestep
-        accuracy = InfoNCELoss.determine_accuracy(
-            Y_future[:, :, -1],
-            Y_future_preds[:, :, -1]
-        )
+        accuracy = 0
+        # accuracy = InfoNCELoss.determine_accuracy(
+            # Y_future[:, :, -1],
+            # Y_future_preds[:, :, -1]
+        # )
 
         return loss, accuracy
 
@@ -182,7 +183,7 @@ class CPC(BaseModel):
 
         metrics = {
             'train/loss': loss,
-            'train/accuracy': accuracy
+            # 'train/accuracy': accuracy
         }
 
         return loss, metrics

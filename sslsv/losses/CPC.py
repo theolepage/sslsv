@@ -2,25 +2,25 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from sslsv.losses.InfoNCE import InfoNCELoss
+
 
 class CPCLoss(nn.Module):
 
     def __init__(self):
         super().__init__()
 
+        self.infonce = InfoNCELoss(temperature=1.0)
+
     def forward(self, Y_future_preds, Y_future):
         # Shape: (N, encoded_dim, nb_t_to_predict)
 
         nb_t_to_predict = Y_future.size(2)
 
-        losses = 0
+        loss = 0
         for t in range(nb_t_to_predict):
-            dot = Y_future[:, :, t] @ Y_future_preds[:, :, t].T
-            log_softmax_dot = torch.nn.functional.log_softmax(dot, dim=1)
-            diag = torch.diagonal(log_softmax_dot)
-            losses += diag
+            loss += self.infonce(Y_future[:, :, t], Y_future_preds[:, :, t])
 
-        losses /= nb_t_to_predict
-        loss = -torch.mean(losses)
+        loss /= nb_t_to_predict
 
         return loss

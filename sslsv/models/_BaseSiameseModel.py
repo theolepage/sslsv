@@ -59,11 +59,9 @@ class BaseSiameseModel(BaseModel):
 
         loss = self.loss_fn(Z_1, Z_2)
 
-        accuracy = InfoNCELoss.determine_accuracy(Z_1, Z_2)
-            
         metrics = {
             'train/loss': loss,
-            'train/accuracy': accuracy
+            # 'train/accuracy': InfoNCELoss.determine_accuracy(Z_1, Z_2)
         }
 
         return loss, metrics

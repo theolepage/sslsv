@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from sslsv.utils.distributed import gather
+
 
 class VIbCRegLoss(nn.Module):
 
@@ -18,10 +20,11 @@ class VIbCRegLoss(nn.Module):
         self.cov_weight = cov_weight
 
     def forward(self, Z_a, Z_b):
-        N, D = Z_a.size()
-
         # Invariance loss
         inv_loss = F.mse_loss(Z_a, Z_b)
+
+        Z_a = gather(Z_a)
+        Z_b = gather(Z_b)
 
         # Variance loss
         Z_a_std = torch.sqrt(Z_a.var(dim=0) + 1e-04)

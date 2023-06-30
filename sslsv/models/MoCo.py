@@ -12,6 +12,8 @@ from sslsv.models._BaseMomentumModel import (
     initialize_momentum_params
 )
 
+from sslsv.utils.distributed import gather
+
 
 @dataclass
 class MoCoConfig(BaseMomentumModelConfig):
@@ -116,13 +118,14 @@ class MoCo(BaseMomentumModel):
         loss += self.loss_fn(Q_2, K_1, queue[0])
         loss /= 2
 
-        self._enqueue(torch.stack((K_1, K_2)))
-
-        accuracy = InfoNCELoss.determine_accuracy(Q_1, Q_2)
+        self._enqueue(torch.stack((
+            gather(K_1),
+            gather(K_2)
+        )))
 
         metrics = {
             'train/loss': loss,
-            'train/accuracy': accuracy,
+            # 'train/accuracy': InfoNCELoss.determine_accuracy(Q_1, Q_2),
             'train/tau': self.momentum_updater.tau
         }
 
