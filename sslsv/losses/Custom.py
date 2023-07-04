@@ -2,7 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from sslsv.utils.distributed import gather
+from sslsv.utils.distributed import gather, get_world_size, get_rank
+from sslsv.losses.SimCLR import SimCLRLoss
 
 import math
 
@@ -14,7 +15,7 @@ class BaseLoss(nn.Module):
 
         self.logits_fn = logits_fn
 
-    def _determine_logits(self, A, B, discard_diag=True):
+    def _determine_logits(self, A, B, discard_identity=True):
         N, V_A, D = A.size()
         _, V_B, _ = B.size()
 
@@ -23,27 +24,23 @@ class BaseLoss(nn.Module):
 
         A = F.normalize(A, p=2, dim=-1)
         B = F.normalize(B, p=2, dim=-1)
-        logits = self.logits_fn(A, B)
-        # logits: (V_A*N, V_B*N)
+        logits = self.logits_fn(A, gather(B))
+        # logits: (V_A*N, world_size*V_B*N)
 
-        labels = (torch.arange(N).unsqueeze(0) == torch.arange(N).unsqueeze(1))
-        labels = labels.repeat(V_A, V_B).float()
-        # labels: (V_A*N, V_B*N)
-        # For each sample (row)
-        #   - a column with 1 is a positive
-        #   - a column with 0 is a negative
+        pos_mask, neg_mask = SimCLRLoss.create_contrastive_masks(
+            N=N,
+            V_A=V_A,
+            V_B=V_B,
+            rank=get_rank(),
+            world_size=get_world_size(),
+            discard_identity=discard_identity
+        )
 
-        # Discard diagonal
-        if discard_diag:
-            mask = torch.eye(V_A * N, dtype=torch.bool)
-            labels = labels[~mask].view(V_A * N, -1)
-            logits = logits[~mask].view(V_A * N, -1)
+        pos = logits[pos_mask].view(V_A * N, -1)
+        neg = logits[neg_mask].view(V_A * N, -1)
 
-        pos = logits[labels.bool()].view(V_A * N, -1)
-        neg = logits[~labels.bool()].view(V_A * N, -1)
-
-        # pos: (V_A*N, V_B) -> V_B positives or V_B-1 positives (if discard_diag)
-        # neg: (V_A*N, V_B*N-V_B) -> V_B*(N-1) negatives 
+        # pos: (V_A*N, V_B) -> V_B positives or V_B-1 positives (if discard_identity)
+        # neg: (V_A*N, V_B*N*world_size-V_B) -> V_B*(N*world_size-1) negatives 
 
         return pos, neg
 
@@ -58,8 +55,8 @@ class MHERegularization(BaseLoss):
 
         self.weight = config.loss_reg_weight
 
-    def forward(self, A, B, discard_diag=True):
-        _, neg = self._determine_logits(A, B, discard_diag)
+    def forward(self, A, B, discard_identity=True):
+        _, neg = self._determine_logits(A, B, discard_identity)
 
         loss = self.weight * torch.mean(1 / (neg ** 2))
 
@@ -87,8 +84,8 @@ class SNTXent(BaseLoss):
     def _process_logits(self, logits):
         return self.scale * logits
 
-    def forward(self, A, B, discard_diag=True):
-        pos, neg = self._determine_logits(A, B, discard_diag)
+    def forward(self, A, B, discard_identity=True):
+        pos, neg = self._determine_logits(A, B, discard_identity)
 
         logits = torch.cat((
             self._process_pos(pos),
@@ -111,8 +108,8 @@ class NTXent(SNTXent):
     def __init__(self, config):
         super().__init__(config)
 
-    def forward(self, A, B, discard_diag):
-       return super().forward(A[:, 0:1], B[:, 1:2], discard_diag=False)
+    def forward(self, A, B, discard_identity):
+       return super().forward(A[:, 0:1], B[:, 1:2], discard_identity=False)
 
 
 class SNTXentAM(SNTXent):
@@ -172,18 +169,16 @@ class CustomLoss(nn.Module):
     def forward(self, Z):
         # Z shape: (N, V, C)
 
-        Z = gather(Z)
-
         GLOBAL_VIEWS = Z[:, :2]
         LOCAL_VIEWS = Z[:, 2:]
 
-        loss = self.loss_fn(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_diag=True)
+        loss = self.loss_fn(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_identity=True)
         if self.reg:
-            loss += self.reg(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_diag=True)
+            loss += self.reg(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_identity=True)
 
         if self.enable_multi_views:
-            loss += self.loss_fn(LOCAL_VIEWS, GLOBAL_VIEWS, discard_diag=False)
+            loss += self.loss_fn(LOCAL_VIEWS, GLOBAL_VIEWS, discard_identity=False)
             if self.reg:
-                loss += self.reg(LOCAL_VIEWS, GLOBAL_VIEWS, discard_diag=False)
+                loss += self.reg(LOCAL_VIEWS, GLOBAL_VIEWS, discard_identity=False)
 
         return loss

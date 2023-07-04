@@ -107,11 +107,9 @@ class Custom(BaseModel):
 
         loss = self.loss_fn(Z)
 
-        accuracy = InfoNCELoss.determine_accuracy(Z[:, 0], Z[:, 1])
-
         metrics = {
             'train/loss': loss,
-            'train/accuracy': accuracy,
+            # 'train/accuracy': InfoNCELoss.determine_accuracy(Z[:, 0], Z[:, 1]),
             'train/margin': loss_margin
         }
 
