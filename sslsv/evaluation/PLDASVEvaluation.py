@@ -18,6 +18,17 @@ from sslsv.evaluation._SpeakerVerificationEvaluation import (
 )
 
 
+def create_stat_object(modelset, segset, embeddings):
+    return StatObject_SB(
+        modelset=modelset,
+        segset=segset,
+        start=None,
+        stop=None,
+        stat0=None,
+        stat1=embeddings
+    )
+
+
 @dataclass
 class PLDASVEvaluationTaskConfig(SpeakerVerificationEvaluationTaskConfig):
 
@@ -37,19 +48,17 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
                 stat = pickle.load(f)
             return stat
 
-        labels = None
-
         if key == 'train':
             df = pd.read_csv(self.config.data.base_path / self.config.data.train)
             files = df['File'].tolist()
             labels = pd.factorize(df['Speaker'])[0].tolist()
         else:
-            k = 1 if key == 'enrolment' else 2
             files = list(dict.fromkeys([
-                line.rstrip().split()[k]
+                line.rstrip().split()[1 if key == 'enrolment' else 2]
                 for trial_file in trials
                 for line in open(self.config.data.base_path / trial_file)
             ]))
+            labels = None
 
         embeddings = self._extract_embeddings(
             files,
@@ -58,28 +67,27 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
             numpy=True
         )
 
+        # Convert embeddings from dict to numpy arrays
+        embeddings_keys = np.array(list(embeddings.keys()))
+        embeddings_values = np.array(list(embeddings.values())).squeeze(axis=1)
+
         assert (
             self.config.evaluation.num_frames == 1 or
             self.config.evaluation.mean_of_features
         )
 
-        modelset = labels if key == 'train' else list(embeddings.keys())
-        segset = list(embeddings.keys())
-        embeddings = np.array(list(embeddings.values())).squeeze(axis=1)
-
-        modelset = np.array(modelset, dtype="|O")
-        segset = np.array(segset, dtype="|O")
-        s = np.array([None] * len(embeddings))
-        b = np.array([[1.0]] * len(embeddings))
-
-        stat = StatObject_SB(
-            modelset=modelset,
-            segset=segset,
-            start=s,
-            stop=s,
-            stat0=b,
-            stat1=embeddings
-        )
+        if key == 'train':
+            stat = create_stat_object(
+                np.array(labels),
+                None,
+                embeddings_values
+            )
+        else:
+            stat = create_stat_object(
+                embeddings_keys,
+                embeddings_keys,
+                embeddings_values
+            )
 
         stat.save_stat_object(stat_path)
 
@@ -96,14 +104,12 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
         enrolment_stat = self._prepare_evaluation_aux(trials, 'enrolment')
         test_stat = self._prepare_evaluation_aux(trials, 'test')
 
-        self.test_embeddings = None
-        
         ndx = Ndx(
             models=enrolment_stat.modelset,
-            testsegs=test_stat.modelset
+            testsegs=test_stat.segset
         )
 
-        self.plda_scores = fast_PLDA_scoring(
+        self.scores = fast_PLDA_scoring(
             enrolment_stat,
             test_stat,
             ndx,
@@ -111,8 +117,10 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
             plda.F,
             plda.Sigma
         )
-
+        
     def _get_sv_score(self, a, b):
-        i = int(np.where(self.plda_scores.modelset == a)[0][0])
-        j = int(np.where(self.plda_scores.segset == b)[0][0])
-        return self.plda_scores.scoremat[i, j].item()
+        score = self.scores.scoremat[
+            self.scores.modelset == a,
+            self.scores.segset == b
+        ]
+        return score.item()
