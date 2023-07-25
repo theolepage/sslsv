@@ -43,7 +43,7 @@ class BaseEncoder(nn.Module):
 
         if config.extract_mel_features:
             self.features_extractor = nn.Sequential(
-                AudioPreEmphasis(),
+                # AudioPreEmphasis(),
                 MelSpectrogram(
                     n_fft=config.mel_n_fft,
                     win_length=config.mel_win_length,

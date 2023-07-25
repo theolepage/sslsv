@@ -36,7 +36,7 @@ class ResNetBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
         self.downsample = None
-        if stride != 1:
+        if stride != 1 or in_size != out_size:
             self.downsample = nn.Sequential(
                 nn.Conv2d(
                     in_size,
@@ -90,20 +90,31 @@ class SelfAttentivePooling(nn.Module):
     def __init__(self, out_size, dim=128):
         super().__init__()
 
-        self.attention = nn.Sequential(
-            nn.Conv1d(out_size, dim, kernel_size=1),
-            nn.ReLU(),
-            nn.BatchNorm1d(dim),
-            nn.Conv1d(dim, out_size, kernel_size=1),
-            nn.Softmax(dim=2)
-        )
+        #self.attention = nn.Sequential(
+        #    nn.Conv1d(out_size, dim, kernel_size=1),
+        #    nn.ReLU(),
+        #    nn.BatchNorm1d(dim),
+        #    nn.Conv1d(dim, out_size, kernel_size=1),
+        #    nn.Softmax(dim=2)
+        #)
+
+        self.attention = nn.Parameter(torch.FloatTensor(out_size, 1))
+        nn.init.xavier_normal_(self.attention)
+
+        self.sap_linear = nn.Linear(out_size, out_size)
 
     def forward(self, X):
         b, c, h, w = X.size()
+        # B 1 40 200
 
-        X = X.reshape(b, -1, w)
-        W = self.attention(X)
-        return torch.sum(W * X, dim=2)
+        X = X.mean(dim=2).transpose(1, 2) # B W C
+        W = torch.tanh(self.sap_linear(X)) @ self.attention # B W 1
+        W = F.softmax(W, dim=1)
+        return torch.sum(X * W, dim=1)
+
+        #X = X.reshape(b, -1, w)
+        #W = self.attention(X)
+        #return torch.sum(W * X, dim=2)
 
 
 class StatsPooling(nn.Module):
@@ -141,19 +152,20 @@ class ResNet34(BaseEncoder):
 
         base_dim = config.base_dim
 
-        self.conv = nn.Conv2d(1, base_dim, kernel_size=3, stride=1, padding=1)
+        self.conv = nn.Conv2d(1, base_dim, kernel_size=7, stride=(2, 1), padding=3, bias=False)
         self.relu = nn.ReLU(inplace=True)
         self.bn = nn.BatchNorm2d(base_dim)
 
         self.block1 = self.__make_block(3, base_dim, base_dim, 1)
         self.block2 = self.__make_block(4, base_dim, base_dim * 2, 2)
         self.block3 = self.__make_block(6, base_dim * 2, base_dim * 4, 2)
-        self.block4 = self.__make_block(3, base_dim * 4, base_dim * 8, 2)
+        self.block4 = self.__make_block(3, base_dim * 4, base_dim * 8, 1)
 
-        out_size = int(config.mel_n_mels / 8 * (base_dim * 8))
+        #out_size = int(config.mel_n_mels / 8 * (base_dim * 8))
+        out_size = base_dim * 8
 
         self.pooling = None
-        if config.pooling:        
+        if config.pooling:
             self.pooling = self._POOLING_MODULES[config.pooling_mode](out_size)
 
         if config.pooling_mode == 'stats': out_size *= 2
@@ -185,8 +197,8 @@ class ResNet34(BaseEncoder):
         # Z: (B, C, H, W) = (B, 1, 40, 200)
 
         Z = self.conv(Z)
-        Z = self.relu(Z)
         Z = self.bn(Z)
+        Z = self.relu(Z)
 
         Z = self.block1(Z)
         Z = self.block2(Z)

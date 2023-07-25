@@ -22,6 +22,8 @@ class CustomConfig(BaseModelConfig):
     loss_margin: float = 0.2
     loss_scale: float = 5
 
+    loss_simo: bool = False
+
     loss_reg_weight: float = 0.0
 
     enable_projector: bool = True
@@ -39,11 +41,11 @@ class Custom(BaseModel):
 
         self.config = config
 
-        self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
-        )
+        # self.projector = nn.Sequential(
+        #     nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
+        # )
 
         self.loss_fn = CustomLoss(config)
     
@@ -80,7 +82,8 @@ class Custom(BaseModel):
 
     def get_learnable_params(self):
         extra_learnable_params = [
-            {'params': self.projector.parameters()}
+            # {'params': self.projector.parameters()},
+            {'params': self.loss_fn.parameters()}
         ]
         return super().get_learnable_params() + extra_learnable_params
 

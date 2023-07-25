@@ -30,7 +30,7 @@ class BaseModel(nn.Module):
 
     def adjust_learning_rate(self, optimizer, learning_rate, epoch, epochs):
         # Equivalent to StepLR(..., step_size=10, gamma=0.95)
-        lr = learning_rate * (0.95 ** (epoch // 10))
+        lr = learning_rate * (0.95 ** (epoch // 5))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         return lr

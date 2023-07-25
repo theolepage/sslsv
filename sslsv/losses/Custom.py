@@ -69,6 +69,7 @@ class SNTXent(BaseLoss):
         super().__init__()
 
         self.scale = config.loss_scale
+        self.simo = config.loss_simo
 
     def _determine_labels(self, logits, nb_positives):
         labels = torch.zeros(logits.size(), device=logits.device)
@@ -76,7 +77,10 @@ class SNTXent(BaseLoss):
         return labels
 
     def _process_pos(self, pos):
-        return pos
+        m = 0
+        if self.simo:
+            m = 0.02 * math.log(65536 / (2 * 255))
+        return pos - m
 
     def _process_neg(self, neg):
         return neg
@@ -107,6 +111,13 @@ class NTXent(SNTXent):
 
     def __init__(self, config):
         super().__init__(config)
+
+        self.w = nn.Parameter(torch.tensor(10.0))
+        self.b = nn.Parameter(torch.tensor(-5.0))
+
+    def _process_logits(self, logits):
+        torch.clamp(self.w, 1e-6)
+        return logits * self.w + self.b
 
     def forward(self, A, B, discard_identity):
        return super().forward(A[:, 0:1], B[:, 1:2], discard_identity=False)
