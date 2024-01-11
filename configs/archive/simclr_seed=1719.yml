@@ -1,0 +1,13 @@
+seed: 1719
+wandb_project: 'sslsv_theo_experiments'
+encoder:
+  type: 'resnet34'
+model:
+  type: 'custom'
+training:
+  epochs: 200
+data:
+  siamese: true
+  train: 'voxceleb1_train'
+  wav_augment:
+    enable: true

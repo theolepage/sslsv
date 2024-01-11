@@ -1,0 +1,13 @@
+wandb_project: 'sslsv_theo_experiments'
+encoder:
+  type: 'resnet34'
+model:
+  type: 'simclr'
+training:
+  epochs: 10
+data:
+  max_samples: 1000
+  siamese: true
+  train: 'voxceleb1_train'
+  augmentation:
+    enable: true

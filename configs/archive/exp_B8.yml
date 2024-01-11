@@ -1,0 +1,12 @@
+wandb_project: 'sslsv_theo_experiments'
+encoder:
+  type: 'resnet34'
+model:
+  type: 'simclr'
+training:
+  epochs: 3
+data:
+  siamese: true
+  train: 'nistsre10_train'
+  augmentation:
+    enable: true

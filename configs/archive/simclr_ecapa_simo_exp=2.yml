@@ -1,0 +1,13 @@
+encoder:
+  type: 'ecapatdnn'
+  encoder_dim: 1024
+model:
+  type: 'custom'
+  loss_simo: true
+training:
+  epochs: 200
+data:
+  siamese: true
+  train: 'voxceleb1_train'
+  augmentation:
+    enable: true

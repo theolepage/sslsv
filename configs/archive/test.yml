@@ -1,0 +1,13 @@
+encoder:
+  type: 'resnet34'
+model:
+  type: 'custom'
+  enable_projector: false
+  loss_simo: false
+training:
+  epochs: 200
+data:
+  siamese: true
+  train: 'voxceleb1_train'
+  augmentation:
+    enable: true
