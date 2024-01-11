@@ -219,6 +219,7 @@ def load_train_dataloader(config, nb_labels_per_spk=None):
         files=files,
         labels=labels,
         frame_length=config.data.frame_length,
+        frame_sampling=config.data.frame_sampling,
         num_frames=1,
         augmentation_config=config.data.augmentation,
         max_samples=config.data.max_samples

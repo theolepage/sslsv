@@ -66,7 +66,7 @@ class MoCo(BaseMomentumModel):
     def _batch_shuffle_ddp(self, x):
         x_gather = gather(x)
 
-        idx_shuffle = torch.randperm(x_gather.size(0)).cuda()
+        idx_shuffle = torch.randperm(x_gather.size(0)).to(get_rank())
         dist.broadcast(idx_shuffle, src=0)
 
         idx_unshuffle = torch.argsort(idx_shuffle)

@@ -123,9 +123,12 @@ class StatsPooling(nn.Module):
         super().__init__()
 
     def forward(self, X):
-        mean = torch.mean(X, dim=-1)
-        std = torch.std(X, dim=-1)
-        stats = torch.cat((mean, std), dim=1)
+        X = X.view(X.size(0), -1, X.size(-1)) # B C L
+
+        mean = torch.mean(X, dim=-1, keepdim=True)
+        std = torch.sqrt(torch.mean((X - mean) ** 2, dim=-1, keepdim=True).clamp(min=1e-5))
+        stats = torch.cat((mean, std), dim=1).squeeze(dim=-1)
+
         return stats
 
 
@@ -136,6 +139,8 @@ class ResNet34Config(BaseEncoderConfig):
     pooling_mode: str = 'sap'
 
     base_dim: int = 16
+
+    enable_last_bn: bool = False
 
 
 class ResNet34(BaseEncoder):
@@ -161,16 +166,20 @@ class ResNet34(BaseEncoder):
         self.block3 = self.__make_block(6, base_dim * 2, base_dim * 4, 2)
         self.block4 = self.__make_block(3, base_dim * 4, base_dim * 8, 1)
 
-        #out_size = int(config.mel_n_mels / 8 * (base_dim * 8))
         out_size = base_dim * 8
+        if config.pooling_mode == 'stats':
+            out_size = 2 * int(80 / 8 * (base_dim * 8))
 
         self.pooling = None
         if config.pooling:
             self.pooling = self._POOLING_MODULES[config.pooling_mode](out_size)
 
-        if config.pooling_mode == 'stats': out_size *= 2
-
         self.fc = nn.Linear(out_size, self.encoder_dim)
+
+        self.last_bn = (
+            nn.BatchNorm1d(self.encoder_dim)
+            if config.enable_last_bn else None
+        )
 
         self.__init_weights()
 
@@ -212,5 +221,7 @@ class ResNet34(BaseEncoder):
             B, C, H, W = Z.size()
             Z = Z.reshape((B, -1, W))
             Z = self.fc(Z.transpose(1, 2)).transpose(2, 1)
+        
+        if self.last_bn: Z = self.last_bn(Z)
 
         return Z

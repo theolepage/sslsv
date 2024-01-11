@@ -68,11 +68,26 @@ class SimSiam(BaseModel):
         ]
         return super().get_learnable_params() + extra_learnable_params
 
-    def adjust_learning_rate(self, optimizer, learning_rate, epoch, epochs):
-        lr = super().adjust_learning_rate(optimizer, learning_rate, epoch, epochs)
+    def update_optim(
+        self,
+        optimizer,
+        training_config,
+        step,
+        nb_steps,
+        nb_steps_per_epoch
+    ):
+        lr = super().update_optim(
+            optimizer,
+            training_config,
+            step,
+            nb_steps,
+            nb_steps_per_epoch
+        )
+
         for param_group in optimizer.param_groups:
             if 'fix_lr' in param_group and param_group['fix_lr']:
-                param_group['lr'] = learning_rate
+                param_group['lr'] = training_config.learning_rate
+
         return lr
 
     def train_step(self, Z, labels, step, samples):

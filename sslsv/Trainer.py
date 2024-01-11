@@ -1,4 +1,5 @@
 from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 import json
 
@@ -19,6 +20,105 @@ from sslsv.utils.distributed import (
     get_rank,
     get_world_size
 )
+
+
+
+
+
+
+import time
+from collections import defaultdict
+import torch.distributed as dist
+class MetricValue(object):
+
+    def __init__(self, fmt='{global_avg:.6f}'):
+        self.fmt = fmt
+
+        self.total = 0.0
+        self.count = 0
+
+    def update(self, value):
+        self.count += 1
+        self.total += value
+
+    def synchronize(self):
+        if not is_dist_initialized(): return
+
+        t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
+        dist.barrier()
+        dist.all_reduce(t)
+        t = t.tolist()
+        self.count = int(t[0])
+        self.total = t[1]
+
+    @property
+    def global_avg(self):
+        return self.total / self.count
+
+    def __str__(self):
+        return self.fmt.format(global_avg=self.global_avg)
+
+class MetricLogger:
+
+    def __init__(self, delimiter=' '):
+        self.metrics = defaultdict(MetricValue)
+        self.delimiter = delimiter
+
+    def update(self, metrics):
+        for k, v in metrics.items():
+            assert isinstance(v, (torch.Tensor, float, int))
+
+            if isinstance(v, torch.Tensor): v = v.item()
+            self.metrics[k].update(v)
+
+    def __str__(self):
+        res = []
+        for name, metric in self.metrics.items():
+            res.append('{}: {}'.format(name, metric))
+        return self.delimiter.join(res)
+
+    def __getitem__(self, key):
+        return self.metrics[key]
+
+    def synchronize(self):
+        for metric in self.metrics.values():
+            metric.synchronize()
+
+    def log(self, iterable, print_freq=100):
+        i = 0
+
+        last_iter_end_time = time.time()
+        iter_time = MetricValue()
+        
+        space_fmt = ':' + str(len(str(len(iterable)))) + 'd'
+        log_msg = self.delimiter.join([
+            '[{0' + space_fmt + '}/{1}]',
+            'eta: {eta}',
+            '{metrics}'
+        ])
+
+        for obj in iterable:
+            yield obj
+            iter_time.update(time.time() - last_iter_end_time)
+            if get_rank() == 0 and (i % print_freq == 0 or i == len(iterable) - 1):
+                eta = int(iter_time.global_avg * (len(iterable) - i))
+                print(
+                    log_msg.format(
+                        i,
+                        len(iterable),
+                        eta=str(timedelta(seconds=eta)),
+                        metrics=str(self)
+                    )
+                )
+
+            i += 1
+            last_iter_end_time = time.time()
+
+
+
+
+
+
 
 
 class Trainer:
@@ -47,12 +147,22 @@ class Trainer:
         train_metrics = {}
         self.last_progress = 0
 
-        max_steps = self.config.training.epochs * len(self.train_dataloader)
+        nb_steps = self.config.training.epochs * len(self.train_dataloader)
 
-        for step, (idx, X, info) in enumerate(self.train_dataloader):
-            step_abs = self.epoch * len(self.train_dataloader) + step
+        # metric_logger = MetricLogger()
+        # for i, (idx, X, info) in enumerate(metric_logger.log(self.train_dataloader)):
+        for i, (idx, X, info) in enumerate(self.train_dataloader):
+            step = self.epoch * len(self.train_dataloader) + i
 
-            self.model.module.on_train_step_start(step_abs, max_steps)
+            self.model.module.on_train_step_start(step, nb_steps)
+
+            lr = self.model.module.update_optim(
+                self.optimizer,
+                self.config.training,
+                step=step,
+                nb_steps=nb_steps,
+                nb_steps_per_epoch=len(self.train_dataloader)
+            )
 
             X = X.to(self.device)
             labels = info['labels'].to(self.device)
@@ -66,7 +176,7 @@ class Trainer:
                 loss, metrics = self.model.module.train_step(
                     Z,
                     labels=labels,
-                    step=step,
+                    step=i,
                     samples=idx
                 )
 
@@ -93,9 +203,23 @@ class Trainer:
             else:
                 self.optimizer.step()
 
-            self.model.module.on_train_step_end(step_abs, max_steps)
+            self.model.module.on_train_step_end(step, nb_steps)
 
-            if is_main_process(): self.print_progress_bar(step)
+            # metric_logger.update({
+            #     'loss': loss
+            # })
+
+            if is_main_process():
+                print(
+                    f"\rStep {i}/{len(self.train_dataloader)} - "
+                    f"Loss: {round(loss.item(), 4)} - ",
+                    f"LR: {round(lr, 4)}",
+                    end='',
+                    flush=True
+                )
+                # self.print_progress_bar(i)
+
+        # metric_logger.synchronize()
 
         if is_main_process(): print()
 
@@ -166,12 +290,6 @@ class Trainer:
 
         return True
 
-    def start_epoch(self, epoch):
-        self.epoch = epoch
-        self.epoch_start_time = datetime.now()
-        if callable(getattr(self.train_dataloader.sampler, 'set_epoch', None)):
-            self.train_dataloader.sampler.set_epoch(epoch)
-
     def gather_metrics(self, metrics):
         for k, v in metrics.items():
             metric = torch.tensor([v]).to(get_rank())
@@ -189,18 +307,14 @@ class Trainer:
         max_epochs = self.config.training.epochs
 
         for epoch in range(first_epoch, max_epochs):
-            self.start_epoch(epoch)
+            self.epoch = epoch
+            self.epoch_start_time = datetime.now()
+            if callable(getattr(self.train_dataloader.sampler, 'set_epoch', None)):
+                self.train_dataloader.sampler.set_epoch(epoch)
 
             self.model.module.on_train_epoch_start(self.epoch, max_epochs)
         
             if is_main_process(): print(f'\nEpoch {self.epoch}')
-
-            lr = self.model.module.adjust_learning_rate(
-                self.optimizer,
-                self.config.training.learning_rate,
-                self.epoch,
-                max_epochs
-            )
 
             self.model.train()
             train_metrics = self.train_step_loop()
@@ -220,7 +334,7 @@ class Trainer:
                     verbose=False
                 )
 
-                metrics = {**train_metrics, 'lr': lr, **val_metrics}
+                metrics = {**train_metrics, **val_metrics}
 
                 self.log_metrics(metrics)
                 if not self.track_improvement(metrics): break
@@ -228,21 +342,17 @@ class Trainer:
     def setup(self):
         params = self.model.module.get_learnable_params()
 
-        init_lr = self.model.module.get_initial_learning_rate(
-            self.config.training
-        )
-
         if self.config.training.optimizer == 'sgd':
             self.optimizer = SGD(
                 params,
                 momentum=0.9,
-                lr=init_lr,
+                lr=0,
                 weight_decay=self.config.training.weight_decay
             )
         elif self.config.training.optimizer == 'adam':
             self.optimizer = Adam(
                 params,
-                lr=init_lr,
+                lr=0,
                 weight_decay=self.config.training.weight_decay
             )
         else:

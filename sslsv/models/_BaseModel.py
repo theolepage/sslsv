@@ -25,12 +25,18 @@ class BaseModel(nn.Module):
     def get_learnable_params(self):
         return [{'params': self.encoder.parameters()}]
 
-    def get_initial_learning_rate(self, training_config):
-        return training_config.learning_rate
+    def update_optim(
+        self,
+        optimizer,
+        training_config,
+        step,
+        nb_steps,
+        nb_steps_per_epoch
+    ):
+        # Equivalent to StepLR(..., step_size=5, gamma=0.95)
+        init_lr = training_config.learning_rate
+        lr = init_lr * (0.95 ** ((step // nb_steps_per_epoch) // 5))
 
-    def adjust_learning_rate(self, optimizer, learning_rate, epoch, epochs):
-        # Equivalent to StepLR(..., step_size=10, gamma=0.95)
-        lr = learning_rate * (0.95 ** (epoch // 5))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         return lr

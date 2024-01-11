@@ -112,13 +112,6 @@ class NTXent(SNTXent):
     def __init__(self, config):
         super().__init__(config)
 
-        self.w = nn.Parameter(torch.tensor(10.0))
-        self.b = nn.Parameter(torch.tensor(-5.0))
-
-    def _process_logits(self, logits):
-        torch.clamp(self.w, 1e-6)
-        return logits * self.w + self.b
-
     def forward(self, A, B, discard_identity):
        return super().forward(A[:, 0:1], B[:, 1:2], discard_identity=False)
 

@@ -30,7 +30,7 @@ class DINOLoss(nn.Module):
         self.teacher_temp = teacher_temp
 
         self.center_momentum = center_momentum
-        self.register_buffer('center', torch.zeros(1, 1, nb_prototypes))
+        self.register_buffer('center', torch.zeros(1, nb_prototypes))
 
     def _get_teacher_temp(self):
         if self.epoch < len(self.teacher_temp_warmup):
@@ -39,17 +39,18 @@ class DINOLoss(nn.Module):
 
     def forward(self, S, T):
         S = S / self.student_temp
+        S = S.chunk(2 + 4)
 
         T_ = F.softmax((T - self.center) / self._get_teacher_temp(), dim=-1)
-        T_ = T_.detach()
+        T_ = T_.detach().chunk(2)
 
         loss = 0
         nb_loss_terms = 0
-        for i in range(S.size(1)):
-            for j in range(T.size(1)):
+        for j in range(len(T_)):
+            for i in range(len(S)):
                 if i == j: continue
 
-                loss += torch.sum(-T_[:, j] * F.log_softmax(S[:, i], dim=-1), dim=-1).mean()
+                loss += torch.sum(-T_[j] * F.log_softmax(S[i], dim=-1), dim=-1).mean()
                 nb_loss_terms += 1
 
         loss /= nb_loss_terms

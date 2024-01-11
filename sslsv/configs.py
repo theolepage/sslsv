@@ -43,6 +43,7 @@ class DataConfig:
     siamese: bool = False
     augmentation: AudioAugmentationConfig = None
     frame_length: int = 32000
+    frame_sampling: str = 'default'
     max_samples: int = None
     train: str = 'voxceleb2_train.csv'
     label_key: str = 'Speaker'

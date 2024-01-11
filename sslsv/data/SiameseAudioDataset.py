@@ -1,11 +1,8 @@
-import os
 import numpy as np
 
 import torch
-from torch.utils.data import Dataset
 
 from sslsv.data.AudioDataset import AudioDataset
-from sslsv.data.AudioAugmentation import AudioAugmentation
 from sslsv.data.utils import load_audio
 
 
@@ -29,22 +26,68 @@ def sample_frames(audio, frame_length):
     frame2_to = pivot + dist // 2 + frame_length
     frame2 = audio[:, frame2_from:frame2_to]
 
-    return frame1, frame2
+    return [frame1, frame2]
+
+
+def sample_frames_dino(
+    audio,
+    frame_length,
+    large_frames_count=2,
+    large_frames_length=4*16000,
+    small_frames_count=4,
+    small_frames_length=2*16000
+):
+    audio_length = audio.shape[1]
+
+    frames = []
+
+    for _ in range(large_frames_count):
+        pos = np.random.randint(0, audio_length - large_frames_length + 1)
+        frame = audio[:, pos:pos+large_frames_length]
+        frames.append(frame)
+
+    for _ in range(small_frames_count):
+        pos = np.random.randint(0, audio_length - small_frames_length + 1)
+        frame = audio[:, pos:pos+small_frames_length]
+        frames.append(frame)
+
+    return frames
 
 
 class SiameseAudioDataset(AudioDataset):
 
+    FRAME_SAMPLING_METHODS = {
+        'default': sample_frames,
+        'dino':    sample_frames_dino
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _pad_smaller_frames(self, frames):
+        max_frame_length = max([f.shape[1] for f in frames])
+        res = []
+        for frame in frames:
+            res.append(np.concatenate((
+                frame,
+                np.zeros((1, max_frame_length - frame.shape[1]))
+            ), axis=-1))
+        return res
+
     def __getitem__(self, i):
         if isinstance(i, int):
+            min_length = 2 * self.frame_length
+            if self.frame_sampling == 'dino': min_length = self.frame_length
+
             data = load_audio(
                 self.base_path / self.files[i],
                 frame_length=None,
-                min_length=2*self.frame_length
+                min_length=min_length
             ) # (1, T)
-            frame1, frame2 = sample_frames(data, self.frame_length)
+            frames = self.FRAME_SAMPLING_METHODS[self.frame_sampling](
+                data,
+                self.frame_length
+            )
             y = self.labels[i]
         else:
             frame1 = load_audio(
@@ -55,13 +98,14 @@ class SiameseAudioDataset(AudioDataset):
                 self.base_path / self.files[i[1]],
                 frame_length=self.frame_length
             )
+            frames = [frame1, frame2]
             y = self.labels[i[0]]
 
-        x = np.concatenate((
-            self.preprocess_data(frame1),
-            self.preprocess_data(frame2)
-        ), axis=0)
-        x = torch.FloatTensor(x)
+        frames = [self.preprocess_data(f) for f in frames]
+        
+        frames = self._pad_smaller_frames(frames)
+        
+        x = torch.FloatTensor(np.concatenate(frames, axis=0))
 
         info = {'files': self.files[i]}
         if self.labels:

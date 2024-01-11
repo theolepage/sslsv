@@ -1,12 +1,22 @@
 encoder:
   type: 'resnet34'
+  mel_n_mels: 80
+  pooling_mode: 'stats'
+  enable_last_bn: true
 model:
   type: 'dino'
 training:
-  epochs: 100
-  weight_decay: 0.00001
+  epochs: 70
+  batch_size: 128
+  weight_decay: 0.00005
 data:
   siamese: true
+  frame_length: 64000
+  frame_sampling: 'dino'
   train: 'voxceleb1_train.csv'
   augmentation:
     enable: true
+evaluation:
+  mean_of_features: false
+  num_frames: 10
+  frame_length: 56240

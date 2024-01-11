@@ -16,6 +16,7 @@ class AudioDataset(Dataset):
         files,
         labels=None,
         frame_length=32000,
+        frame_sampling='default',
         num_frames=1,
         augmentation_config=None,
         max_samples=None
@@ -26,6 +27,7 @@ class AudioDataset(Dataset):
         self.files = files
         self.labels = labels
         self.frame_length = frame_length
+        self.frame_sampling = frame_sampling
         self.num_frames = num_frames
         self.max_samples = max_samples
         self.augmentation_config = augmentation_config
