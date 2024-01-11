@@ -225,8 +225,6 @@ def load_train_dataloader(config, nb_labels_per_spk=None):
         max_samples=config.data.max_samples
     )
 
-    batch_size = config.training.batch_size // get_world_size()
-
     shuffle = True
     sampler = None
 
@@ -236,14 +234,18 @@ def load_train_dataloader(config, nb_labels_per_spk=None):
 
     if nb_labels_per_spk:
         shuffle = False
-        sampler = SupervisedSampler(dataset, batch_size, nb_labels_per_spk)
+        sampler = SupervisedSampler(
+            dataset,
+            config.training.batch_size,
+            nb_labels_per_spk
+        )
         if is_dist_initialized(): sampler = DistributedSamplerWrapper(sampler)
 
     dataloader = DataLoader(
         dataset,
         sampler=sampler,
         shuffle=shuffle,
-        batch_size=batch_size,
+        batch_size=config.training.batch_size // get_world_size(),
         num_workers=config.data.num_workers,
         drop_last=True,
         pin_memory=config.data.pin_memory,
