@@ -34,6 +34,7 @@ from sslsv.models.CPC import CPC, CPCConfig
 from sslsv.models.LIM import LIM, LIMConfig
 from sslsv.models.SimCLR import SimCLR, SimCLRConfig
 from sslsv.models.MoCo import MoCo, MoCoConfig
+from sslsv.models.WMSE import WMSE, WMSEConfig
 from sslsv.models.BarlowTwins import BarlowTwins, BarlowTwinsConfig
 from sslsv.models.VICReg import VICReg, VICRegConfig
 from sslsv.models.VIbCReg import VIbCReg, VIbCRegConfig
@@ -102,6 +103,7 @@ REGISTERED_MODELS = {
     'lim':         (LIM,         LIMConfig),
     'simclr':      (SimCLR,      SimCLRConfig),
     'moco':        (MoCo,        MoCoConfig),
+    'wmse':        (WMSE,        WMSEConfig),
     'barlowtwins': (BarlowTwins, BarlowTwinsConfig),
     'vicreg':      (VICReg,      VICRegConfig),
     'vibcreg':     (VIbCReg,     VIbCRegConfig),

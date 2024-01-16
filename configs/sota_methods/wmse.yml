@@ -1,0 +1,9 @@
+encoder:
+  type: 'resnet34'
+model:
+  type: 'wmse'
+data:
+  siamese: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true
