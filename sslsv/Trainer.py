@@ -2,6 +2,7 @@ from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 import json
+import subprocess
 
 import os
 os.environ["WANDB_SILENT"] = "true"
@@ -423,15 +424,23 @@ class Trainer:
         if resume: checkpoint = self.load_checkpoint()
 
         if is_main_process():
+            gitHash = subprocess.run(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                text=True,
+                capture_output=True,
+                check=True
+            ).stdout.strip()
+
             print()
             print('=' * 10, 'Training', '=' * 10)
-            print(f'Distributed: {"yes" if is_dist_initialized() else "no"}')
-            print(f'Device: {self.device}')
-            print(f'Number of batches: {len(self.train_dataloader)}')
-            print(f'Resuming: {"no" if checkpoint is None else "yes"}')
+            print(f'Config: {self.config.name}')
             print(f'Checkpoint: {self.checkpoint_dir}')
-            if os.getenv('WANDB_MODE') != 'offline':
-                print(f'WandB url: {self.wandb_url}')
+            print(f'Commit: {gitHash}')
+            print(f'Mode: {f"DDP ({get_world_size()} GPUs)" if is_dist_initialized() else "DP"}')
+            print(f'Iterations: {len(self.train_dataloader)}')
+            print(f'Resuming: {"no" if checkpoint is None else "yes"}')
+            if os.getenv('WANDB_MODE') not in ['offline', 'disabled']:
+                print(f'WandB URL: {self.wandb_url}')
 
         first_epoch = 0 if checkpoint is None else checkpoint['epoch']
         self.train_epoch_loop(first_epoch)
