@@ -7,4 +7,6 @@ checkpoints
 data
 !sslsv/data/
 
+env
+
 .env
