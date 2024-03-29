@@ -84,12 +84,14 @@ class ModelConfig:
 @dataclass
 class Config:
 
+    experiment_name: str = 'default'
+    experiment_path: Path = 'default'
+
     training: TrainingConfig = TrainingConfig()
     data: DataConfig = DataConfig()
     evaluation: EvaluationConfig = EvaluationConfig()
     encoder: EncoderConfig = EncoderConfig()
     model: ModelConfig = ModelConfig()
-    name: str = 'test'
     seed: int = 1717
     reproducibility: bool = False
     wandb_id: str = None

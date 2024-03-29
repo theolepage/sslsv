@@ -2,7 +2,12 @@ __pycache__
 .ipynb_checkpoints
 .vscode
 
-checkpoints
+old
+
+# Ignore all files in the experiments folder except config files
+exps/**
+!exps/**/
+!exps/**/config.yml
 
 data
 !sslsv/data/

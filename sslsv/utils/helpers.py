@@ -116,10 +116,6 @@ REGISTERED_MODELS = {
 }
 
 
-def get_checkpoint_dir(config_name):
-    return './checkpoints/' + config_name
-
-
 def bind_custom_config(data, key, registered_dict):
     type_ = data[key]['type']
     if type_ not in registered_dict.keys():
@@ -175,7 +171,8 @@ def load_config(path, verbose=True):
     )
     config.encoder = bind_custom_config(data, 'encoder', REGISTERED_ENCODERS)
     config.model = bind_custom_config(data, 'model', REGISTERED_MODELS)
-    config.name = Path(path).stem
+    config.experiment_name = str(Path(path).parent)
+    config.experiment_path = Path(path).parent
 
     # Reproducibility / performance
     torch.backends.cudnn.benchmark = not config.reproducibility
@@ -189,16 +186,12 @@ def load_config(path, verbose=True):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    # Create checkpoint dir
-    checkpoint_dir = get_checkpoint_dir(config.name)
-    Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
-
     # Print config
     if is_main_process() and verbose:
         pp.install_extras(include=['dataclasses'])
         pp.pprint(config)
 
-    return config, checkpoint_dir
+    return config
 
 
 def seed_dataloader_worker(worker_id):

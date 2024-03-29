@@ -11,12 +11,12 @@ def load_models(configs, override_names={}):
     models = {}
 
     for config_path in configs:
-        config, checkpoint_dir = load_config(config_path, verbose=False)
+        config = load_config(config_path, verbose=False)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model = load_model(config).to(device)
         
-        checkpoint = torch.load(Path(checkpoint_dir) / 'model_latest.pt')
+        checkpoint = torch.load(config.experiment_path / 'model_latest.pt')
         model.load_state_dict(checkpoint['model'], strict=False)
         model.eval()
 
@@ -27,7 +27,6 @@ def load_models(configs, override_names={}):
         models[model_name] = {
             'model': model,
             'config': config,
-            'checkpoint_dir': checkpoint_dir,
             'device': device
         }
         

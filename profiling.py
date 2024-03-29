@@ -15,7 +15,7 @@ def train_with_profiling(
     repeat=1,
     path='./checkpoints/profiling'
 ):
-    config, checkpoint_dir = load_config(args.config)
+    config = load_config(args.config)
     config.training.epochs = 1
 
     train_dataloader = load_dataloader(config)
@@ -29,7 +29,6 @@ def train_with_profiling(
         model=model,
         train_dataloader=train_dataloader,
         config=config,
-        checkpoint_dir=checkpoint_dir,
         device=device
     )
 

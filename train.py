@@ -7,7 +7,7 @@ from sslsv.utils.helpers import load_config, load_train_dataloader, load_model
 
 
 def train(args):
-    config, checkpoint_dir = load_config(args.config)
+    config = load_config(args.config)
     train_dataloader = load_train_dataloader(config)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -19,7 +19,6 @@ def train(args):
         model=model,
         train_dataloader=train_dataloader,
         config=config,
-        checkpoint_dir=checkpoint_dir,
         device=device
     )
     trainer.start()

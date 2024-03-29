@@ -21,18 +21,18 @@ class Classifier(Supervised):
         super().__init__(ClassifierConfig(), lambda: model.encoder)
 
 
-def get_config_name(config_name, nb_labels_per_spk, fine_tune, supervised):
-    config_name += '_label-efficient-'
-    config_name += str(nb_labels_per_spk) + '-'
+def get_experiment_name(name, nb_labels_per_spk, fine_tune, supervised):
+    name += '_label-efficient-'
+    name += str(nb_labels_per_spk) + '-'
     if supervised:
-        config_name += 'supervised'
+        name += 'supervised'
     else:
-        config_name += 'finetuned' if fine_tune else 'frozen'
-    return config_name
+        name += 'finetuned' if fine_tune else 'frozen'
+    return name
 
 
 def train(args, nb_labels_per_spk, fine_tune=False, supervised=False):
-    config, checkpoint_dir = load_config(args.config)
+    config = load_config(args.config)
 
     config.data.augmentation.enable = False
     config.data.siamese = False
@@ -48,7 +48,7 @@ def train(args, nb_labels_per_spk, fine_tune=False, supervised=False):
     # Load model (to use as an encoder)
     model = load_model(config)
     if not supervised:
-        checkpoint = torch.load(Path(checkpoint_dir) / 'model_latest.pt')
+        checkpoint = torch.load(config.experiment_path / 'model_latest.pt')
         model.load_state_dict(checkpoint['model'])
         for p in model.parameters(): p.requires_grad = fine_tune
 
@@ -57,20 +57,21 @@ def train(args, nb_labels_per_spk, fine_tune=False, supervised=False):
     classifier = Classifier(config, model).to(device)
     classifier = torch.nn.DataParallel(classifier)
 
-    config.name = get_config_name(
-        config.name,
+
+    new_experiment_name = get_experiment_name(
+        config.experiment_name,
         nb_labels_per_spk,
         fine_tune,
         supervised
     )
-    checkpoint_dir = './checkpoints/' + config.name
-    Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
+    config.experiment_name = new_experiment_name
+    config.experiment_path = Path(new_experiment_name)
+    config.experiment_path.mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(
         model=classifier,
         train_dataloader=train_dataloader,
         config=config,
-        checkpoint_dir=checkpoint_dir,
         device=device
     )
     trainer.start()

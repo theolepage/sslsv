@@ -41,7 +41,7 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
         super().__init__(*args, **kwargs)
 
     def _prepare_evaluation_aux(self, trials, key):
-        stat_path = Path(f'./checkpoints/{self.config.name}/plda_{key}_stat.pkl')
+        stat_path = self.config.experiment_path / f'plda_{key}_stat.pkl'
 
         if stat_path.exists():
             with open(stat_path, "rb") as f:

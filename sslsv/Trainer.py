@@ -1,5 +1,4 @@
 from datetime import datetime
-from datetime import timedelta
 from pathlib import Path
 import json
 import subprocess
@@ -14,112 +13,13 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, SGD
 from torch.cuda.amp import GradScaler, autocast
 
+from sslsv.TrainerEpochLogger import TrainerEpochLogger
 from sslsv.utils.helpers import evaluate
 from sslsv.utils.distributed import (
     is_main_process,
     is_dist_initialized,
-    get_rank,
     get_world_size
 )
-
-
-
-
-
-
-import time
-from collections import defaultdict
-import torch.distributed as dist
-class MetricValue(object):
-
-    def __init__(self, fmt='{global_avg:.6f}'):
-        self.fmt = fmt
-
-        self.total = 0.0
-        self.count = 0
-
-    def update(self, value):
-        self.count += 1
-        self.total += value
-
-    def synchronize(self):
-        if not is_dist_initialized(): return
-
-        t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
-        dist.barrier()
-        dist.all_reduce(t)
-        t = t.tolist()
-        self.count = int(t[0])
-        self.total = t[1]
-
-    @property
-    def global_avg(self):
-        return self.total / self.count
-
-    def __str__(self):
-        return self.fmt.format(global_avg=self.global_avg)
-
-class MetricLogger:
-
-    def __init__(self, delimiter=' '):
-        self.metrics = defaultdict(MetricValue)
-        self.delimiter = delimiter
-
-    def update(self, metrics):
-        for k, v in metrics.items():
-            assert isinstance(v, (torch.Tensor, float, int))
-
-            if isinstance(v, torch.Tensor): v = v.item()
-            self.metrics[k].update(v)
-
-    def __str__(self):
-        res = []
-        for name, metric in self.metrics.items():
-            res.append('{}: {}'.format(name, metric))
-        return self.delimiter.join(res)
-
-    def __getitem__(self, key):
-        return self.metrics[key]
-
-    def synchronize(self):
-        for metric in self.metrics.values():
-            metric.synchronize()
-
-    def log(self, iterable, print_freq=100):
-        i = 0
-
-        last_iter_end_time = time.time()
-        iter_time = MetricValue()
-        
-        space_fmt = ':' + str(len(str(len(iterable)))) + 'd'
-        log_msg = self.delimiter.join([
-            '[{0' + space_fmt + '}/{1}]',
-            'eta: {eta}',
-            '{metrics}'
-        ])
-
-        for obj in iterable:
-            yield obj
-            iter_time.update(time.time() - last_iter_end_time)
-            if get_rank() == 0 and (i % print_freq == 0 or i == len(iterable) - 1):
-                eta = int(iter_time.global_avg * (len(iterable) - i))
-                print(
-                    log_msg.format(
-                        i,
-                        len(iterable),
-                        eta=str(timedelta(seconds=eta)),
-                        metrics=str(self)
-                    )
-                )
-
-            i += 1
-            last_iter_end_time = time.time()
-
-
-
-
-
-
 
 
 class Trainer:
@@ -129,13 +29,11 @@ class Trainer:
         model,
         train_dataloader,
         config,
-        checkpoint_dir,
         device
     ):
         self.model = model
         self.train_dataloader = train_dataloader
         self.config = config
-        self.checkpoint_dir = checkpoint_dir
         self.device = device
 
         self.best_metric = (
@@ -144,15 +42,12 @@ class Trainer:
             else float('inf')
         )
 
-    def train_step_loop(self):
-        train_metrics = {}
+    def _train_step_loop(self, logger):
         self.last_progress = 0
 
         nb_steps = self.config.training.epochs * len(self.train_dataloader)
 
-        # metric_logger = MetricLogger()
-        # for i, (idx, X, info) in enumerate(metric_logger.log(self.train_dataloader)):
-        for i, (idx, X, info) in enumerate(self.train_dataloader):
+        for i, (idx, X, info) in enumerate(logger.log(self.train_dataloader)):
             step = self.epoch * len(self.train_dataloader) + i
 
             self.model.module.on_train_step_start(step, nb_steps)
@@ -181,12 +76,6 @@ class Trainer:
                     samples=idx
                 )
 
-            # Update metrics (average for epoch)
-            if not train_metrics:
-                train_metrics = {name:0 for name in metrics.keys()}
-            for metric_name, metric_value in metrics.items():
-                train_metrics[metric_name] += metric_value
-
             self.optimizer.zero_grad(set_to_none=True)
 
             # Backward
@@ -206,38 +95,9 @@ class Trainer:
 
             self.model.module.on_train_step_end(step, nb_steps)
 
-            # metric_logger.update({
-            #     'loss': loss
-            # })
+            logger.update({**metrics, 'train/lr': lr})
 
-            if is_main_process():
-                print(
-                    f"\rStep {i}/{len(self.train_dataloader)} - "
-                    f"Loss: {round(loss.item(), 4)} - ",
-                    f"LR: {round(lr, 4)}",
-                    end='',
-                    flush=True
-                )
-                # self.print_progress_bar(i)
-
-        # metric_logger.synchronize()
-
-        if is_main_process(): print()
-
-        for name, value in train_metrics.items():
-            if isinstance(value, torch.Tensor): value = value.item()
-            train_metrics[name] = value / len(self.train_dataloader)
-
-        return train_metrics
-
-    def print_progress_bar(self, i, size=100):
-        progress = (i + 1) * size // len(self.train_dataloader)
-        if progress > self.last_progress:
-            for _ in range(progress - self.last_progress):
-                print('.', end='', flush=True)
-            self.last_progress = progress
-
-    def log_metrics(self, metrics):
+    def _log_end_epoch(self, metrics):
         time = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
         print(f'Time: {time}')
 
@@ -246,10 +106,10 @@ class Trainer:
         print(f'Duration: {duration}')
 
         for metric_name, metric_value in metrics.items():
-            print(f'{metric_name}: {metric_value}') 
+            print(f'{metric_name}: {round(metric_value, 6)}') 
             self.writer.add_scalar(metric_name, metric_value, self.epoch)
 
-        log_file_path = Path(self.checkpoint_dir) / 'training.json'
+        log_file_path = self.config.experiment_path / 'training.json'
         log_file_data = {}
         if log_file_path.exists():
             with open(log_file_path, 'r') as f:
@@ -260,7 +120,7 @@ class Trainer:
         
         wandb.log(metrics, step=self.epoch)
 
-    def track_improvement(self, metrics):
+    def _early_stopping(self, metrics):
         improved = False
 
         if self.config.training.tracked_metric in metrics.keys():
@@ -277,53 +137,43 @@ class Trainer:
             )
             self.best_metric = metric
             self.nb_epochs_remaining = 0
-            self.save_checkpoint('best')
+            self._save_checkpoint('best')
         else:
             print(
                 f'\n=> {self.config.training.tracked_metric}'
                 f' did not improve from {self.best_metric}'
             )
             self.nb_epochs_remaining += 1
-        self.save_checkpoint('latest')
 
         if self.nb_epochs_remaining >= self.config.training.patience:
             return False
 
         return True
 
-    def gather_metrics(self, metrics):
-        for k, v in metrics.items():
-            metric = torch.tensor([v]).to(get_rank())
-            if is_main_process():
-                metric_all = [metric.clone() for _ in range(get_world_size())]
-                torch.distributed.gather(metric, metric_all, dst=0)
-                metrics[k] = torch.mean(torch.cat(metric_all)).item()
-            else:
-                torch.distributed.gather(metric, [], dst=0)
-        return metrics
-
-    def train_epoch_loop(self, first_epoch=0):
+    def _train_epoch_loop(self, first_epoch=0):
         self.nb_epochs_remaining = 0
 
         max_epochs = self.config.training.epochs
 
         for epoch in range(first_epoch, max_epochs):
+            logger = TrainerEpochLogger()
+
             self.epoch = epoch
             self.epoch_start_time = datetime.now()
+
             if callable(getattr(self.train_dataloader.sampler, 'set_epoch', None)):
                 self.train_dataloader.sampler.set_epoch(epoch)
 
-            self.model.module.on_train_epoch_start(self.epoch, max_epochs)
-        
             if is_main_process(): print(f'\nEpoch {self.epoch}')
-
+            
+            self.model.module.on_train_epoch_start(self.epoch, max_epochs)
             self.model.train()
-            train_metrics = self.train_step_loop()
 
+            self._train_step_loop(logger)
+            
             self.model.module.on_train_epoch_end(self.epoch, max_epochs)
 
-            if is_dist_initialized():
-                train_metrics = self.gather_metrics(train_metrics)
+            logger.synchronize()
 
             if is_main_process():
                 self.model.eval()
@@ -335,61 +185,23 @@ class Trainer:
                     verbose=False
                 )
 
+                train_metrics = {k:v.global_avg for k, v in logger.metrics.items()}
                 metrics = {**train_metrics, **val_metrics}
 
-                self.log_metrics(metrics)
-                if not self.track_improvement(metrics): break
+                self._log_end_epoch(metrics)
+                self._save_checkpoint('latest')
+                if not self._early_stopping(metrics): break
 
-    def setup(self):
-        params = self.model.module.get_learnable_params()
-
-        if self.config.training.optimizer == 'sgd':
-            self.optimizer = SGD(
-                params,
-                momentum=0.9,
-                lr=0,
-                weight_decay=self.config.training.weight_decay
-            )
-        elif self.config.training.optimizer == 'adam':
-            self.optimizer = Adam(
-                params,
-                lr=0,
-                weight_decay=self.config.training.weight_decay
-            )
-        else:
-            raise Exception(
-                f'Optimizer {self.config.training.optimizer} not supported'
-            )
-        self.scaler = (
-            GradScaler() if self.config.training.mixed_precision else None
-        )
-
-        if not is_main_process(): return
-
-        # Init tensorboard and wandb
-        self.writer = SummaryWriter(log_dir=self.checkpoint_dir + '/logs')
-        self.wandb_url = wandb.init(
-            project=self.config.wandb_project,
-            id=(self.config.wandb_id if self.config.wandb_id else self.config.name),
-            resume='allow',
-            dir=self.checkpoint_dir,
-            name=self.config.name,
-            config=vars(self.config)
-        ).get_url()
-
-    def load_checkpoint(self):
+    def _load_checkpoint(self):
         init_weights = self.config.training.init_weights
-        checkpoint_path = Path(self.checkpoint_dir) / 'model_latest.pt'
+        checkpoint_path = self.config.experiment_path / 'model_latest.pt'
 
         if not checkpoint_path.exists():
             if init_weights:
-                checkpoint_path = (
-                    Path(get_checkpoint_dir(init_weights)) /
-                    init_weights_path /
-                    'model_latest.pt'
+                checkpoint = torch.load(
+                    Path(init_weights) / 'model_latest.pt',
+                    map_location='cpu'
                 )
-
-                checkpoint = torch.load(checkpoint_path, map_location='cpu')
                 self.model.module.load_state_dict(checkpoint['model'])
 
             return None
@@ -401,7 +213,7 @@ class Trainer:
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         return checkpoint
 
-    def save_checkpoint(self, suffix):
+    def _save_checkpoint(self, suffix):
         torch.save(
             {
                 'epoch': self.epoch + 1,
@@ -409,41 +221,79 @@ class Trainer:
                 'model': self.model.module.state_dict(),
                 'optimizer': self.optimizer.state_dict(),
             },
-            self.checkpoint_dir + '/model_' + suffix + '.pt'
+            self.config.experiment_path / f'model_{suffix}.pt'
         )
+
+    def _log_start_training(self, resuming):
+        gitHash = subprocess.run(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            text=True,
+            capture_output=True,
+            check=True
+        ).stdout.strip()
+
+        sep_length = len(f'Experiment: {self.config.experiment_name}')
+
+        print()
+        print('=' * 3, 'Trainer', '=' * (sep_length - 12))
+        print(f'Experiment: {self.config.experiment_name}')
+        print(f'Commit: {gitHash}')
+        print(f'Mode: {f"DDP ({get_world_size()} GPUs)" if is_dist_initialized() else "DP"}')
+        print(f'Iterations: {len(self.train_dataloader)}')
+        print(f'Resuming: {"yes" if resuming else "no"}')
+        if os.getenv('WANDB_MODE') not in ['offline', 'disabled']:
+            print(f'WandB URL: {self.wandb_url}')
+        print('=' * sep_length)
 
     def start(self, resume=True):
         if is_dist_initialized() and self.config.training.ddp_sync_batchnorm:
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
 
-        self.setup()
+        # Init optimizer and grad scaler
+        if self.config.training.optimizer == 'sgd':
+            self.optimizer = SGD(
+                self.model.module.get_learnable_params(),
+                momentum=0.9,
+                lr=0,
+                weight_decay=self.config.training.weight_decay
+            )
+        elif self.config.training.optimizer == 'adam':
+            self.optimizer = Adam(
+                self.model.module.get_learnable_params(),
+                lr=0,
+                weight_decay=self.config.training.weight_decay
+            )
+        else:
+            raise Exception(
+                f'Optimizer {self.config.training.optimizer} not supported'
+            )
+
+        self.scaler = (
+            GradScaler() if self.config.training.mixed_precision else None
+        )
+
+        # Init Tensorboard and WandB
+        if is_main_process():
+            self.writer = SummaryWriter(log_dir=str(self.config.experiment_path / 'tensorboard'))
+            self.wandb_url = wandb.init(
+                project=self.config.wandb_project,
+                id=(self.config.wandb_id if self.config.wandb_id else self.config.experiment_name),
+                resume='allow',
+                dir=str(self.config.experiment_path),
+                name=self.config.experiment_name,
+                config=vars(self.config)
+            ).get_url()
 
         self.model.module.on_train_start(self)
         
         checkpoint = None
-        if resume: checkpoint = self.load_checkpoint()
+        if resume: checkpoint = self._load_checkpoint()
 
         if is_main_process():
-            gitHash = subprocess.run(
-                ['git', 'rev-parse', '--short', 'HEAD'],
-                text=True,
-                capture_output=True,
-                check=True
-            ).stdout.strip()
-
-            print()
-            print('=' * 10, 'Training', '=' * 10)
-            print(f'Config: {self.config.name}')
-            print(f'Checkpoint: {self.checkpoint_dir}')
-            print(f'Commit: {gitHash}')
-            print(f'Mode: {f"DDP ({get_world_size()} GPUs)" if is_dist_initialized() else "DP"}')
-            print(f'Iterations: {len(self.train_dataloader)}')
-            print(f'Resuming: {"no" if checkpoint is None else "yes"}')
-            if os.getenv('WANDB_MODE') not in ['offline', 'disabled']:
-                print(f'WandB URL: {self.wandb_url}')
+            self._log_start_training(resuming=checkpoint is not None)
 
         first_epoch = 0 if checkpoint is None else checkpoint['epoch']
-        self.train_epoch_loop(first_epoch)
+        self._train_epoch_loop(first_epoch)
 
         self.model.module.on_train_end(self)
 

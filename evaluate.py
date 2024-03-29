@@ -70,7 +70,7 @@ def print_metrics(metrics):
 
 
 def evaluate(args):
-    config, checkpoint_dir = load_config(
+    config = load_config(
         args.config,
         verbose=not args.silent
     )
@@ -79,7 +79,7 @@ def evaluate(args):
 
     model = load_model(config).to(device)
 
-    checkpoint = torch.load(Path(checkpoint_dir) / 'model_latest.pt')
+    checkpoint = torch.load(config.experiment_path / 'model_latest.pt')
     model.load_state_dict(checkpoint['model'], strict=False)
     model.eval()
 
@@ -97,7 +97,7 @@ def evaluate(args):
     else:
         print_metrics(metrics)
 
-    with open(Path(checkpoint_dir) / 'evaluation.json', 'w') as f:
+    with open(config.experiment_path / 'evaluation.json', 'w') as f:
         json.dump(metrics, f, indent=4)
 
 

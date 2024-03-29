@@ -1,9 +1,0 @@
-encoder:
-  type: 'resnet34'
-model:
-  type: 'supervised'
-  nb_classes: 1211
-data:
-  train: 'voxceleb1_train.csv'
-  augmentation:
-    enable: true

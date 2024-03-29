@@ -20,7 +20,7 @@ def train(args):
     )
     torch.cuda.set_device(rank)
 
-    config, checkpoint_dir = load_config(args.config)
+    config = load_config(args.config)
     train_dataloader = load_train_dataloader(config)
 
     model = load_model(config).to(rank)
@@ -30,7 +30,6 @@ def train(args):
         model=model,
         train_dataloader=train_dataloader,
         config=config,
-        checkpoint_dir=checkpoint_dir,
         device=rank
     )
     trainer.start()
