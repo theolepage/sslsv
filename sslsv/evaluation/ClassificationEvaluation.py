@@ -11,13 +11,13 @@ from sslsv.evaluation._BaseEvaluation import (
 
 
 @dataclass
-class ClassifierEvaluationTaskConfig(EvaluationTaskConfig):
+class ClassificationEvaluationTaskConfig(EvaluationTaskConfig):
 
     csv: str = None
     key: str = None
 
 
-class ClassifierEvaluation(BaseEvaluation):
+class ClassificationEvaluation(BaseEvaluation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,16 +29,17 @@ class ClassifierEvaluation(BaseEvaluation):
         )
 
         df = pd.read_csv(self.config.data.base_path / file)
+        df['Label'] = pd.factorize(df[self.task_config.key])[0]
         df = df[df['Set'] == subset]
 
         X = self._extract_embeddings(
-            df['File'].tolist()[:50],
+            df['File'].tolist(),
             numpy=True,
             desc=f'Extracting {subset} embeddings'
         )
-        X = np.array(list(X.values())).squeeze(axis=1)
-        
-        y = df[self.task_config.key].tolist()[:50]
+        X = np.array(list(X.values())).squeeze()
+
+        y = np.array(df['Label'])
 
         return X, y
 
@@ -55,22 +56,12 @@ class ClassifierEvaluation(BaseEvaluation):
 
         return metrics
 
-    def _prepare_evaluation(self):
-        X_train, y_train = self._get_embeddings(self.task_config.csv, 'train')
-
-        self.classifier = self._get_classifier()
-        self.classifier.fit(X_train, y_train)
-
     def _evaluate_file(self, file):
-        X_test, y_test = self._get_embeddings(file, 'test')
-
-        y_test_pred = self.classifier.predict(X_test)
+        y_test_pred, y_test = self._get_embeddings(file, 'test')
 
         return self._get_metrics(y_test, y_test_pred, file)
 
     def evaluate(self):
-        self._prepare_evaluation()
-
         metrics = {}
         for file in [self.task_config.csv]:
             metrics.update(self._evaluate_file(file))

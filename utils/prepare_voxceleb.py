@@ -149,44 +149,32 @@ def create_vox1_train_csv_gender(test_split=0.7):
     df.to_csv('voxceleb1_train_gender.csv', index=False)
 
 
-def create_vox2_train_csv_age(test_split=0.7):
-    files = [line.strip().split()[1].replace('\\', '/') for line in lines]
-    videos = [file.split('/')[-2] for file in files]
-    speakers = [line.strip().split()[0] for line in lines]
-    
-    df = pd.read_csv('voxceleb2_train_age.csv')
+def create_vox2_train_csv_age():
+    df = pd.read_csv('voxceleb2_train.csv')
 
-    df['Video'] = [f.spit('/')[-2] for f in df['File']]
+    df_age_train = pd.read_csv('https://raw.githubusercontent.com/nttcslab-sp/agevoxceleb/master/utt2age.train', sep=' ', names=['Key', 'Age'])
+    df_age_test  = pd.read_csv('https://raw.githubusercontent.com/nttcslab-sp/agevoxceleb/master/utt2age.test', sep=' ', names=['Key', 'Age'])
+    df_age_train['Set'] = 'train'
+    df_age_test['Set'] = 'test'
+    df_age = pd.concat((df_age_train, df_age_test))
 
-    df['_KEY'] = df['Video'] + '-' + df['Speaker']
-    
-    # Add age column
-    vox2_meta = pd.read_csv(
-        'https://raw.githubusercontent.com/hechmik/voxceleb_enrichment_age_gender/main/dataset/final_dataframe_extended.csv',
-        usecols=['VoxCeleb_ID', 'video_id', 'speaker_age']
-    )
-    vox2_meta = vox2_meta.rename(columns={
-        'VoxCeleb_ID': 'Speaker',
-        'video_id': 'Video',
-        'speaker_age': 'Age'
-    })
-    vox2_meta['_KEY'] = vox2_meta['Video'] + '-' + vox2_meta['Speaker']
-    df = pd.merge(df, vox2_meta, on='_KEY', how='left')
-    
-    # Clean df
-    df = df.drop(columns=['Video_x', 'Video_y', '_KEY', 'Speaker_y'])
-    df = df.rename(columns={'Speaker_x': 'Speaker'})
+    df['Key'] = [f[10:-4] for f in df['File']]
+
+    df = pd.merge(df, df_age, on='Key', how='left')
+
+    df = df.drop(columns=['Key'])
     df.dropna(inplace=True)
-    
-    # Add set column
-    all_speakers = df['Speaker'].unique()
-    train_speakers = np.random.choice(
-        all_speakers,
-        size=int(test_split*len(all_speakers)),
-        replace=False
-    )
-    df['Set'] = ['train' if spk in train_speakers else 'test' for spk in df['Speaker']]
-    
+
+    conditions = [
+        ((df['Age'] >   0) & (df['Age'] <=  30)),
+        ((df['Age'] >  30) & (df['Age'] <=  40)),
+        ((df['Age'] >  40) & (df['Age'] <=  50)),
+        ((df['Age'] >  50) & (df['Age'] <=  60)),
+        ((df['Age'] >  60) & (df['Age'] <= 100))
+    ]
+    values = [0, 1, 2, 3, 4]
+    df['Age Quantized'] = np.select(conditions, values)
+
     df.to_csv('voxceleb2_train_age.csv', index=False)
 
 

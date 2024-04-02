@@ -202,7 +202,7 @@ class Trainer:
                     Path(init_weights) / 'model_latest.pt',
                     map_location='cpu'
                 )
-                self.model.module.load_state_dict(checkpoint['model'])
+                self.model.module.load_state_dict(checkpoint['model'], strict=False)
 
             return None
 

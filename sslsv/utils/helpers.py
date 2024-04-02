@@ -54,37 +54,16 @@ from sslsv.evaluation.PLDASVEvaluation import (
     PLDASVEvaluation,
     PLDASVEvaluationTaskConfig
 )
-from sslsv.evaluation.LogisticRegressionEvaluation import (
-    LogisticRegressionEvaluation,
-    LogisticRegressionEvaluationTaskConfig
-)
-from sslsv.evaluation.SVMEvaluation import (
-    SVMEvaluation,
-    SVMEvaluationTaskConfig
-)
-from sslsv.evaluation.MLPEvaluation import (
-    MLPEvaluation,
-    MLPEvaluationTaskConfig
-)
-from sslsv.evaluation.LinearRegressionEvaluation import (
-    LinearRegressionEvaluation,
-    LinearRegressionEvaluationTaskConfig
+from sslsv.evaluation.ClassificationEvaluation import (
+    ClassificationEvaluation,
+    ClassificationEvaluationTaskConfig
 )
 
 
 REGISTERED_EVALUATIONS = {
-    'sv_cosine': (CosineSVEvaluation, CosineSVEvaluationTaskConfig),
-    'sv_plda':   (PLDASVEvaluation,   PLDASVEvaluationTaskConfig),
-    'svm':       (SVMEvaluation, SVMEvaluationTaskConfig),
-    'mlp':       (MLPEvaluation, MLPEvaluationTaskConfig),
-    'logistic_regression':  (
-        LogisticRegressionEvaluation,
-        LogisticRegressionEvaluationTaskConfig
-    ),
-    'linear_regression':  (
-        LinearRegressionEvaluation,
-        LinearRegressionEvaluationTaskConfig
-    )
+    'sv_cosine':      (CosineSVEvaluation,       CosineSVEvaluationTaskConfig),
+    'sv_plda':        (PLDASVEvaluation,         PLDASVEvaluationTaskConfig),
+    'classification': (ClassificationEvaluation, ClassificationEvaluationTaskConfig),
 }
 
 
@@ -202,6 +181,7 @@ def seed_dataloader_worker(worker_id):
 
 def load_train_dataloader(config, nb_labels_per_spk=None):
     df = pd.read_csv(config.data.base_path / config.data.train)
+    df = df[df['Set'] == 'train']
     files = df['File'].tolist()
     labels = pd.factorize(df[config.data.label_key])[0].tolist()
     

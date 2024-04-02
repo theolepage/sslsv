@@ -69,12 +69,20 @@ class BaseEvaluation:
             X = X.reshape((B * N, L))
 
             with torch.no_grad():
-                Y = self.model(X)
+                if self.task_config.__type__ in ['sv_cosine', 'sv_plda']:
+                    Y = self.model(X)
+                else: # self.task_config.__type__ == 'classification'
+                    Y = self.model(X, training=True)
+                    Y = F.softmax(Y, dim=-1)
+                    Y = torch.argmax(Y, dim=-1)
 
             Y = Y.reshape((B, N, -1))
+
             if self.config.evaluation.mean_of_features:
                 Y = Y.mean(dim=1, keepdim=True)
-            Y = F.normalize(Y, p=2, dim=-1)
+
+            if self.task_config.__type__ in ['sv_cosine', 'sv_plda']:
+                Y = F.normalize(Y, p=2, dim=-1)
 
             embeddings.update({
                 info['files'][i]:(Y[i].cpu().numpy() if numpy else Y[i].cpu())

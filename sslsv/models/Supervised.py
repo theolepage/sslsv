@@ -60,7 +60,7 @@ class Supervised(BaseModel):
         loss_cls = (
             AAMSoftmaxLoss
             if config.speaker_classification
-            else nn.CrossEntropyLoss()
+            else nn.CrossEntropyLoss
         )
         self.loss_fn = loss_cls()
 
@@ -77,7 +77,7 @@ class Supervised(BaseModel):
 
     def train_step(self, Z, labels, step, samples):
         loss = self.loss_fn(Z, labels)
-        
+
         if self.config.speaker_classification:
             loss, accuracy = loss
             metrics = {
@@ -85,6 +85,10 @@ class Supervised(BaseModel):
                 'train/accuracy': accuracy
             }
         else:
-            metrics = { 'train/loss': loss }
+            accuracy = torch.sum(torch.argmax(Z, dim=-1) == labels) / Z.size(0)
+            metrics = {
+                'train/loss': loss,
+                'train/accuracy': accuracy
+            }
 
         return loss, metrics

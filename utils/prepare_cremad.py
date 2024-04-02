@@ -6,7 +6,7 @@ import numpy as np
 from prepare_dataset_utils import glob
 
 
-def create_cremad_train_csv(test_split=0.7):
+def create_cremad_train_csv(test_split=0.9):
     files = glob('cremad/AudioWAV/*.wav')
 
     LABELS = {
@@ -23,16 +23,16 @@ def create_cremad_train_csv(test_split=0.7):
         'Emotion': [LABELS[f.split('/')[-1].split('_')[2]] for f in files],
     })
 
+    df.drop(df[df['Emotion'] == 'Disgust'].index, inplace=True)
+
     # Add set column
-    all_speakers = list(set([f.split('/')[-1].split('_')[0] for f in files]))
-    train_speakers = np.random.choice(
-        all_speakers,
-        size=int(test_split*len(all_speakers)),
+    train_files = np.random.choice(
+        files,
+        size=int(test_split*len(files)),
         replace=False
     )
     df['Set'] = [
-        'train'
-        if f.split('/')[-1].split('_')[0] in train_speakers else 'test'
+        'train' if f in train_files else 'test'
         for f in df['File']
     ]
 
