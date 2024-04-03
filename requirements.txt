@@ -13,7 +13,6 @@ ruamel.yaml==0.17.21
 dacite==1.8.1
 prettyprinter==0.18.0
 tqdm==4.64.0
-python-dotenv==1.0.1
 
 plotnine==0.9.0
 plotly==5.10.0

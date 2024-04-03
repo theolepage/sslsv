@@ -42,8 +42,8 @@ TRIALS = [
     ('voxsrc2021_val',   'https://www.robots.ox.ac.uk/~vgg/data/voxceleb/data_workshop_2021/voxsrc2021_val.txt')
 ]
 
-VOX1_TRAIN_LIST = 'voxceleb1_train'
-VOX2_TRAIN_LIST = 'voxceleb2_train'
+VOX1_TRAIN_FILE = 'voxceleb1_train'
+VOX2_TRAIN_FILE = 'voxceleb2_train'
 
 
 def fix_vox_structure():
@@ -110,7 +110,7 @@ def create_vox1_train_csv():
         'Speaker': [f.split('/')[-3] for f in files]
     })
 
-    df.to_csv('voxceleb1_train.csv', index=False)
+    df.to_csv(VOX1_TRAIN_FILE, index=False)
 
 
 def create_vox2_train_csv():
@@ -122,11 +122,11 @@ def create_vox2_train_csv():
         'Speaker': [f.split('/')[-3] for f in files]
     })
 
-    df.to_csv('voxceleb2_train.csv', index=False)
+    df.to_csv(VOX2_TRAIN_FILE, index=False)
 
 
 def create_vox1_train_csv_gender(test_split=0.7):
-    df = pd.read_csv('voxceleb1_train.csv')
+    df = pd.read_csv(VOX1_TRAIN_FILE)
 
     # Add gender column
     vox1_meta = pd.read_csv(
@@ -150,7 +150,7 @@ def create_vox1_train_csv_gender(test_split=0.7):
 
 
 def create_vox2_train_csv_age():
-    df = pd.read_csv('voxceleb2_train.csv')
+    df = pd.read_csv(VOX2_TRAIN_FILE)
 
     df_age_train = pd.read_csv('https://raw.githubusercontent.com/nttcslab-sp/agevoxceleb/master/utt2age.train', sep=' ', names=['Key', 'Age'])
     df_age_test  = pd.read_csv('https://raw.githubusercontent.com/nttcslab-sp/agevoxceleb/master/utt2age.test', sep=' ', names=['Key', 'Age'])

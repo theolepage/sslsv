@@ -5,24 +5,9 @@ from torchaudio.transforms import MelSpectrogram
 
 from dataclasses import dataclass
 
-from sslsv.configs import EncoderConfig
-
-
-class AudioPreEmphasis(nn.Module):
-
-    def __init__(self, coeff=0.97):
-        super().__init__()
-
-        self.w = torch.FloatTensor([-coeff, 1.0]).unsqueeze(0).unsqueeze(0)
-
-    def forward(self, audio):
-        audio = audio.unsqueeze(1)
-        audio = F.pad(audio, (1, 0), 'reflect')
-        return F.conv1d(audio, self.w.to(audio.device)).squeeze(1)
-
 
 @dataclass
-class BaseEncoderConfig(EncoderConfig):
+class BaseEncoderConfig:
 
     encoder_dim: int = 512
 
@@ -43,7 +28,6 @@ class BaseEncoder(nn.Module):
 
         if config.extract_mel_features:
             self.features_extractor = nn.Sequential(
-                # AudioPreEmphasis(),
                 MelSpectrogram(
                     n_fft=config.mel_n_fft,
                     win_length=config.mel_win_length,

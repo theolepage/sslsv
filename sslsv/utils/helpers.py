@@ -1,25 +1,26 @@
 from pathlib import Path
 import random
 import os
-from dotenv import load_dotenv
 import numpy as np
 import pandas as pd
 
+from enum import Enum
 import ruamel.yaml
 from dacite import from_dict
+from dacite import Config as DaciteConfig
 import prettyprinter as pp
 
 import torch
 from torch.utils.data import DataLoader, DistributedSampler
 
-from sslsv.configs import Config
+from sslsv.Config import Config
 from sslsv.utils.distributed import is_dist_initialized, is_main_process, get_world_size
 
 # Datasets
-from sslsv.data.AudioDataset import AudioDataset
-from sslsv.data.SiameseAudioDataset import SiameseAudioDataset
-from sslsv.data.SupervisedSampler import SupervisedSampler
-from sslsv.data.DistributedSamplerWrapper import DistributedSamplerWrapper
+from sslsv.datasets.Dataset import Dataset
+from sslsv.datasets.SSLDataset import SSLDataset
+from sslsv.datasets.Sampler import Sampler
+from sslsv.datasets.DistributedSamplerWrapper import DistributedSamplerWrapper
 
 # Encoders
 from sslsv.encoders.TDNN import TDNN, TDNNConfig
@@ -27,34 +28,34 @@ from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
 from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 from sslsv.encoders.ECAPATDNN import ECAPATDNN, ECAPATDNNConfig
 
-# Models
-from sslsv.models.Supervised import Supervised, SupervisedConfig
-from sslsv.models.Custom import Custom, CustomConfig
-from sslsv.models.CPC import CPC, CPCConfig
-from sslsv.models.LIM import LIM, LIMConfig
-from sslsv.models.SimCLR import SimCLR, SimCLRConfig
-from sslsv.models.MoCo import MoCo, MoCoConfig
-from sslsv.models.WMSE import WMSE, WMSEConfig
-from sslsv.models.BarlowTwins import BarlowTwins, BarlowTwinsConfig
-from sslsv.models.VICReg import VICReg, VICRegConfig
-from sslsv.models.VIbCReg import VIbCReg, VIbCRegConfig
-from sslsv.models.MultiLosses import MultiLosses, MultiLossesConfig
-from sslsv.models.BYOL import BYOL, BYOLConfig
-from sslsv.models.SimSiam import SimSiam, SimSiamConfig
-from sslsv.models.DINO import DINO, DINOConfig
-from sslsv.models.DeepCluster import DeepCluster, DeepClusterConfig
-from sslsv.models.SwAV import SwAV, SwAVConfig
+# Methods
+from sslsv.methods.Supervised.Supervised import Supervised, SupervisedConfig
+from sslsv.methods.CPC.CPC import CPC, CPCConfig
+from sslsv.methods.LIM.LIM import LIM, LIMConfig
+from sslsv.methods.SimCLR.SimCLR import SimCLR, SimCLRConfig
+from sslsv.methods.MoCo.MoCo import MoCo, MoCoConfig
+from sslsv.methods.WMSE.WMSE import WMSE, WMSEConfig
+from sslsv.methods.BarlowTwins.BarlowTwins import BarlowTwins, BarlowTwinsConfig
+from sslsv.methods.VICReg.VICReg import VICReg, VICRegConfig
+from sslsv.methods.VIbCReg.VIbCReg import VIbCReg, VIbCRegConfig
+from sslsv.methods.BYOL.BYOL import BYOL, BYOLConfig
+from sslsv.methods.SimSiam.SimSiam import SimSiam, SimSiamConfig
+from sslsv.methods.DINO.DINO import DINO, DINOConfig
+from sslsv.methods.DeepCluster.DeepCluster import DeepCluster, DeepClusterConfig
+from sslsv.methods.SwAV.SwAV import SwAV, SwAVConfig
+from sslsv.methods.Combiner.Combiner import Combiner, CombinerConfig
+from sslsv.methods.SimCLRCustom.SimCLRCustom import SimCLRCustom, SimCLRCustomConfig
 
 # Evaluations
-from sslsv.evaluation.CosineSVEvaluation import (
+from sslsv.evaluations.CosineSVEvaluation import (
     CosineSVEvaluation,
     CosineSVEvaluationTaskConfig
 )
-from sslsv.evaluation.PLDASVEvaluation import (
+from sslsv.evaluations.PLDASVEvaluation import (
     PLDASVEvaluation,
     PLDASVEvaluationTaskConfig
 )
-from sslsv.evaluation.ClassificationEvaluation import (
+from sslsv.evaluations.ClassificationEvaluation import (
     ClassificationEvaluation,
     ClassificationEvaluationTaskConfig
 )
@@ -75,23 +76,23 @@ REGISTERED_ENCODERS = {
 }
 
 
-REGISTERED_MODELS = {
-    'supervised':  (Supervised,  SupervisedConfig),
-    'custom':      (Custom,      CustomConfig),
-    'cpc':         (CPC,         CPCConfig),
-    'lim':         (LIM,         LIMConfig),
-    'simclr':      (SimCLR,      SimCLRConfig),
-    'moco':        (MoCo,        MoCoConfig),
-    'wmse':        (WMSE,        WMSEConfig),
-    'barlowtwins': (BarlowTwins, BarlowTwinsConfig),
-    'vicreg':      (VICReg,      VICRegConfig),
-    'vibcreg':     (VIbCReg,     VIbCRegConfig),
-    'multilosses': (MultiLosses, MultiLossesConfig),
-    'byol':        (BYOL,        BYOLConfig),
-    'simsiam':     (SimSiam,     SimSiamConfig),
-    'dino':        (DINO,        DINOConfig),
-    'deepcluster': (DeepCluster, DeepClusterConfig),
-    'swav':        (SwAV,        SwAVConfig),
+REGISTERED_METHODS = {
+    'supervised':    (Supervised,   SupervisedConfig),
+    'cpc':           (CPC,          CPCConfig),
+    'lim':           (LIM,          LIMConfig),
+    'simclr':        (SimCLR,       SimCLRConfig),
+    'moco':          (MoCo,         MoCoConfig),
+    'wmse':          (WMSE,         WMSEConfig),
+    'barlow_twins':  (BarlowTwins,  BarlowTwinsConfig),
+    'vicreg':        (VICReg,       VICRegConfig),
+    'vibcreg':       (VIbCReg,      VIbCRegConfig),
+    'byol':          (BYOL,         BYOLConfig),
+    'simsiam':       (SimSiam,      SimSiamConfig),
+    'dino':          (DINO,         DINOConfig),
+    'deepcluster':   (DeepCluster,  DeepClusterConfig),
+    'swav':          (SwAV,         SwAVConfig),
+    'combiner':      (Combiner,     CombinerConfig),
+    'simclr_custom': (SimCLRCustom, SimCLRCustomConfig),
 }
 
 
@@ -102,7 +103,7 @@ def bind_custom_config(data, key, registered_dict):
             Exception('{} `{}` not supported'.format(key.capitalize(), type_))
         )
 
-    res = from_dict(registered_dict[type_][1], data[key])
+    res = from_dict(registered_dict[type_][1], data[key], DaciteConfig(cast=[Enum]))
     res.__type__ = type_
     return res
 
@@ -125,7 +126,7 @@ def bind_evaluate_tasks_config(data, key, default_config):
                 Exception('Evaluation `{}` already registered'.format(type_))
             )
 
-        res = from_dict(REGISTERED_EVALUATIONS[type_][1], task)
+        res = from_dict(REGISTERED_EVALUATIONS[type_][1], task, DaciteConfig(cast=[Enum]))
         res.__type__ = type_
         tasks.append(res)
 
@@ -133,10 +134,8 @@ def bind_evaluate_tasks_config(data, key, default_config):
 
 
 def load_config(path, verbose=True):
-    load_dotenv()
-    
     data = ruamel.yaml.safe_load(open(path, 'r'))
-    config = from_dict(Config, data)
+    config = from_dict(Config, data, DaciteConfig(cast=[Enum]))
 
     config.evaluation.validation = bind_evaluate_tasks_config(
         data,
@@ -149,7 +148,7 @@ def load_config(path, verbose=True):
         config.evaluation.test
     )
     config.encoder = bind_custom_config(data, 'encoder', REGISTERED_ENCODERS)
-    config.model = bind_custom_config(data, 'model', REGISTERED_MODELS)
+    config.method = bind_custom_config(data, 'method', REGISTERED_METHODS)
     config.experiment_name = str(Path(path).parent)
     config.experiment_path = Path(path).parent
 
@@ -179,25 +178,22 @@ def seed_dataloader_worker(worker_id):
     np.random.seed(worker_seed)
 
 
-def load_train_dataloader(config, nb_labels_per_spk=None):
-    df = pd.read_csv(config.data.base_path / config.data.train)
-    df = df[df['Set'] == 'train']
+def load_train_dataloader(config):
+    df = pd.read_csv(config.dataset.base_path / config.dataset.train)
+    if 'Set' in df.columns: df = df[df['Set'] == 'train']
     files = df['File'].tolist()
-    labels = pd.factorize(df[config.data.label_key])[0].tolist()
+    labels = pd.factorize(df[config.dataset.label_key])[0].tolist()
     
-    dataset_cls = (
-        SiameseAudioDataset if config.data.siamese
-        else AudioDataset
-    )
+    dataset_cls = SSLDataset if config.dataset.ssl else Dataset
     dataset = dataset_cls(
-        base_path=config.data.base_path,
+        base_path=config.dataset.base_path,
         files=files,
         labels=labels,
-        frame_length=config.data.frame_length,
-        frame_sampling=config.data.frame_sampling,
+        frame_length=config.dataset.frame_length,
+        frame_sampling=config.dataset.frame_sampling,
         num_frames=1,
-        augmentation_config=config.data.augmentation,
-        max_samples=config.data.max_samples
+        augmentation_config=config.dataset.augmentation,
+        max_samples=config.dataset.max_samples
     )
 
     shuffle = True
@@ -207,12 +203,12 @@ def load_train_dataloader(config, nb_labels_per_spk=None):
         shuffle = False
         sampler = DistributedSampler(dataset, shuffle=True, seed=config.seed)
 
-    if nb_labels_per_spk:
+    if config.dataset.sampler and config.dataset.sampler.enable:
         shuffle = False
-        sampler = SupervisedSampler(
+        sampler = Sampler(
             dataset,
-            config.training.batch_size,
-            nb_labels_per_spk
+            config.trainer.batch_size,
+            config.dataset.sampler
         )
         if is_dist_initialized(): sampler = DistributedSamplerWrapper(sampler)
 
@@ -220,10 +216,10 @@ def load_train_dataloader(config, nb_labels_per_spk=None):
         dataset,
         sampler=sampler,
         shuffle=shuffle,
-        batch_size=config.training.batch_size // get_world_size(),
-        num_workers=config.data.num_workers,
+        batch_size=config.trainer.batch_size // get_world_size(),
+        num_workers=config.dataset.num_workers,
         drop_last=True,
-        pin_memory=config.data.pin_memory,
+        pin_memory=config.dataset.pin_memory,
         worker_init_fn=seed_dataloader_worker
     )
 
@@ -234,8 +230,8 @@ def load_model(config):
     encoder_cls = REGISTERED_ENCODERS[config.encoder.__type__][0]
     create_encoder_fn = lambda: encoder_cls(config.encoder)
 
-    model = REGISTERED_MODELS[config.model.__type__][0](
-        config.model,
+    model = REGISTERED_METHODS[config.method.__type__][0](
+        config.method,
         create_encoder_fn
     )
     return model

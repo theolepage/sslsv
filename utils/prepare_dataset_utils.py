@@ -8,6 +8,7 @@ def glob(path):
     paths = [p.replace('\\', '/') for p in paths]
     return paths
 
+
 def get_md5(path):
     hash_md5 = hashlib.md5()
     with open(path, 'rb') as f:

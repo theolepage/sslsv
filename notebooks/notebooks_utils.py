@@ -1,10 +1,7 @@
-from pathlib import Path
-
 import torch
 import pandas as pd
 
 from sslsv.utils.helpers import load_config, load_model
-
 
 
 def load_models(configs, override_names={}):
@@ -20,9 +17,9 @@ def load_models(configs, override_names={}):
         model.load_state_dict(checkpoint['model'], strict=False)
         model.eval()
 
-        model_name = config_path.split('/')[-1][:-4]
-        if model_name in override_names.keys():
-            model_name = override_names[model_name]
+        model_name = config.experiment_name
+        if config.experiment_name in override_names.keys():
+            model_name = override_names[config.experiment_name]
 
         models[model_name] = {
             'model': model,

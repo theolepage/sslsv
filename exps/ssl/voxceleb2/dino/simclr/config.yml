@@ -1,0 +1,21 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'simclr'
+trainer:
+  epochs: 1
+  init_weights: 'exps/ssl/voxceleb2/dino/dino'
+evaluation:
+  num_frames: 10
+  frame_length: 56240
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+dataset:
+  max_samples: 1000
+  frame_sampling: 'dino'
+  ssl: true
+  train: 'voxceleb1_train.csv'
+  augmentation:
+    enable: true

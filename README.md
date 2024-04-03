@@ -22,53 +22,53 @@ Collection of **self-supervised learning** (SSL) methods for **speaker verificat
   ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification ([PDF](https://arxiv.org/abs/2005.07143))  
   *Brecht Desplanques, Jenthe Thienpondt, Kris Demuynck*
 
-### Models
+### Methods
 
-- **CPC** (`sslsv.models.CPC`)  
+- **CPC** (`sslsv.methods.CPC`)  
   Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
   *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
 
-- **LIM** (`sslsv.models.LIM`)  
+- **LIM** (`sslsv.methods.LIM`)  
   Learning Speaker Representations with Mutual Information ([arXiv](https://arxiv.org/abs/1812.00271))  
   *Mirco Ravanelli, Yoshua Bengio*
 
-- **SimCLR** (`sslsv.models.SimCLR`)  
+- **SimCLR** (`sslsv.methods.SimCLR`)  
   A Simple Framework for Contrastive Learning of Visual Representations ([arXiv](https://arxiv.org/abs/2002.05709))  
   *Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton*
 
-- **MoCo v2+** (`sslsv.models.MoCo`)  
+- **MoCo v2+** (`sslsv.methods.MoCo`)  
   Improved Baselines with Momentum Contrastive Learning ([arXiv](https://arxiv.org/abs/2003.04297))  
   *Xinlei Chen, Haoqi Fan, Ross Girshick, Kaiming He*
 
-- **Barlow Twins** (`sslsv.models.BarlowTwins`)  
+- **Barlow Twins** (`sslsv.methods.BarlowTwins`)  
   Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arXiv](https://arxiv.org/abs/2103.03230))  
   *Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny*
 
-- **VICReg** (`sslsv.models.VICReg`)  
+- **VICReg** (`sslsv.methods.VICReg`)  
   VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning ([arXiv](https://arxiv.org/abs/2105.04906))  
   *Adrien Bardes, Jean Ponce, Yann LeCun*
 
-- **VIbCReg** (`sslsv.models.VIbCReg`)  
+- **VIbCReg** (`sslsv.methods.VIbCReg`)  
   Computer Vision Self-supervised Learning Methods on Time Series ([arXiv](https://arxiv.org/abs/2109.00783))  
   *Daesoo Lee, Erlend Aune*
 
-- **BYOL** (`sslsv.models.BYOL`)  
+- **BYOL** (`sslsv.methods.BYOL`)  
   Bootstrap Your Own Latent: A New Approach to Self-Supervised Learning ([arXiv](https://arxiv.org/abs/2006.07733))  
   *Jean-Bastien Grill, Florian Strub, Florent Altché, Corentin Tallec, Pierre H. Richemond, Elena Buchatskaya, Carl Doersch, Bernardo Avila Pires, Zhaohan Daniel Guo, Mohammad Gheshlaghi Azar, Bilal Piot, Koray Kavukcuoglu, Rémi Munos, Michal Valko*
 
-- **SimSiam** (`sslsv.models.SimSiam`)  
+- **SimSiam** (`sslsv.methods.SimSiam`)  
   Exploring Simple Siamese Representation Learning ([arXiv](https://arxiv.org/abs/2011.10566))  
   *Xinlei Chen, Kaiming He*
 
-- **DINO** (`sslsv.models.DINO`)  
+- **DINO** (`sslsv.methods.DINO`)  
   Emerging Properties in Self-Supervised Vision Transformers ([arXiv](https://arxiv.org/abs/2104.14294))  
   *Mathilde Caron, Hugo Touvron, Ishan Misra, Hervé Jégou, Julien Mairal, Piotr Bojanowski, Armand Joulin*
 
-- **DeepCluster v2** (`sslsv.models.DeepCluster`)  
+- **DeepCluster v2** (`sslsv.methods.DeepCluster`)  
   Deep Clustering for Unsupervised Learning of Visual Features ([arXiv](https://arxiv.org/abs/1807.05520))  
   *Mathilde Caron, Piotr Bojanowski, Armand Joulin, Matthijs Douze*
 
-- **SwAV** (`sslsv.models.SwAV`)  
+- **SwAV** (`sslsv.methods.SwAV`)  
   Unsupervised Learning of Visual Features by Contrasting Cluster Assignments ([arXiv](https://arxiv.org/abs/2006.09882))  
   *Mathilde Caron, Ishan Misra, Julien Mairal, Priya Goyal, Piotr Bojanowski, Armand Joulin*
 

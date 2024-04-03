@@ -1,15 +1,18 @@
 encoder:
   type: 'resnet34'
-model:
+method:
   type: 'supervised'
   nb_classes: 5994
-training:
+trainer:
   epochs: 200
 evaluation:
-  mean_of_features: false
   num_frames: 10
   frame_length: 64000
-data:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+dataset:
   train: 'voxceleb2_train.csv'
   augmentation:
     enable: true

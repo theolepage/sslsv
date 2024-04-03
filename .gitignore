@@ -2,16 +2,12 @@ __pycache__
 .ipynb_checkpoints
 .vscode
 
+data
+env
+wandb
 old
 
-# Ignore all files in the experiments folder except config files
-exps/**
-!exps/**/
-!exps/**/config.yml
-
-data
-!sslsv/data/
-
-env
-
-.env
+exps/**/tensorboard/
+exps/**/wandb/
+exps/**/*.json
+exps/**/*.pt

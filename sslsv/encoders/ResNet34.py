@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from dataclasses import dataclass
+from enum import Enum
 
 from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
@@ -132,11 +133,18 @@ class StatsPooling(nn.Module):
         return stats
 
 
+class PoolingModeEnum(Enum):
+
+    NONE  = None
+    SAP   = 'sap'
+    STATS = 'stats'
+
+
 @dataclass
 class ResNet34Config(BaseEncoderConfig):
 
     pooling: bool = True
-    pooling_mode: str = 'sap'
+    pooling_mode: PoolingModeEnum = PoolingModeEnum.SAP
 
     base_dim: int = 16
 
@@ -146,8 +154,8 @@ class ResNet34Config(BaseEncoderConfig):
 class ResNet34(BaseEncoder):
 
     _POOLING_MODULES = {
-        'sap': SelfAttentivePooling,
-        'stats': StatsPooling
+        PoolingModeEnum.SAP: SelfAttentivePooling,
+        PoolingModeEnum.STATS: StatsPooling
     }
 
     def __init__(self, config):
@@ -167,8 +175,11 @@ class ResNet34(BaseEncoder):
         self.block4 = self.__make_block(3, base_dim * 4, base_dim * 8, 1)
 
         out_size = base_dim * 8
-        if config.pooling_mode == 'stats':
+        
+        if config.pooling_mode == PoolingModeEnum.STATS:
             out_size = 2 * int(80 / 8 * (base_dim * 8))
+        if not config.pooling:
+            out_size = int(40 / 8 * (base_dim * 8))
 
         self.pooling = None
         if config.pooling:
