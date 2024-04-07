@@ -33,12 +33,9 @@ class InfoNCELoss(nn.Module):
         p1 = N * get_rank()
         p2 = N * (get_rank() + 1)
 
-        pos_mask = torch.zeros((
-            N ,
-            N * get_world_size()
-        ), dtype=torch.bool)
-        
-        pos_mask[:, p1:p2] = (indexes.unsqueeze(0) == indexes.unsqueeze(1))
+        pos_mask = torch.zeros((N, N * get_world_size()), dtype=torch.bool)
+
+        pos_mask[:, p1:p2] = indexes.unsqueeze(0) == indexes.unsqueeze(1)
 
         neg_mask = ~pos_mask
 
@@ -51,8 +48,8 @@ class InfoNCELoss(nn.Module):
 
         pos_mask, neg_mask = self._create_masks(N)
 
-        pos = dot[pos_mask].view(N, -1) # (N, 1) positives
-        neg = dot[neg_mask].view(N, -1) # (N, N*world_size-1) negatives
+        pos = dot[pos_mask].view(N, -1)  # (N, 1) positives
+        neg = dot[neg_mask].view(N, -1)  # (N, N*world_size-1) negatives
 
         logits = torch.cat((pos, neg), dim=1)
         labels = torch.zeros(N, dtype=torch.long, device=dot.device)

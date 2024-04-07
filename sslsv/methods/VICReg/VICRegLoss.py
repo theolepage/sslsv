@@ -7,12 +7,7 @@ from sslsv.utils.distributed import gather
 
 class VICRegLoss(nn.Module):
 
-    def __init__(
-        self,
-        inv_weight=1.0,
-        var_weight=1.0,
-        cov_weight=0.04
-    ):
+    def __init__(self, inv_weight=1.0, var_weight=1.0, cov_weight=0.04):
         super().__init__()
 
         self.inv_weight = inv_weight
@@ -38,7 +33,7 @@ class VICRegLoss(nn.Module):
         Z_b = Z_b - Z_b.mean(dim=0)
         Z_a_cov = (Z_a.T @ Z_a) / (N - 1)
         Z_b_cov = (Z_b.T @ Z_b) / (N - 1)
-        
+
         diag = torch.eye(D, dtype=torch.bool, device=Z_a.device)
         cov_loss = Z_a_cov[~diag].pow_(2).sum() / D
         cov_loss += Z_b_cov[~diag].pow_(2).sum() / D

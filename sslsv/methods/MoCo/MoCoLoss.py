@@ -10,17 +10,10 @@ class MoCoLoss(nn.Module):
 
         self.temperature = temperature
 
-    def forward(
-        self,
-        query,
-        key,
-        queue,
-        current_labels=None,
-        queue_labels=None
-    ):
+    def forward(self, query, key, queue, current_labels=None, queue_labels=None):
         N, _ = query.size()
 
-        pos = torch.einsum('nc,nc->n', (query, key)).unsqueeze(-1)
+        pos = torch.einsum("nc,nc->n", (query, key)).unsqueeze(-1)
         neg = torch.einsum("nc,ck->nk", (query, queue))
 
         # Prevent class collisions using labels

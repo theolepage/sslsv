@@ -8,7 +8,7 @@ import torch.distributed as dist
 from sslsv.utils.distributed import (
     is_dist_initialized,
     is_main_process,
-    get_world_size
+    get_world_size,
 )
 
 
@@ -23,20 +23,18 @@ class KMeans:
     def get_indices_sparse(data):
         cols = np.arange(data.size)
         M = csr_matrix(
-            (cols, (data.ravel(), cols)),
-            shape=(int(data.max()) + 1, data.size)
+            (cols, (data.ravel(), cols)), shape=(int(data.max()) + 1, data.size)
         )
         return [np.unravel_index(row.data, data.shape) for row in M]
 
     def run(self, local_memory_index, local_memory_embeddings):
         V, N, D = local_memory_embeddings.size()
         device = local_memory_embeddings.device
-    
+
         j = 0
 
         assignments = -1 * torch.ones(
-            (len(self.nb_prototypes), self.dataset_size),
-            dtype=torch.long
+            (len(self.nb_prototypes), self.dataset_size), dtype=torch.long
         )
 
         centroids_list = []
@@ -56,8 +54,7 @@ class KMeans:
                 for n_iter in range(self.nb_iters + 1):
                     # E step
                     local_assignments = torch.mm(
-                        local_memory_embeddings[j],
-                        centroids.T
+                        local_memory_embeddings[j], centroids.T
                     ).max(dim=1)[1]
 
                     if n_iter == self.nb_iters:
@@ -77,8 +74,7 @@ class KMeans:
                         idx = where_helper[k][0]
                         if len(idx) > 0:
                             emb_sums[k] = torch.sum(
-                                local_memory_embeddings[j][idx],
-                                dim=0
+                                local_memory_embeddings[j][idx], dim=0
                             )
                             counts[k] = len(idx)
                     if is_dist_initialized():

@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import argparse
 
@@ -17,14 +18,14 @@ def train_with_profiling(
     warmup=1,
     active=3,
     repeat=1,
-    path='./profiling'
+    path="./profiling",
 ):
     config = load_config(args.config)
     config.trainer.epochs = 1
 
     train_dataloader = load_dataloader(config)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = load_model(config).to(device)
     model = torch.nn.DataParallel(model)
@@ -34,7 +35,7 @@ def train_with_profiling(
         train_dataloader=train_dataloader,
         config=config,
         evaluate=evaluate,
-        device=device
+        device=device,
     )
 
     with profiler.profile(
@@ -42,21 +43,21 @@ def train_with_profiling(
             wait=wait,
             warmup=warmup,
             active=active,
-            repeat=repeat
+            repeat=repeat,
         ),
         on_trace_ready=profiler.tensorboard_trace_handler(path),
         record_shapes=True,
         profile_memory=True,
-        with_stack=True
+        with_stack=True,
     ) as prof:
         for step in range((wait + warmup + active) * repeat):
             trainer.start(resume=False)
             prof.step()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('config', help='Path to model config file.')
+    parser.add_argument("config", help="Path to model config file.")
     args = parser.parse_args()
 
     train_with_profiling(args)

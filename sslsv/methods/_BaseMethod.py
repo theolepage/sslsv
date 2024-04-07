@@ -22,7 +22,7 @@ class BaseMethod(nn.Module):
         return self.encoder(X)
 
     def get_learnable_params(self):
-        return [{'params': self.encoder.parameters()}]
+        return [{"params": self.encoder.parameters()}]
 
     def update_optim(
         self,
@@ -30,14 +30,14 @@ class BaseMethod(nn.Module):
         training_config,
         step,
         nb_steps,
-        nb_steps_per_epoch
+        nb_steps_per_epoch,
     ):
         # Equivalent to StepLR(..., step_size=5, gamma=0.95)
         init_lr = training_config.learning_rate
         lr = init_lr * (0.95 ** ((step // nb_steps_per_epoch) // 5))
 
         for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
+            param_group["lr"] = lr
         return lr
 
     def train_step(self, Z, labels, step, samples):

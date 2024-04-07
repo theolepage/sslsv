@@ -6,16 +6,16 @@ import pandas as pd
 
 from sslsv.evaluations._SpeakerVerificationEvaluation import (
     SpeakerVerificationEvaluation,
-    SpeakerVerificationEvaluationTaskConfig
+    SpeakerVerificationEvaluationTaskConfig,
 )
 
 
 class ScoreNormEnum(Enum):
 
-    NONE  = None
-    ZNORM = 'z-norm'
-    TNORM = 't-norm'
-    SNORM = 's-norm'
+    NONE = None
+    ZNORM = "z-norm"
+    TNORM = "t-norm"
+    SNORM = "s-norm"
 
 
 @dataclass
@@ -32,24 +32,30 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
 
     def _extract_train_embeddings(self):
         df = pd.read_csv(self.config.dataset.base_path / self.config.dataset.train)
-        files = df['File'].tolist()
+        files = df["File"].tolist()
 
-        self.train_embeddings = torch.stack(list(self._extract_embeddings(
-            files,
-            desc='Extracting train embeddings'
-        ).values()))
+        self.train_embeddings = torch.stack(
+            list(
+                self._extract_embeddings(
+                    files, desc="Extracting train embeddings"
+                ).values()
+            )
+        )
 
     def _extract_test_embeddings(self, trials):
-        test_files = list(dict.fromkeys([
-            line.rstrip().split()[i]
-            for trial_file in trials
-            for line in open(self.config.dataset.base_path / trial_file)
-            for i in (1, 2)
-        ]))
+        test_files = list(
+            dict.fromkeys(
+                [
+                    line.rstrip().split()[i]
+                    for trial_file in trials
+                    for line in open(self.config.dataset.base_path / trial_file)
+                    for i in (1, 2)
+                ]
+            )
+        )
 
         self.test_embeddings = self._extract_embeddings(
-            test_files,
-            desc='Extracting test embeddings'
+            test_files, desc="Extracting test embeddings"
         )
 
     def _prepare_evaluation(self):
@@ -83,7 +89,7 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
             score_e = (score - self.mean_e_c) / self.std_e_c
             score_t = (score - self.mean_t_c) / self.std_t_c
             score = (score_e + score_t) / 2
-        
+
         return score
 
     def _get_sv_score(self, a, b):

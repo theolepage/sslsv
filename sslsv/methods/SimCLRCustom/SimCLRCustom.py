@@ -2,7 +2,6 @@ import math
 
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 from dataclasses import dataclass
 
@@ -13,7 +12,7 @@ from .SimCLRCustomLoss import SimCLRCustomLoss, SimCLRCustomLossEnum
 
 @dataclass
 class SimCLRCustomConfig(BaseMethodConfig):
-    
+
     enable_multi_views: bool = False
 
     loss: SimCLRCustomLossEnum = SimCLRCustomLossEnum.SNTXENT
@@ -25,9 +24,9 @@ class SimCLRCustomConfig(BaseMethodConfig):
     loss_margin_simo: bool = False
     loss_margin_simo_K: int = 2 * 255
     loss_margin_simo_alpha: int = 65536
-    
+
     loss_margin_learnable: bool = False
-    
+
     loss_margin_scheduler: bool = False
 
     loss_reg_weight: float = 0.0
@@ -49,11 +48,11 @@ class SimCLRCustom(BaseMethod):
             self.projector = nn.Sequential(
                 nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
                 nn.ReLU(),
-                nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
+                nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
             )
 
         self.loss_fn = SimCLRCustomLoss(config)
-    
+
     def _compute_embeddings(self, X):
         Y = self.encoder(X)
 
@@ -63,7 +62,8 @@ class SimCLRCustom(BaseMethod):
         return Y
 
     def forward(self, X, training=False):
-        if not training: return self.encoder(X)
+        if not training:
+            return self.encoder(X)
 
         # Retrieve global views
         X_1 = X[:, 0, :]
@@ -78,20 +78,15 @@ class SimCLRCustom(BaseMethod):
             views.append(X_2[:, :small_frame_length])
             views.append(X_2[:, small_frame_length:])
 
-        Z = torch.stack(
-            [self._compute_embeddings(V) for V in views],
-            dim=1
-        )
+        Z = torch.stack([self._compute_embeddings(V) for V in views], dim=1)
 
         return Z
 
     def get_learnable_params(self):
-        extra_learnable_params = [
-            {'params': self.loss_fn.parameters()}
-        ]
+        extra_learnable_params = [{"params": self.loss_fn.parameters()}]
         if self.config.enable_projector:
             extra_learnable_params += [
-                {'params': self.projector.parameters()},
+                {"params": self.projector.parameters()},
             ]
         return super().get_learnable_params() + extra_learnable_params
 
@@ -104,9 +99,10 @@ class SimCLRCustom(BaseMethod):
             return self.config.loss_margin
 
         return (
-            self.config.loss_margin -
-            self.config.loss_margin *
-            (math.cos(math.pi * self.epoch / (self.max_epochs // 2)) + 1) / 2
+            self.config.loss_margin
+            - self.config.loss_margin
+            * (math.cos(math.pi * self.epoch / (self.max_epochs // 2)) + 1)
+            / 2
         )
 
     def train_step(self, Z, labels, step, samples):
@@ -119,8 +115,8 @@ class SimCLRCustom(BaseMethod):
         loss = self.loss_fn(Z)
 
         metrics = {
-            'train/loss': loss,
-            'train/margin': loss_margin
+            "train/loss": loss,
+            "train/margin": loss_margin,
         }
 
         return loss, metrics

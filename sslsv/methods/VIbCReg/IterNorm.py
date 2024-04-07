@@ -6,12 +6,13 @@ https://github.com/huangleiBuaa/IterNorm-pytorch
 import torch
 import torch.nn as nn
 
+
 class iterative_normalization_py(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, *args, **kwargs):
         X, running_mean, running_wmat, nc, ctx.T, eps, momentum, training = args
-        
+
         # change NxCxHxW to (G x D) x(NxHxW), i.e., g*d*m
         ctx.g = X.size(1) // nc
         x = X.transpose(0, 1).contiguous().view(ctx.g, nc, -1)
@@ -31,9 +32,9 @@ class iterative_normalization_py(torch.autograd.Function):
                 input=P[0],
                 alpha=1.0 / m,
                 batch1=xc,
-                batch2=xc.transpose(1, 2)
+                batch2=xc.transpose(1, 2),
             )
-    
+
             # reciprocal of trace of Sigma: shape [g, 1, 1]
             rTr = (Sigma * P[0]).sum((1, 2), keepdim=True).reciprocal_()
             saved.append(rTr)
@@ -45,7 +46,7 @@ class iterative_normalization_py(torch.autograd.Function):
                     input=P[k],
                     alpha=-0.5,
                     batch1=torch.matrix_power(P[k], 3),
-                    batch2=Sigma_N
+                    batch2=Sigma_N,
                 )
             saved.extend(P)
 
@@ -84,14 +85,22 @@ class iterative_normalization_py(torch.autograd.Function):
             g_tmp = g_P.matmul(sn)
             g_P.baddbmm_(beta=1.5, alpha=-0.5, batch1=g_tmp, batch2=P2)
             g_P.baddbmm_(beta=1, alpha=-0.5, batch1=P2, batch2=g_tmp)
-            g_P.baddbmm_(beta=1, alpha=-0.5, batch1=P[k - 1].matmul(g_tmp), batch2=P[k - 1])
+            g_P.baddbmm_(
+                beta=1, alpha=-0.5, batch1=P[k - 1].matmul(g_tmp), batch2=P[k - 1]
+            )
         g_sn += g_P
         # g_sn = g_sn * rTr.sqrt()
-        g_tr = ((-sn.matmul(g_sn) + g_wm.transpose(-2, -1).matmul(wm)) * P[0]).sum((1, 2), keepdim=True) * P[0]
+        g_tr = ((-sn.matmul(g_sn) + g_wm.transpose(-2, -1).matmul(wm)) * P[0]).sum(
+            (1, 2), keepdim=True
+        ) * P[0]
         g_sigma = (g_sn + g_sn.transpose(-2, -1) + 2.0 * g_tr) * (-0.5 / m * rTr)
         # g_sigma = g_sigma + g_sigma.transpose(-2, -1)
         g_x = torch.baddbmm(wm.matmul(g_ - g_.mean(-1, keepdim=True)), g_sigma, xc)
-        grad_input = g_x.view(grad.size(1), grad.size(0), *grad.size()[2:]).transpose(0, 1).contiguous()
+        grad_input = (
+            g_x.view(grad.size(1), grad.size(0), *grad.size()[2:])
+            .transpose(0, 1)
+            .contiguous()
+        )
         return grad_input, None, None, None, None, None, None, None
 
 
@@ -124,7 +133,7 @@ class IterNorm(torch.nn.Module):
             nb_groups = nb_features // nb_channels
         assert (
             nb_groups > 0 and nb_features % nb_groups == 0
-        ), f'nb_features={nb_features}, nb_groups={nb_groups}'
+        ), f"nb_features={nb_features}, nb_groups={nb_groups}"
         self.nb_groups = nb_groups
         self.nb_channels = nb_channels
         shape = [1] * dim
@@ -133,17 +142,14 @@ class IterNorm(torch.nn.Module):
             self.weight = nn.Parameter(torch.Tensor(*shape))
             self.bias = nn.Parameter(torch.Tensor(*shape))
         else:
-            self.register_parameter('weight', None)
-            self.register_parameter('bias', None)
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
 
-        self.register_buffer(
-            'running_mean',
-            torch.zeros(nb_groups, nb_channels, 1)
-        )
+        self.register_buffer("running_mean", torch.zeros(nb_groups, nb_channels, 1))
         # running whiten matrix
         self.register_buffer(
-            'running_wm',
-            torch.eye(nb_channels).expand(nb_groups, nb_channels, nb_channels).clone()
+            "running_wm",
+            torch.eye(nb_channels).expand(nb_groups, nb_channels, nb_channels).clone(),
         )
         self.reset_parameters()
 
@@ -161,7 +167,7 @@ class IterNorm(torch.nn.Module):
             self.T,
             self.eps,
             self.momentum,
-            self.training
+            self.training,
         )
         if self.affine:
             return X_hat * self.weight + self.bias
@@ -170,10 +176,10 @@ class IterNorm(torch.nn.Module):
 
     def extra_repr(self):
         return (
-            f'{self.nb_features}, '
-            f'nb_channels={self.nb_channels}, '
-            f'T={self.T}, '
-            f'eps={self.eps}, '
-            f'momentum={self.momentum}, '
-            f'affine={self.affine}'
+            f"{self.nb_features}, "
+            f"nb_channels={self.nb_channels}, "
+            f"T={self.T}, "
+            f"eps={self.eps}, "
+            f"momentum={self.momentum}, "
+            f"affine={self.affine}"
         )

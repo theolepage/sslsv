@@ -34,15 +34,16 @@ class MomentumUpdater:
 
     def update_tau(self, step, max_steps):
         self.tau = (
-            self.end_tau -
-            (self.end_tau - self.start_tau) *
-            (math.cos(math.pi * step / max_steps) + 1) / 2
+            self.end_tau
+            - (self.end_tau - self.start_tau)
+            * (math.cos(math.pi * step / max_steps) + 1)
+            / 2
         )
 
 
 @dataclass
 class BaseMomentumMethodConfig(BaseMethodConfig):
-    
+
     tau_scheduler: bool = True
     start_tau: float = 0.99
     end_tau: float = 1.0
@@ -57,10 +58,7 @@ class BaseMomentumMethod(BaseMethod):
         initialize_momentum_params(self.encoder, self.encoder_momentum)
 
         self.tau_scheduler = config.tau_scheduler
-        self.momentum_updater = MomentumUpdater(
-            config.start_tau,
-            config.end_tau
-        )
+        self.momentum_updater = MomentumUpdater(config.start_tau, config.end_tau)
 
     def get_momentum_pairs(self):
         return [(self.encoder, self.encoder_momentum)]

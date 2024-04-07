@@ -1,6 +1,4 @@
-import torch
 from torch import nn
-import torch.nn.functional as F
 
 from dataclasses import dataclass
 
@@ -24,14 +22,22 @@ class SimSiam(BaseMethod):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim, bias=False),
+            nn.Linear(
+                self.encoder.encoder_dim,
+                config.projector_hidden_dim,
+                bias=False,
+            ),
             nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.projector_hidden_dim, config.projector_hidden_dim, bias=False),
+            nn.Linear(
+                config.projector_hidden_dim,
+                config.projector_hidden_dim,
+                bias=False,
+            ),
             nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
             nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
-            nn.BatchNorm1d(config.projector_output_dim, affine=False)
+            nn.BatchNorm1d(config.projector_output_dim, affine=False),
         )
         # hack: not use bias as it is followed by BN
         self.projector[6].bias.requires_grad = False
@@ -40,14 +46,15 @@ class SimSiam(BaseMethod):
             nn.Linear(config.projector_output_dim, config.pred_hidden_dim, bias=False),
             nn.BatchNorm1d(config.pred_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.pred_hidden_dim, config.projector_output_dim)
+            nn.Linear(config.pred_hidden_dim, config.projector_output_dim),
         )
 
         self.loss_fn = SimSiamLoss()
 
     def forward(self, X, training=False):
-        if not training: return self.encoder(X)
-        
+        if not training:
+            return self.encoder(X)
+
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
 
@@ -61,8 +68,8 @@ class SimSiam(BaseMethod):
 
     def get_learnable_params(self):
         extra_learnable_params = [
-            {'params': self.projector.parameters()},
-            {'params': self.predictor.parameters(), 'fix_lr': True}
+            {"params": self.projector.parameters()},
+            {"params": self.predictor.parameters(), "fix_lr": True},
         ]
         return super().get_learnable_params() + extra_learnable_params
 
@@ -72,32 +79,29 @@ class SimSiam(BaseMethod):
         training_config,
         step,
         nb_steps,
-        nb_steps_per_epoch
+        nb_steps_per_epoch,
     ):
         lr = super().update_optim(
             optimizer,
             training_config,
             step,
             nb_steps,
-            nb_steps_per_epoch
+            nb_steps_per_epoch,
         )
 
         for param_group in optimizer.param_groups:
-            if 'fix_lr' in param_group and param_group['fix_lr']:
-                param_group['lr'] = training_config.learning_rate
+            if "fix_lr" in param_group and param_group["fix_lr"]:
+                param_group["lr"] = training_config.learning_rate
 
         return lr
 
     def train_step(self, Z, labels, step, samples):
         Z_1, Z_2, P_1, P_2 = Z
 
-        loss = (
-            self.loss_fn(P_1, Z_2) +
-            self.loss_fn(P_2, Z_1)
-        ) / 2
+        loss = (self.loss_fn(P_1, Z_2) + self.loss_fn(P_2, Z_1)) / 2
 
         metrics = {
-            'train/loss': loss,
+            "train/loss": loss,
         }
 
         return loss, metrics

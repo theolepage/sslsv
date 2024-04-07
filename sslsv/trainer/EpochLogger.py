@@ -4,15 +4,12 @@ import time
 from datetime import timedelta
 from collections import defaultdict
 
-from sslsv.utils.distributed import (
-    is_dist_initialized,
-    get_rank
-)
+from sslsv.utils.distributed import is_dist_initialized, get_rank
 
 
 class EpochLoggerMetric(object):
 
-    def __init__(self, fmt='{global_avg:.6f}'):
+    def __init__(self, fmt="{global_avg:.6f}"):
         self.fmt = fmt
 
         self.total = 0.0
@@ -23,9 +20,10 @@ class EpochLoggerMetric(object):
         self.total += value
 
     def synchronize(self):
-        if not is_dist_initialized(): return
+        if not is_dist_initialized():
+            return
 
-        t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
+        t = torch.tensor([self.count, self.total], dtype=torch.float64, device="cuda")
         torch.distributed.barrier()
         torch.distributed.all_reduce(t)
         t = t.tolist()
@@ -35,14 +33,14 @@ class EpochLoggerMetric(object):
     @property
     def global_avg(self):
         return self.total / self.count
-    
+
     def __str__(self):
         return self.fmt.format(global_avg=self.global_avg)
 
 
 class EpochLogger:
 
-    def __init__(self, delimiter=' | '):
+    def __init__(self, delimiter=" | "):
         self.metrics = defaultdict(EpochLoggerMetric)
         self.delimiter = delimiter
 
@@ -50,13 +48,14 @@ class EpochLogger:
         for k, v in metrics.items():
             assert isinstance(v, (torch.Tensor, float, int))
 
-            if isinstance(v, torch.Tensor): v = v.item()
+            if isinstance(v, torch.Tensor):
+                v = v.item()
             self.metrics[k].update(v)
 
     def __str__(self):
         res = []
         for name, metric in self.metrics.items():
-            res.append('{}: {}'.format(name, metric))
+            res.append("{}: {}".format(name, metric))
         return self.delimiter.join(res)
 
     def __getitem__(self, key):
@@ -71,12 +70,14 @@ class EpochLogger:
 
         last_iter_end_time = time.time()
         iter_time = EpochLoggerMetric()
-        
-        space_fmt = ':' + str(len(str(len(iterable)))) + 'd'
-        log_msg = '[{0' + space_fmt + '}/{1}] ' + self.delimiter.join([
-            'ETA: {eta}',
-            '{metrics}'
-        ])
+
+        space_fmt = ":" + str(len(str(len(iterable)))) + "d"
+        log_msg = (
+            "[{0"
+            + space_fmt
+            + "}/{1}] "
+            + self.delimiter.join(["ETA: {eta}", "{metrics}"])
+        )
 
         for obj in iterable:
             yield obj
@@ -88,7 +89,7 @@ class EpochLogger:
                         i,
                         len(iterable),
                         eta=str(timedelta(seconds=eta)),
-                        metrics=str(self)
+                        metrics=str(self),
                     )
                 )
 

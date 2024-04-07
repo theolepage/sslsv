@@ -11,7 +11,7 @@ from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
 
 class Conv1dSamePaddingReflect(nn.Module):
-   
+
     def __init__(
         self,
         in_channels,
@@ -20,7 +20,7 @@ class Conv1dSamePaddingReflect(nn.Module):
         stride=1,
         dilation=1,
         groups=1,
-        bias=True
+        bias=True,
     ):
         super().__init__()
 
@@ -35,7 +35,7 @@ class Conv1dSamePaddingReflect(nn.Module):
             stride=self.stride,
             dilation=self.dilation,
             groups=groups,
-            bias=bias
+            bias=bias,
         )
 
     def forward(self, x):
@@ -43,33 +43,27 @@ class Conv1dSamePaddingReflect(nn.Module):
         L_in = x.size(-1)
         L_out = (
             math.floor(
-                (L_in - self.dilation * (self.kernel_size - 1) - 1)
-                / self.stride
-            ) + 1
+                (L_in - self.dilation * (self.kernel_size - 1) - 1) / self.stride
+            )
+            + 1
         )
         padding = (L_in - L_out) // 2
 
-        x = F.pad(x, (padding, padding), mode='reflect')
+        x = F.pad(x, (padding, padding), mode="reflect")
 
         return self.conv(x)
 
 
 class TDNNBlock(nn.Module):
 
-    def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        dilation
-    ):
+    def __init__(self, in_channels, out_channels, kernel_size, dilation):
         super().__init__()
 
         self.conv = Conv1dSamePaddingReflect(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
-            dilation=dilation
+            dilation=dilation,
         )
         self.activation = nn.ReLU()
         self.norm = nn.BatchNorm1d(out_channels)
@@ -86,7 +80,7 @@ class Res2NetBlock(nn.Module):
         out_channels,
         scale=8,
         kernel_size=3,
-        dilation=1
+        dilation=1,
     ):
         super().__init__()
 
@@ -102,7 +96,7 @@ class Res2NetBlock(nn.Module):
                     in_channel,
                     hidden_channel,
                     kernel_size=kernel_size,
-                    dilation=dilation
+                    dilation=dilation,
                 )
                 for i in range(scale - 1)
             ]
@@ -129,16 +123,12 @@ class SEBlock(nn.Module):
         super().__init__()
 
         self.conv1 = Conv1dSamePaddingReflect(
-            in_channels=in_channels,
-            out_channels=se_channels,
-            kernel_size=1
+            in_channels=in_channels, out_channels=se_channels, kernel_size=1
         )
         self.relu = nn.ReLU(inplace=True)
 
         self.conv2 = Conv1dSamePaddingReflect(
-            in_channels=se_channels,
-            out_channels=out_channels,
-            kernel_size=1
+            in_channels=se_channels, out_channels=out_channels, kernel_size=1
         )
         self.sigmoid = nn.Sigmoid()
 
@@ -158,26 +148,16 @@ class SERes2NetBlock(nn.Module):
         res2net_scale=8,
         se_channels=128,
         kernel_size=1,
-        dilation=1
+        dilation=1,
     ):
         super().__init__()
 
         self.out_channels = out_channels
-        self.tdnn1 = TDNNBlock(
-            in_channels,
-            out_channels,
-            kernel_size=1,
-            dilation=1
-        )
+        self.tdnn1 = TDNNBlock(in_channels, out_channels, kernel_size=1, dilation=1)
         self.res2net_block = Res2NetBlock(
             out_channels, out_channels, res2net_scale, kernel_size, dilation
         )
-        self.tdnn2 = TDNNBlock(
-            out_channels,
-            out_channels,
-            kernel_size=1,
-            dilation=1
-        )
+        self.tdnn2 = TDNNBlock(out_channels, out_channels, kernel_size=1, dilation=1)
         self.se_block = SEBlock(out_channels, se_channels, out_channels)
 
         self.shortcut = None
@@ -213,16 +193,12 @@ class AttentiveStatisticsPooling(nn.Module):
         self.tdnn = TDNNBlock(in_channels, attention_channels, 1, 1)
         self.tanh = nn.Tanh()
         self.conv = Conv1dSamePaddingReflect(
-            in_channels=attention_channels,
-            out_channels=channels,
-            kernel_size=1
+            in_channels=attention_channels, out_channels=channels, kernel_size=1
         )
-    
+
     def _compute_statistics(self, x, m, eps=1e-12):
         mean = (m * x).sum(dim=2)
-        std = torch.sqrt(
-            (m * (x - mean.unsqueeze(dim=2)).pow(2)).sum(dim=2).clamp(eps)
-        )
+        std = torch.sqrt((m * (x - mean.unsqueeze(dim=2)).pow(2)).sum(dim=2).clamp(eps))
         return mean, std
 
     def forward(self, x):
@@ -251,17 +227,11 @@ class ECAPATDNNConfig(BaseEncoderConfig):
 
     pooling: bool = True
 
-    channels: List[int] = field(
-        default_factory=lambda: [512, 512, 512, 512, 1536]
-    )
-    
-    kernel_sizes: List[int] = field(
-        default_factory=lambda: [5, 3, 3, 3, 1]
-    )
-    
-    dilations: List[int] = field(
-        default_factory=lambda: [1, 2, 3, 4, 1]
-    )
+    channels: List[int] = field(default_factory=lambda: [512, 512, 512, 512, 1536])
+
+    kernel_sizes: List[int] = field(default_factory=lambda: [5, 3, 3, 3, 1])
+
+    dilations: List[int] = field(default_factory=lambda: [1, 2, 3, 4, 1])
 
     attention_channels: int = 128
 
@@ -286,7 +256,7 @@ class ECAPATDNN(BaseEncoder):
                 config.mel_n_mels,
                 config.channels[0],
                 config.kernel_sizes[0],
-                config.dilations[0]
+                config.dilations[0],
             )
         )
 
@@ -298,7 +268,7 @@ class ECAPATDNN(BaseEncoder):
                     res2net_scale=config.res2net_scale,
                     se_channels=config.se_channels,
                     kernel_size=config.kernel_sizes[i],
-                    dilation=config.dilations[i]
+                    dilation=config.dilations[i],
                 )
             )
 
@@ -306,7 +276,7 @@ class ECAPATDNN(BaseEncoder):
             config.channels[-1],
             config.channels[-1],
             config.kernel_sizes[-1],
-            config.dilations[-1]
+            config.dilations[-1],
         )
 
         self.asp = AttentiveStatisticsPooling(
@@ -317,13 +287,10 @@ class ECAPATDNN(BaseEncoder):
         self.asp_bn = nn.BatchNorm1d(config.channels[-1] * 2)
 
         last_in_channels = (
-            config.channels[-1] * 2 if self.pooling
-            else config.channels[-1]
+            config.channels[-1] * 2 if self.pooling else config.channels[-1]
         )
         self.fc = Conv1dSamePaddingReflect(
-            in_channels=last_in_channels,
-            out_channels=config.encoder_dim,
-            kernel_size=1
+            in_channels=last_in_channels, out_channels=config.encoder_dim, kernel_size=1
         )
 
     def forward(self, X):
@@ -346,7 +313,8 @@ class ECAPATDNN(BaseEncoder):
 
         # Final linear transformation
         Z = self.fc(Z)
-        
-        if self.pooling: Z = Z.squeeze(dim=2)
+
+        if self.pooling:
+            Z = Z.squeeze(dim=2)
 
         return Z

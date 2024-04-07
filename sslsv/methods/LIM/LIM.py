@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
 
 from dataclasses import dataclass
@@ -23,8 +22,9 @@ class LIM(BaseMethod):
         self.loss_fn = LIMLoss(config.loss_name)
 
     def forward(self, X, training=False):
-        if not training: return self.encoder(X)
-        
+        if not training:
+            return self.encoder(X)
+
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
 
@@ -35,7 +35,7 @@ class LIM(BaseMethod):
 
     def train_step(self, Y, labels, step, samples):
         Y_1, Y_2 = Y
-        
+
         N, _ = Y_1.size()
 
         shift = torch.randint(1, N, size=(1,)).item()
@@ -47,7 +47,7 @@ class LIM(BaseMethod):
         loss = self.loss_fn(pos, neg)
 
         metrics = {
-            'train/loss': loss,
+            "train/loss": loss,
         }
 
         return loss, metrics

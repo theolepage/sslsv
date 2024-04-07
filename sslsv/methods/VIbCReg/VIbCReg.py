@@ -1,13 +1,8 @@
-import torch
 from torch import nn
-import torch.nn.functional as F
 
 from dataclasses import dataclass
 
-from sslsv.methods._BaseSiameseMethod import (
-    BaseSiameseMethod,
-    BaseSiameseMethodConfig
-)
+from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
 
 from .IterNorm import IterNorm
 from .VIbCRegLoss import VIbCRegLoss
@@ -34,11 +29,17 @@ class VIbCReg(BaseSiameseMethod):
             nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
             nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
-            IterNorm(config.projector_output_dim, nb_groups=64, T=5, dim=2, affine=True)
+            IterNorm(
+                config.projector_output_dim,
+                nb_groups=64,
+                T=5,
+                dim=2,
+                affine=True,
+            ),
         )
 
         self.loss_fn = VIbCRegLoss(
             config.inv_weight,
             config.var_weight,
-            config.cov_weight
+            config.cov_weight,
         )

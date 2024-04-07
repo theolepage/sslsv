@@ -42,14 +42,14 @@ class SwAV(BaseMethod):
             nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
             nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
         )
 
         self.prototypes = nn.utils.weight_norm(
             nn.Linear(
                 config.projector_output_dim,
                 config.nb_prototypes,
-                bias=False
+                bias=False,
             )
         )
         self.prototypes.weight_g.data.fill_(1)
@@ -57,7 +57,7 @@ class SwAV(BaseMethod):
 
         self.sk = SinkhornKnopp(
             nb_iters=config.sk_nb_iters,
-            epsilon=config.sk_epsilon
+            epsilon=config.sk_epsilon,
         )
 
         self.loss_fn = SwAVLoss(config.temperature)
@@ -65,17 +65,18 @@ class SwAV(BaseMethod):
     def on_train_start(self, trainer):
         if self.config.queue_size > 0:
             self.register_buffer(
-                'queue',
+                "queue",
                 torch.zeros(
                     2,
                     self.config.queue_size // get_world_size(),
                     self.config.projector_output_dim,
                     device=trainer.device,
-                )
+                ),
             )
 
     def forward(self, X, training=False):
-        if not training: return self.encoder(X)
+        if not training:
+            return self.encoder(X)
 
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
@@ -90,8 +91,8 @@ class SwAV(BaseMethod):
 
     def get_learnable_params(self):
         extra_learnable_params = [
-            {'params': self.projector.parameters()},
-            {'params': self.prototypes.parameters()}
+            {"params": self.projector.parameters()},
+            {"params": self.prototypes.parameters()},
         ]
         return super().get_learnable_params() + extra_learnable_params
 
@@ -102,10 +103,9 @@ class SwAV(BaseMethod):
         N = preds[0].size(0)
 
         assignments = []
-        
+
         use_queue = (
-            self.config.queue_size > 0 and
-            self.epoch >= self.config.queue_start_epoch
+            self.config.queue_size > 0 and self.epoch >= self.config.queue_start_epoch
         )
 
         for i, P in enumerate(preds):
@@ -113,7 +113,7 @@ class SwAV(BaseMethod):
                 P_queue = self.prototypes(self.queue[i])
                 P = torch.cat((P, P_queue))
             assignments.append(self.sk(P)[:N])
-        
+
         return assignments
 
     def train_step(self, Z, labels, step, samples):
@@ -133,7 +133,7 @@ class SwAV(BaseMethod):
             self.queue[1, :N] = Z_2.detach()
 
         metrics = {
-            'train/loss': loss
+            "train/loss": loss,
         }
 
         return loss, metrics

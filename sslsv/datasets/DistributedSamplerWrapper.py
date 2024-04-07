@@ -9,8 +9,8 @@ class DistributedSamplerWrapper(DistributedSampler):
 
     def __init__(self, sampler):
         if not is_dist_initialized():
-            raise RuntimeError('Requires distributed package to be available')
-        
+            raise RuntimeError("Requires distributed package to be available")
+
         self.sampler = sampler
 
         self.num_replicas = get_world_size()
@@ -22,7 +22,7 @@ class DistributedSamplerWrapper(DistributedSampler):
 
         self.num_samples = math.ceil(len(indices) / self.num_replicas)
         self.total_size = self.num_samples * self.num_replicas
-        
+
         # Ensure that each rank receives the same amount of data
         padding_size = self.total_size - len(indices)
         if padding_size <= len(indices):
@@ -31,7 +31,7 @@ class DistributedSamplerWrapper(DistributedSampler):
             indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
 
         # Subsample depending on rank
-        indices = indices[self.rank:self.total_size:self.num_replicas]
+        indices = indices[self.rank : self.total_size : self.num_replicas]
 
         return iter(indices)
 

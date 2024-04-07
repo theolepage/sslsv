@@ -1,7 +1,4 @@
-import torch
 from torch import nn
-import torch.nn.functional as F
-from torchaudio.transforms import MelSpectrogram
 
 from dataclasses import dataclass
 
@@ -10,7 +7,7 @@ from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
 @dataclass
 class SimpleAudioCNNConfig(BaseEncoderConfig):
-    
+
     extract_mel_features: bool = False
 
 
@@ -25,7 +22,7 @@ class SimpleAudioCNNBlock(nn.Module):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
-            bias=False
+            bias=False,
         )
         self.ln = nn.BatchNorm1d(out_dim)
         self.act = nn.ReLU()
@@ -53,7 +50,7 @@ class SimpleAudioCNN(BaseEncoder):
                     nb_filters[i],
                     kernel_sizes[i],
                     strides[i],
-                    paddings[i]
+                    paddings[i],
                 )
             )
             last_dim = nb_filters[i]
@@ -65,7 +62,7 @@ class SimpleAudioCNN(BaseEncoder):
 
         Z = Z.unsqueeze(1)
         # Z: (N, 1, L)
-        
+
         Z = self.blocks(Z)
-        
+
         return Z

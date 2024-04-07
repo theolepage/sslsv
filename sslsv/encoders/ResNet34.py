@@ -19,7 +19,7 @@ class ResNetBlock(nn.Module):
             kernel_size=3,
             stride=stride,
             padding=1,
-            bias=False
+            bias=False,
         )
         self.bn1 = nn.BatchNorm2d(out_size)
 
@@ -28,7 +28,7 @@ class ResNetBlock(nn.Module):
             out_size,
             kernel_size=3,
             padding=1,
-            bias=False
+            bias=False,
         )
         self.bn2 = nn.BatchNorm2d(out_size)
 
@@ -44,14 +44,15 @@ class ResNetBlock(nn.Module):
                     out_size,
                     kernel_size=1,
                     stride=stride,
-                    bias=False
+                    bias=False,
                 ),
-                nn.BatchNorm2d(out_size)
+                nn.BatchNorm2d(out_size),
             )
 
     def forward(self, X):
         residual = X
-        if self.downsample: residual = self.downsample(residual)
+        if self.downsample:
+            residual = self.downsample(residual)
 
         Z = self.conv1(X)
         Z = self.relu(Z)
@@ -76,7 +77,7 @@ class SELayer(nn.Module):
             nn.Linear(in_size, in_size // reduction),
             nn.ReLU(inplace=True),
             nn.Linear(in_size // reduction, in_size),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, X):
@@ -91,13 +92,13 @@ class SelfAttentivePooling(nn.Module):
     def __init__(self, out_size, dim=128):
         super().__init__()
 
-        #self.attention = nn.Sequential(
+        # self.attention = nn.Sequential(
         #    nn.Conv1d(out_size, dim, kernel_size=1),
         #    nn.ReLU(),
         #    nn.BatchNorm1d(dim),
         #    nn.Conv1d(dim, out_size, kernel_size=1),
         #    nn.Softmax(dim=2)
-        #)
+        # )
 
         self.attention = nn.Parameter(torch.FloatTensor(out_size, 1))
         nn.init.xavier_normal_(self.attention)
@@ -108,14 +109,14 @@ class SelfAttentivePooling(nn.Module):
         b, c, h, w = X.size()
         # B 1 40 200
 
-        X = X.mean(dim=2).transpose(1, 2) # B W C
-        W = torch.tanh(self.sap_linear(X)) @ self.attention # B W 1
+        X = X.mean(dim=2).transpose(1, 2)  # B W C
+        W = torch.tanh(self.sap_linear(X)) @ self.attention  # B W 1
         W = F.softmax(W, dim=1)
         return torch.sum(X * W, dim=1)
 
-        #X = X.reshape(b, -1, w)
-        #W = self.attention(X)
-        #return torch.sum(W * X, dim=2)
+        # X = X.reshape(b, -1, w)
+        # W = self.attention(X)
+        # return torch.sum(W * X, dim=2)
 
 
 class StatsPooling(nn.Module):
@@ -124,10 +125,12 @@ class StatsPooling(nn.Module):
         super().__init__()
 
     def forward(self, X):
-        X = X.view(X.size(0), -1, X.size(-1)) # B C L
+        X = X.view(X.size(0), -1, X.size(-1))  # B C L
 
         mean = torch.mean(X, dim=-1, keepdim=True)
-        std = torch.sqrt(torch.mean((X - mean) ** 2, dim=-1, keepdim=True).clamp(min=1e-5))
+        std = torch.sqrt(
+            torch.mean((X - mean) ** 2, dim=-1, keepdim=True).clamp(min=1e-5)
+        )
         stats = torch.cat((mean, std), dim=1).squeeze(dim=-1)
 
         return stats
@@ -135,9 +138,9 @@ class StatsPooling(nn.Module):
 
 class PoolingModeEnum(Enum):
 
-    NONE  = None
-    SAP   = 'sap'
-    STATS = 'stats'
+    NONE = None
+    SAP = "sap"
+    STATS = "stats"
 
 
 @dataclass
@@ -155,7 +158,7 @@ class ResNet34(BaseEncoder):
 
     _POOLING_MODULES = {
         PoolingModeEnum.SAP: SelfAttentivePooling,
-        PoolingModeEnum.STATS: StatsPooling
+        PoolingModeEnum.STATS: StatsPooling,
     }
 
     def __init__(self, config):
@@ -165,7 +168,14 @@ class ResNet34(BaseEncoder):
 
         base_dim = config.base_dim
 
-        self.conv = nn.Conv2d(1, base_dim, kernel_size=7, stride=(2, 1), padding=3, bias=False)
+        self.conv = nn.Conv2d(
+            1,
+            base_dim,
+            kernel_size=7,
+            stride=(2, 1),
+            padding=3,
+            bias=False,
+        )
         self.relu = nn.ReLU(inplace=True)
         self.bn = nn.BatchNorm2d(base_dim)
 
@@ -175,7 +185,7 @@ class ResNet34(BaseEncoder):
         self.block4 = self.__make_block(3, base_dim * 4, base_dim * 8, 1)
 
         out_size = base_dim * 8
-        
+
         if config.pooling_mode == PoolingModeEnum.STATS:
             out_size = 2 * int(80 / 8 * (base_dim * 8))
         if not config.pooling:
@@ -188,8 +198,7 @@ class ResNet34(BaseEncoder):
         self.fc = nn.Linear(out_size, self.encoder_dim)
 
         self.last_bn = (
-            nn.BatchNorm1d(self.encoder_dim)
-            if config.enable_last_bn else None
+            nn.BatchNorm1d(self.encoder_dim) if config.enable_last_bn else None
         )
 
         self.__init_weights()
@@ -197,7 +206,7 @@ class ResNet34(BaseEncoder):
     def __init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -232,7 +241,8 @@ class ResNet34(BaseEncoder):
             B, C, H, W = Z.size()
             Z = Z.reshape((B, -1, W))
             Z = self.fc(Z.transpose(1, 2)).transpose(2, 1)
-        
-        if self.last_bn: Z = self.last_bn(Z)
+
+        if self.last_bn:
+            Z = self.last_bn(Z)
 
         return Z

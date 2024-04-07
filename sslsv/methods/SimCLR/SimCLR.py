@@ -1,20 +1,15 @@
-import torch
 from torch import nn
-import torch.nn.functional as F
 
 from dataclasses import dataclass
 
-from sslsv.methods._BaseSiameseMethod import (
-    BaseSiameseMethod,
-    BaseSiameseMethodConfig
-)
+from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
 
 from .SimCLRLoss import SimCLRLoss
 
 
 @dataclass
 class SimCLRConfig(BaseSiameseMethodConfig):
-    
+
     temperature: float = 0.2
 
     projector_hidden_dim: int = 2048
@@ -29,7 +24,7 @@ class SimCLR(BaseSiameseMethod):
         self.projector = nn.Sequential(
             nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
+            nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
         )
 
         self.loss_fn = SimCLRLoss(config.temperature)

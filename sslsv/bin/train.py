@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import argparse
 
@@ -14,7 +15,7 @@ def train(args):
     config = load_config(args.config)
     train_dataloader = load_train_dataloader(config)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = load_model(config).to(device)
     model = torch.nn.DataParallel(model)
@@ -24,14 +25,14 @@ def train(args):
         train_dataloader=train_dataloader,
         config=config,
         evaluate=evaluate,
-        device=device
+        device=device,
     )
     trainer.start()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('config', help='Path to model config file.')
+    parser.add_argument("config", help="Path to model config file.")
     args = parser.parse_args()
 
     train(args)

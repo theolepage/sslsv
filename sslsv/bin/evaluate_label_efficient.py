@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from dataclasses import dataclass
 
@@ -28,21 +29,19 @@ class Classifier(Supervised):
 
 
 def get_experiment_name(name, nb_samples_per_spk, fine_tune, supervised):
-    name += '_label-efficient-'
-    name += str(nb_samples_per_spk) + '-'
+    name += "_label-efficient-"
+    name += str(nb_samples_per_spk) + "-"
     if supervised:
-        name += 'supervised'
+        name += "supervised"
     else:
-        name += 'finetuned' if fine_tune else 'frozen'
+        name += "finetuned" if fine_tune else "frozen"
     return name
 
 
 def train(args, nb_samples_per_spk, fine_tune=False, supervised=False):
     config = load_config(args.config)
 
-    config.dataset.sampler = SamplerConfig(
-        nb_samples_per_spk=nb_samples_per_spk
-    )
+    config.dataset.sampler = SamplerConfig(nb_samples_per_spk=nb_samples_per_spk)
     config.dataset.augmentation.enable = False
     config.dataset.ssl = False
     config.trainer.optimizer = OptimizerEnum.ADAM
@@ -50,28 +49,26 @@ def train(args, nb_samples_per_spk, fine_tune=False, supervised=False):
     config.trainer.batch_size = args.batch_size
     config.trainer.patience = args.patience
     config.trainer.learning_rate = args.lr
-    if fine_tune: config.trainer.learning_rate /= 10
+    if fine_tune:
+        config.trainer.learning_rate /= 10
 
     train_dataloader = load_train_dataloader(config)
 
     # Load model (to use as an encoder)
     model = load_model(config)
     if not supervised:
-        checkpoint = torch.load(config.experiment_path / 'model_latest.pt')
-        model.load_state_dict(checkpoint['model'])
-        for p in model.parameters(): p.requires_grad = fine_tune
+        checkpoint = torch.load(config.experiment_path / "model_latest.pt")
+        model.load_state_dict(checkpoint["model"])
+        for p in model.parameters():
+            p.requires_grad = fine_tune
 
     # Create classifier
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     classifier = Classifier(config, model).to(device)
     classifier = torch.nn.DataParallel(classifier)
 
-
     new_experiment_name = get_experiment_name(
-        config.experiment_name,
-        nb_samples_per_spk,
-        fine_tune,
-        supervised
+        config.experiment_name, nb_samples_per_spk, fine_tune, supervised
     )
     config.experiment_name = new_experiment_name
     config.experiment_path = Path(new_experiment_name)
@@ -82,39 +79,39 @@ def train(args, nb_samples_per_spk, fine_tune=False, supervised=False):
         train_dataloader=train_dataloader,
         config=config,
         evaluate=evaluate,
-        device=device
+        device=device,
     )
     trainer.start()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('config', help='Path to model config file.')
+    parser.add_argument("config", help="Path to model config file.")
     parser.add_argument(
-        '--epochs',
+        "--epochs",
         default=200,
-        help='Number of epochs for trainings.'
+        help="Number of epochs for trainings.",
     )
     parser.add_argument(
-        '--lr',
+        "--lr",
         default=0.001,
-        help='Learning rate used during trainings.'
+        help="Learning rate used during trainings.",
     )
     parser.add_argument(
-        '--batch_size',
+        "--batch_size",
         default=64,
-        help='Batch size used during trainings.'
+        help="Batch size used during trainings.",
     )
     parser.add_argument(
-        '--patience',
+        "--patience",
         default=20,
-        help='Number of epochs without a lower EER before ending training.'
+        help="Number of epochs without a lower EER before ending training.",
     )
     parser.add_argument(
-        '--nb_labels',
+        "--nb_labels",
         default=[100, 50, 20, 10, 8, 6, 4, 2],
-        nargs='*',
-        help='Numbers of labels provided per speaker for each training.'
+        nargs="*",
+        help="Numbers of labels provided per speaker for each training.",
     )
     args = parser.parse_args()
 

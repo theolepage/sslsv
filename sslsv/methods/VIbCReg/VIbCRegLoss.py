@@ -7,12 +7,7 @@ from sslsv.utils.distributed import gather
 
 class VIbCRegLoss(nn.Module):
 
-    def __init__(
-        self,
-        inv_weight=1.0,
-        var_weight=1.0,
-        cov_weight=8.0
-    ):
+    def __init__(self, inv_weight=1.0, var_weight=1.0, cov_weight=8.0):
         super().__init__()
 
         self.inv_weight = inv_weight
@@ -42,9 +37,9 @@ class VIbCRegLoss(nn.Module):
 
         Z_a_cov.fill_diagonal_(0.0)
         Z_b_cov.fill_diagonal_(0.0)
-        
-        cov_loss = (Z_a_cov ** 2).mean()
-        cov_loss += (Z_b_cov ** 2).mean()
+
+        cov_loss = (Z_a_cov**2).mean()
+        cov_loss += (Z_b_cov**2).mean()
 
         loss = self.inv_weight * inv_loss
         loss += self.var_weight * var_loss

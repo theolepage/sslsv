@@ -1,6 +1,4 @@
-import torch
 from torch import nn
-import torch.nn.functional as F
 
 from .InfoNCELoss import InfoNCELoss
 
@@ -21,7 +19,7 @@ class CPCLoss(nn.Module):
         for t in range(nb_t_to_predict):
             loss += self.infonce(
                 Y_future[:, :, t].contiguous(),
-                Y_future_preds[:, :, t].contiguous()
+                Y_future_preds[:, :, t].contiguous(),
             )
 
         loss /= nb_t_to_predict

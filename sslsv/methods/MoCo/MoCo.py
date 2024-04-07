@@ -7,13 +7,18 @@ from dataclasses import dataclass
 from sslsv.methods._BaseMomentumMethod import (
     BaseMomentumMethod,
     BaseMomentumMethodConfig,
-    initialize_momentum_params
+    initialize_momentum_params,
 )
 
 from .MoCoLoss import MoCoLoss
 
 import torch.distributed as dist
-from sslsv.utils.distributed import gather, get_rank, get_world_size, is_dist_initialized
+from sslsv.utils.distributed import (
+    gather,
+    get_rank,
+    get_world_size,
+    is_dist_initialized,
+)
 
 
 @dataclass
@@ -50,29 +55,23 @@ class MoCo(BaseMomentumMethod):
             self.projector = nn.Sequential(
                 nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
                 nn.ReLU(),
-                nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
+                nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
             )
 
             self.projector_momentum = nn.Sequential(
                 nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
                 nn.ReLU(),
-                nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
+                nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
             )
             initialize_momentum_params(self.projector, self.projector_momentum)
 
-        self.register_buffer(
-            'queue',
-            torch.randn(2, queue_dim, self.queue_size)
-        )
+        self.register_buffer("queue", torch.randn(2, queue_dim, self.queue_size))
         self.queue = F.normalize(self.queue, dim=1)
-        self.register_buffer('queue_ptr', torch.zeros(1, dtype=torch.long))
+        self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
         if config.prevent_class_collisions:
-            self.register_buffer(
-                'queue_labels',
-                torch.zeros(self.queue_size)
-            )
-            self.register_buffer('queue_labels_ptr', torch.zeros(1, dtype=torch.long))
+            self.register_buffer("queue_labels", torch.zeros(self.queue_size))
+            self.register_buffer("queue_labels_ptr", torch.zeros(1, dtype=torch.long))
 
         self.loss_fn = MoCoLoss(config.temperature)
 
@@ -109,7 +108,8 @@ class MoCo(BaseMomentumMethod):
             return self.encoder_momentum(X)
 
     def forward(self, X, training=False):
-        if not training: return self.encoder(X)
+        if not training:
+            return self.encoder(X)
 
         # Queries
         Q_1 = self._compute_embeddings(X[:, 0, :])
@@ -127,7 +127,7 @@ class MoCo(BaseMomentumMethod):
     def get_learnable_params(self):
         if self.config.enable_projector:
             return super().get_learnable_params() + [
-                {'params': self.projector.parameters()}
+                {"params": self.projector.parameters()}
             ]
         return super().get_learnable_params()
 
@@ -148,7 +148,7 @@ class MoCo(BaseMomentumMethod):
         assert self.queue_size % batch_size == 0
 
         ptr = int(self.queue_ptr)
-        self.queue[:, :, ptr:ptr+batch_size] = keys.permute(0, 2, 1)
+        self.queue[:, :, ptr : ptr + batch_size] = keys.permute(0, 2, 1)
 
         self.queue_ptr[0] = (ptr + batch_size) % self.queue_size
 
@@ -159,7 +159,7 @@ class MoCo(BaseMomentumMethod):
         assert self.queue_size % batch_size == 0
 
         ptr = int(self.queue_labels_ptr)
-        self.queue_labels[ptr:ptr+batch_size] = labels
+        self.queue_labels[ptr : ptr + batch_size] = labels
 
         self.queue_labels_ptr[0] = (ptr + batch_size) % self.queue_size
 
@@ -183,17 +183,14 @@ class MoCo(BaseMomentumMethod):
         loss += self.loss_fn(Q_2, K_1, queue[0], current_labels, queue_labels)
         loss /= 2
 
-        self._enqueue(torch.stack((
-            gather(K_1),
-            gather(K_2)
-        )))
+        self._enqueue(torch.stack((gather(K_1), gather(K_2))))
 
         if self.config.prevent_class_collisions:
             self._enqueue_labels(gather(labels))
 
         metrics = {
-            'train/loss': loss,
-            'train/tau': self.momentum_updater.tau
+            "train/loss": loss,
+            "train/tau": self.momentum_updater.tau,
         }
 
         return loss, metrics

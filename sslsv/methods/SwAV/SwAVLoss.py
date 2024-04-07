@@ -14,7 +14,8 @@ class SwAVLoss(nn.Module):
         losses = []
         for i, A in enumerate(assignments):
             for j, P in enumerate(preds):
-                if i == j: continue
+                if i == j:
+                    continue
 
                 P = P / self.temperature
                 loss = -torch.mean(torch.sum(A * F.log_softmax(P, dim=1), dim=1))

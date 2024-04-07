@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Union
+
 import torch
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 import random
@@ -43,9 +43,9 @@ class BaseEvaluation:
         model,
         config,
         task_config,
-        device='cpu',
+        device="cpu",
         verbose=False,
-        validation=False
+        validation=False,
     ):
         self.model = model
         self.config = config
@@ -59,7 +59,7 @@ class BaseEvaluation:
 
     def _extract_embeddings_inference(self, X):
         return self.model(X)
-    
+
     def _extract_embeddings_post(self, Y):
         return Y
 
@@ -69,7 +69,7 @@ class BaseEvaluation:
             files=files,
             labels=labels,
             frame_length=self.config.evaluation.frame_length,
-            num_frames=self.config.evaluation.num_frames
+            num_frames=self.config.evaluation.num_frames,
         )
 
         dataloader = DataLoader(
@@ -77,14 +77,15 @@ class BaseEvaluation:
             batch_size=self.config.evaluation.batch_size,
             num_workers=self.config.dataset.num_workers,
             pin_memory=self.config.dataset.pin_memory,
-            worker_init_fn=seed_dataloader_worker
+            worker_init_fn=seed_dataloader_worker,
         )
 
         embeddings = {}
 
         dataloader = tqdm(dataloader, desc=desc) if self.verbose else dataloader
         for idx, X, info in dataloader:
-            if X.ndim == 2: X = X.unsqueeze(1)
+            if X.ndim == 2:
+                X = X.unsqueeze(1)
 
             X = X.to(self.device)
             B, N, L = X.size()
@@ -100,9 +101,11 @@ class BaseEvaluation:
 
             Y = self._extract_embeddings_post(Y)
 
-            embeddings.update({
-                info['files'][i]:(Y[i].cpu().numpy() if numpy else Y[i].cpu())
-                for i in range(B)
-            })
+            embeddings.update(
+                {
+                    info["files"][i]: (Y[i].cpu().numpy() if numpy else Y[i].cpu())
+                    for i in range(B)
+                }
+            )
 
         return embeddings

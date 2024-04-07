@@ -1,13 +1,6 @@
-import torch
-from torch import nn
-import torch.nn.functional as F
-
 from dataclasses import dataclass
 
-from sslsv.methods._BaseSiameseMethod import (
-    BaseSiameseMethod,
-    BaseSiameseMethodConfig
-)
+from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
 
 from .VICRegLoss import VICRegLoss
 
@@ -28,5 +21,5 @@ class VICReg(BaseSiameseMethod):
         self.loss_fn = VICRegLoss(
             config.inv_weight,
             config.var_weight,
-            config.cov_weight
+            config.cov_weight,
         )

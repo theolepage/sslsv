@@ -2,14 +2,13 @@ from enum import Enum
 
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 
 class LIMLossEnum(Enum):
 
-    BCE  = 'bce'
-    NCE  = 'nce'
-    MINE = 'mine'
+    BCE = "bce"
+    NCE = "nce"
+    MINE = "mine"
 
 
 class LIMLoss(nn.Module):
@@ -18,9 +17,9 @@ class LIMLoss(nn.Module):
         super().__init__()
 
         _LOSS_METHODS = {
-            LIMLossEnum.BCE  : LIMLoss._bce_loss,
-            LIMLossEnum.MINE : LIMLoss._mine_loss,
-            LIMLossEnum.NCE  : LIMLoss._nce_loss
+            LIMLossEnum.BCE: LIMLoss._bce_loss,
+            LIMLossEnum.MINE: LIMLoss._mine_loss,
+            LIMLossEnum.NCE: LIMLoss._nce_loss,
         }
 
         self.loss_fn = _LOSS_METHODS[loss_name]

@@ -78,14 +78,11 @@ class Sampler(TorchSampler):
         y_ = []
         for i in rng.permutation(len(y)):
             batch_start_i = len(y_) - len(y_) % self.batch_size
-            if (
-                self.config.prevent_class_collisions and
-                y[i] in y_[batch_start_i:]
-            ):
+            if self.config.prevent_class_collisions and y[i] in y_[batch_start_i:]:
                 continue
 
             x_.append(x[i])
             y_.append(y[i])
 
         self.count = len(x_) - len(x_) % self.batch_size
-        return iter(x_[:self.count])
+        return iter(x_[: self.count])

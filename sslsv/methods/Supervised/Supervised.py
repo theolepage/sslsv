@@ -11,7 +11,7 @@ from .AAMSoftmaxLoss import AAMSoftmaxLoss
 
 @dataclass
 class SupervisedConfig(BaseMethodConfig):
-    
+
     nb_classes: int = 1211
     speaker_classification: bool = True
 
@@ -32,9 +32,7 @@ class SpeakerClassifier(nn.Module):
     def __init__(self, input_dim, nb_classes):
         super().__init__()
 
-        self.classifier_weight = nn.Parameter(
-            torch.FloatTensor(nb_classes, input_dim)
-        )
+        self.classifier_weight = nn.Parameter(torch.FloatTensor(nb_classes, input_dim))
         nn.init.xavier_uniform_(self.classifier_weight)
 
     def forward(self, Z):
@@ -47,31 +45,23 @@ class Supervised(BaseMethod):
         super().__init__(config, create_encoder_fn)
 
         classifier_cls = (
-            SpeakerClassifier
-            if config.speaker_classification
-            else Classifier
+            SpeakerClassifier if config.speaker_classification else Classifier
         )
-        self.classifier = classifier_cls(
-            self.encoder.encoder_dim,
-            config.nb_classes
-        )
+        self.classifier = classifier_cls(self.encoder.encoder_dim, config.nb_classes)
 
         loss_cls = (
-            AAMSoftmaxLoss
-            if config.speaker_classification
-            else nn.CrossEntropyLoss
+            AAMSoftmaxLoss if config.speaker_classification else nn.CrossEntropyLoss
         )
         self.loss_fn = loss_cls()
 
     def forward(self, X, training=False):
-        if not training: return self.encoder(X)
+        if not training:
+            return self.encoder(X)
 
         return self.classifier(self.encoder(X))
 
     def get_learnable_params(self):
-        extra_learnable_params = [
-            {'params': self.classifier.parameters()}
-        ]
+        extra_learnable_params = [{"params": self.classifier.parameters()}]
         return super().get_learnable_params() + extra_learnable_params
 
     def train_step(self, Z, labels, step, samples):
@@ -80,14 +70,14 @@ class Supervised(BaseMethod):
         if self.config.speaker_classification:
             loss, accuracy = loss
             metrics = {
-                'train/loss': loss,
-                'train/accuracy': accuracy
+                "train/loss": loss,
+                "train/accuracy": accuracy,
             }
         else:
             accuracy = torch.sum(torch.argmax(Z, dim=-1) == labels) / Z.size(0)
             metrics = {
-                'train/loss': loss,
-                'train/accuracy': accuracy
+                "train/loss": loss,
+                "train/accuracy": accuracy,
             }
 
         return loss, metrics

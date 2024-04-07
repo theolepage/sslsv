@@ -1,6 +1,4 @@
-import torch
 from torch import nn
-import torch.nn.functional as F
 
 from dataclasses import dataclass
 
@@ -9,7 +7,7 @@ from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 
 @dataclass
 class BaseSiameseMethodConfig(BaseMethodConfig):
-    
+
     enable_projector: bool = True
 
     projector_hidden_dim: int = 2048
@@ -29,11 +27,12 @@ class BaseSiameseMethod(BaseMethod):
                 nn.Linear(config.projector_hidden_dim, config.projector_hidden_dim),
                 nn.BatchNorm1d(config.projector_hidden_dim),
                 nn.ReLU(),
-                nn.Linear(config.projector_hidden_dim, config.projector_output_dim)
+                nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
             )
 
     def forward(self, X, training=False):
-        if not training: return self.encoder(X)
+        if not training:
+            return self.encoder(X)
 
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
@@ -49,7 +48,7 @@ class BaseSiameseMethod(BaseMethod):
     def get_learnable_params(self):
         if self.config.enable_projector:
             return super().get_learnable_params() + [
-                {'params': self.projector.parameters()}
+                {"params": self.projector.parameters()}
             ]
         return super().get_learnable_params()
 
@@ -59,7 +58,7 @@ class BaseSiameseMethod(BaseMethod):
         loss = self.loss_fn(Z_1, Z_2)
 
         metrics = {
-            'train/loss': loss,
+            "train/loss": loss,
         }
 
         return loss, metrics
