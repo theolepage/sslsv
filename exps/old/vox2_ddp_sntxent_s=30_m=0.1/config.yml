@@ -1,0 +1,20 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'simclr_custom'
+  enable_projector: false
+  loss: 'snt-xent-am'
+  loss_scale: 30
+  loss_margin: 0.1
+trainer:
+  epochs: 150
+  batch_size: 200
+evaluation:
+  mean_of_features: false
+  num_frames: 10
+  frame_length: 56240
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

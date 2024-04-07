@@ -1,11 +1,17 @@
 __pycache__
 .ipynb_checkpoints
+
 .vscode
+
+.pypirc
+
+*.egg-info
+build
+dist
 
 data
 env
 wandb
-old
 
 exps/**/tensorboard/
 exps/**/wandb/
