@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Union
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 
 import random
 import numpy as np
@@ -10,6 +10,7 @@ import numpy as np
 from tqdm import tqdm
 
 from sslsv.datasets.Dataset import Dataset
+from sslsv.utils.distributed import get_world_size, is_dist_initialized, is_main_process
 
 
 def seed_dataloader_worker(worker_id):
@@ -54,6 +55,14 @@ class BaseEvaluation:
         self.verbose = verbose
         self.validation = validation
 
+    def _ddp_sync_embeddings(self, embeddings):
+        embeddings_all = [None for _ in range(get_world_size())]
+        torch.distributed.all_gather_object(embeddings_all, embeddings)
+        embeddings = {}
+        for d in embeddings_all:
+            embeddings.update(d)
+        return embeddings
+
     def _extract_embeddings_pre(self, X):
         return X
 
@@ -72,9 +81,14 @@ class BaseEvaluation:
             num_frames=self.config.evaluation.num_frames,
         )
 
+        sampler = None
+        if is_dist_initialized():
+            sampler = DistributedSampler(dataset, shuffle=False)
+
         dataloader = DataLoader(
             dataset,
-            batch_size=self.config.evaluation.batch_size,
+            sampler=sampler,
+            batch_size=max(1, self.config.evaluation.batch_size // get_world_size()),
             num_workers=self.config.dataset.num_workers,
             pin_memory=self.config.dataset.pin_memory,
             worker_init_fn=seed_dataloader_worker,
@@ -82,7 +96,8 @@ class BaseEvaluation:
 
         embeddings = {}
 
-        dataloader = tqdm(dataloader, desc=desc) if self.verbose else dataloader
+        if is_main_process():
+            dataloader = tqdm(dataloader, desc=desc) if self.verbose else dataloader
         for idx, X, info in dataloader:
             if X.ndim == 2:
                 X = X.unsqueeze(1)
@@ -107,5 +122,8 @@ class BaseEvaluation:
                     for i in range(B)
                 }
             )
+
+        if is_dist_initialized():
+            embeddings = self._ddp_sync_embeddings(embeddings)
 
         return embeddings

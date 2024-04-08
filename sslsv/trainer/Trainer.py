@@ -97,8 +97,8 @@ class Trainer:
                 nb_steps_per_epoch=len(self.train_dataloader),
             )
 
-            X = X.to(self.device)
-            labels = info["labels"].to(self.device)
+            X = X.to(self.device, non_blocking=True)
+            labels = info["labels"].to(self.device, non_blocking=True)
 
             # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):

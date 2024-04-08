@@ -79,7 +79,7 @@ class MoCo(BaseMomentumMethod):
     def _batch_shuffle_ddp(self, x):
         x_gather = gather(x)
 
-        idx_shuffle = torch.randperm(x_gather.size(0)).to(get_rank())
+        idx_shuffle = torch.randperm(x_gather.size(0), device=get_rank())
         if is_dist_initialized():
             dist.broadcast(idx_shuffle, src=0)
 
