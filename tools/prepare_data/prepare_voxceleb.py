@@ -6,7 +6,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 
-from prepare_dataset_utils import glob, download, extract, concatenate
+from utils import glob, download, extract, concatenate
 
 VOX_DOWNLOADS = [
     (

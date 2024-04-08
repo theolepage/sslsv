@@ -4,7 +4,7 @@ import pandas as pd
 import shutil
 from tqdm import tqdm
 
-from prepare_dataset_utils import glob
+from utils import glob
 
 
 VOXLINGUA_LABEL_TO_NAME = {

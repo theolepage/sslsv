@@ -4,7 +4,7 @@ method:
   type: 'simclr'
 trainer:
   epochs: 1
-  init_weights: 'exps/ssl/voxceleb2/dino/dino'
+  init_weights: 'models/ssl/voxceleb2/dino/dino'
 evaluation:
   num_frames: 10
   frame_length: 56240

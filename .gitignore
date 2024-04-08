@@ -13,7 +13,7 @@ data
 env
 wandb
 
-exps/**/tensorboard/
-exps/**/wandb/
-exps/**/*.json
-exps/**/*.pt
+models/**/tensorboard/
+models/**/wandb/
+models/**/*.json
+models/**/*.pt

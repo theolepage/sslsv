@@ -141,8 +141,10 @@ def load_config(path, verbose=True):
     )
     config.encoder = bind_custom_config(data, "encoder", REGISTERED_ENCODERS)
     config.method = bind_custom_config(data, "method", REGISTERED_METHODS)
-    config.experiment_name = str(Path(path).parent)
-    config.experiment_path = Path(path).parent
+
+    path = Path(path)
+    config.experiment_name = str(path.parent.relative_to(path.parts[0]))
+    config.experiment_path = path.parent
 
     # Reproducibility / performance
     torch.backends.cudnn.benchmark = not config.reproducibility
