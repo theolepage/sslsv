@@ -62,7 +62,7 @@ class Combiner(BaseSiameseMethod):
             loss += l.weight * Combiner.LOSS_FUNCTIONS[l.type](Z_1, Z_2)
         return loss
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         Y_1, Y_2, Z_1, Z_2 = Z
 
         loss = 0

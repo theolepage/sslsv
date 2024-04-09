@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from enum import Enum
-import ruamel.yaml
+from ruamel.yaml import YAML
 from dacite import from_dict
 from dacite import Config as DaciteConfig
 import prettyprinter as pp
@@ -130,7 +130,7 @@ def bind_evaluate_tasks_config(data, key, default_config):
 
 
 def load_config(path, verbose=True):
-    data = ruamel.yaml.safe_load(open(path, "r"))
+    data = YAML(typ="safe", pure=True).load(open(path, "r"))
     config = from_dict(Config, data, DaciteConfig(cast=[Enum]))
 
     config.evaluation.validation = bind_evaluate_tasks_config(
@@ -143,8 +143,8 @@ def load_config(path, verbose=True):
     config.method = bind_custom_config(data, "method", REGISTERED_METHODS)
 
     path = Path(path)
-    config.experiment_name = str(path.parent.relative_to(path.parts[0]))
-    config.experiment_path = path.parent
+    config.model_name = str(path.parent.relative_to(path.parts[0]))
+    config.model_path = path.parent
 
     # Reproducibility / performance
     torch.backends.cudnn.benchmark = not config.reproducibility
@@ -180,16 +180,7 @@ def load_train_dataloader(config):
     labels = pd.factorize(df[config.dataset.label_key])[0].tolist()
 
     dataset_cls = SSLDataset if config.dataset.ssl else Dataset
-    dataset = dataset_cls(
-        base_path=config.dataset.base_path,
-        files=files,
-        labels=labels,
-        frame_length=config.dataset.frame_length,
-        frame_sampling=config.dataset.frame_sampling,
-        num_frames=1,
-        augmentation_config=config.dataset.augmentation,
-        max_samples=config.dataset.max_samples,
-    )
+    dataset = dataset_cls(config.dataset, files, labels, num_frames=1)
 
     shuffle = True
     sampler = None

@@ -105,7 +105,7 @@ class SimCLRCustom(BaseMethod):
             / 2
         )
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         loss_margin = self.config.loss_margin
 
         if self.config.loss_margin_scheduler:

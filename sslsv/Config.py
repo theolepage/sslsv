@@ -11,8 +11,8 @@ from sslsv.datasets.Dataset import DatasetConfig
 @dataclass
 class Config:
 
-    experiment_name: str = "default"
-    experiment_path: Path = "default"
+    model_name: str = "default"
+    model_path: Path = Path("default")
 
     seed: int = 1717
     reproducibility: bool = False

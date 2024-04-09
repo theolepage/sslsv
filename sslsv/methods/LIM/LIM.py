@@ -33,7 +33,7 @@ class LIM(BaseMethod):
 
         return Y_1, Y_2
 
-    def train_step(self, Y, labels, step, samples):
+    def train_step(self, Y, labels=None, step=None, samples=None):
         Y_1, Y_2 = Y
 
         N, _ = Y_1.size()

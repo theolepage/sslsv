@@ -55,15 +55,15 @@ def sample_frames_dino(
 
 class SSLDataset(Dataset):
 
+    MIN_LOAD_AUDIO_LENGTH = 64000
+
     FRAME_SAMPLING_METHODS = {
         FrameSamplingEnum.DEFAULT: sample_frames,
         FrameSamplingEnum.DINO: sample_frames_dino,
     }
 
-    def __init__(self, min_load_audio_length=64000, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.min_load_audio_length = min_load_audio_length
+    def __init__(self, config, files, labels=None, num_frames=1):
+        super().__init__(config, files, labels, num_frames)
 
     def _pad_smaller_frames(self, frames):
         max_frame_length = max([f.shape[1] for f in frames])
@@ -84,20 +84,22 @@ class SSLDataset(Dataset):
         if isinstance(i, int):
             file, label = self.files[i], self.labels[i]
             data = load_audio(
-                self.base_path / file,
+                self.config.base_path / file,
                 frame_length=None,
-                min_length=self.min_load_audio_length,
+                min_length=self.MIN_LOAD_AUDIO_LENGTH,
             )  # (1, T)
-            frames = self.FRAME_SAMPLING_METHODS[self.frame_sampling](
-                data, self.frame_length
+            frames = self.FRAME_SAMPLING_METHODS[self.config.frame_sampling](
+                data, self.config.frame_length
             )
         else:  # isinstance(i, tuple)
             file, label = self.files[i[0]], self.labels[i[0]]
             frame1 = load_audio(
-                self.base_path / self.files[i[0]], frame_length=self.frame_length
+                self.config.base_path / self.files[i[0]],
+                frame_length=self.config.frame_length,
             )
             frame2 = load_audio(
-                self.base_path / self.files[i[1]], frame_length=self.frame_length
+                self.config.base_path / self.files[i[1]],
+                frame_length=self.config.frame_length,
             )
             frames = [frame1, frame2]
 

@@ -166,7 +166,7 @@ class DINO(BaseMomentumMethod):
         extra_momentum_pairs = [(self.head, self.head_momentum)]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         S, T = Z
 
         loss = self.loss_fn(S, T)

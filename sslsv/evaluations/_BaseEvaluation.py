@@ -9,7 +9,7 @@ import numpy as np
 
 from tqdm import tqdm
 
-from sslsv.datasets.Dataset import Dataset
+from sslsv.datasets.Dataset import Dataset, DatasetConfig
 from sslsv.utils.distributed import get_world_size, is_dist_initialized, is_main_process
 
 
@@ -73,11 +73,17 @@ class BaseEvaluation:
         return Y
 
     def _extract_embeddings(self, files, labels=None, desc=None, numpy=False):
-        dataset = Dataset(
-            base_path=self.config.dataset.base_path,
-            files=files,
-            labels=labels,
+        dataset_config = DatasetConfig(
             frame_length=self.config.evaluation.frame_length,
+            base_path=self.config.dataset.base_path,
+            num_workers=self.config.dataset.num_workers,
+            pin_memory=self.config.dataset.pin_memory,
+        )
+
+        dataset = Dataset(
+            dataset_config,
+            files,
+            labels,
             num_frames=self.config.evaluation.num_frames,
         )
 

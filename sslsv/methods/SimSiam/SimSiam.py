@@ -95,7 +95,7 @@ class SimSiam(BaseMethod):
 
         return lr
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         Z_1, Z_2, P_1, P_2 = Z
 
         loss = (self.loss_fn(P_1, Z_2) + self.loss_fn(P_2, Z_1)) / 2

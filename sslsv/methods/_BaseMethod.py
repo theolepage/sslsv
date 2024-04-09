@@ -40,7 +40,7 @@ class BaseMethod(nn.Module):
             param_group["lr"] = lr
         return lr
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         raise NotImplementedError
 
     def on_train_start(self, trainer):

@@ -75,7 +75,7 @@ class BYOL(BaseMomentumMethod):
         extra_momentum_pairs = [(self.projector, self.projector_momentum)]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         Z_1, Z_2, P_1, P_2 = Z
 
         loss = self.loss_fn(P_1, Z_2) + self.loss_fn(P_2, Z_1)

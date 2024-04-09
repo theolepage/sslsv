@@ -132,7 +132,7 @@ class Trainer:
             logger.update({**metrics, "train/lr": lr})
 
     def _update_training_stats_file(self, metrics):
-        log_file_path = self.config.experiment_path / "training.json"
+        log_file_path = self.config.model_path / "training.json"
         log_file_data = {}
         if log_file_path.exists():
             with open(log_file_path, "r") as f:
@@ -238,7 +238,7 @@ class Trainer:
 
     def _load_checkpoint(self):
         init_weights = self.config.trainer.init_weights
-        checkpoint_path = self.config.experiment_path / "model_latest.pt"
+        checkpoint_path = self.config.model_path / "model_latest.pt"
 
         if not checkpoint_path.exists():
             if init_weights:
@@ -264,7 +264,7 @@ class Trainer:
                 "model": self.model.module.state_dict(),
                 "optimizer": self.optimizer.state_dict(),
             },
-            self.config.experiment_path / f"model_{suffix}.pt",
+            self.config.model_path / f"model_{suffix}.pt",
         )
 
     def _log_start_training(self, resuming):
@@ -282,14 +282,14 @@ class Trainer:
         wandb_online = self.wandb_url and len(self.wandb_url) > 1
 
         sep_length = (
-            len(f"Experiment: {self.config.experiment_name}")
+            len(f"Model: {self.config.model_name}")
             if not wandb_online
             else len(f"W&B URL: {self.wandb_url}")
         )
 
         print()
         print("=" * 3, "Trainer", "=" * (sep_length - 12))
-        print(f"Experiment: {self.config.experiment_name}")
+        print(f"Model: {self.config.model_name}")
         print(f"Commit: {gitHash}")
         print(f"Mode: {training_mode}")
         print(f"Iterations: {len(self.train_dataloader)}")
@@ -317,11 +317,11 @@ class Trainer:
 
     def _init_tensorboard(self):
         self.tensorboard_writer = SummaryWriter(
-            log_dir=str(self.config.experiment_path / "tensorboard")
+            log_dir=str(self.config.model_path / "tensorboard")
         )
 
     def _init_wandb(self):
-        wandb_name = self.config.experiment_name.replace("/", "_")
+        wandb_name = self.config.model_name.replace("/", "_")
         wandb_id = (
             self.config.trainer.wandb_id if self.config.trainer.wandb_id else wandb_name
         )
@@ -330,7 +330,7 @@ class Trainer:
             project=self.config.trainer.wandb_project,
             id=wandb_id,
             resume="allow",
-            dir=str(self.config.experiment_path),
+            dir=str(self.config.model_path),
             name=wandb_name,
             config=vars(self.config),
         ).get_url()

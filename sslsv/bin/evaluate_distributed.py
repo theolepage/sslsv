@@ -24,7 +24,7 @@ def evaluate(args):
     config = load_config(args.config, verbose=not args.silent)
 
     model = load_model(config).to(rank)
-    checkpoint = torch.load(config.experiment_path / "model_latest.pt")
+    checkpoint = torch.load(config.model_path / "model_latest.pt")
     model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
     model = DistributedDataParallel(model, device_ids=[rank])
@@ -37,7 +37,7 @@ def evaluate(args):
         else:
             print_metrics(metrics)
 
-        with open(config.experiment_path / "evaluation.json", "w") as f:
+        with open(config.model_path / "evaluation.json", "w") as f:
             json.dump(metrics, f, indent=4)
 
     torch.distributed.destroy_process_group()

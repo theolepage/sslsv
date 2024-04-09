@@ -52,7 +52,7 @@ class BaseSiameseMethod(BaseMethod):
             ]
         return super().get_learnable_params()
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         Z_1, Z_2 = Z
 
         loss = self.loss_fn(Z_1, Z_2)

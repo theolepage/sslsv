@@ -17,3 +17,8 @@ models/**/tensorboard/
 models/**/wandb/
 models/**/*.json
 models/**/*.pt
+
+tests/resources/**/tensorboard/
+tests/resources/**/wandb/
+tests/resources/**/*.json
+tests/resources/**/*.pt

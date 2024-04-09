@@ -1,20 +1,17 @@
 from torch.utils.data import DistributedSampler
 
-from sslsv.utils.distributed import is_dist_initialized, get_rank, get_world_size
+from sslsv.utils.distributed import get_rank, get_world_size
 
 import math
 
 
 class DistributedSamplerWrapper(DistributedSampler):
 
-    def __init__(self, sampler):
-        if not is_dist_initialized():
-            raise RuntimeError("Requires distributed package to be available")
-
+    def __init__(self, sampler, world_size=None, rank=None):
         self.sampler = sampler
 
-        self.num_replicas = get_world_size()
-        self.rank = get_rank()
+        self.num_replicas = world_size if world_size else get_world_size()
+        self.rank = rank if rank else get_rank()
         self.num_samples = 0
 
     def __iter__(self):

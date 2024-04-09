@@ -71,7 +71,7 @@ def evaluate(args):
 
     model = load_model(config).to(device)
 
-    checkpoint = torch.load(config.experiment_path / "model_latest.pt")
+    checkpoint = torch.load(config.model_path / "model_latest.pt")
     model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
 
@@ -84,7 +84,7 @@ def evaluate(args):
     else:
         print_metrics(metrics)
 
-    with open(config.experiment_path / "evaluation.json", "w") as f:
+    with open(config.model_path / "evaluation.json", "w") as f:
         json.dump(metrics, f, indent=4)
 
 

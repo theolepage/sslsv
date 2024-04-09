@@ -163,7 +163,7 @@ class MoCo(BaseMomentumMethod):
 
         self.queue_labels_ptr[0] = (ptr + batch_size) % self.queue_size
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         Q_1, K_2, Q_2, K_1 = Z
 
         Q_1 = F.normalize(Q_1, p=2, dim=1)

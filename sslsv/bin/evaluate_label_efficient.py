@@ -28,14 +28,14 @@ class Classifier(Supervised):
         super().__init__(ClassifierConfig(), lambda: model.encoder)
 
 
-def get_experiment_name(name, nb_samples_per_spk, fine_tune, supervised):
-    name += "_label-efficient-"
-    name += str(nb_samples_per_spk) + "-"
+def get_model_name_suffix(nb_samples_per_spk, fine_tune, supervised):
+    suffix = "_label-efficient-"
+    suffix += str(nb_samples_per_spk) + "-"
     if supervised:
-        name += "supervised"
+        suffix += "supervised"
     else:
-        name += "finetuned" if fine_tune else "frozen"
-    return name
+        suffix += "finetuned" if fine_tune else "frozen"
+    return suffix
 
 
 def train(args, nb_samples_per_spk, fine_tune=False, supervised=False):
@@ -67,11 +67,11 @@ def train(args, nb_samples_per_spk, fine_tune=False, supervised=False):
     classifier = Classifier(config, model).to(device)
     classifier = torch.nn.DataParallel(classifier)
 
-    new_experiment_name = get_experiment_name(
-        config.experiment_name, nb_samples_per_spk, fine_tune, supervised
+    model_name_suffix = get_model_name_suffix(nb_samples_per_spk, fine_tune, supervised)
+    config.experiment_name = config.experiment_name + model_name_suffix
+    config.experiment_path = config.experiment_path.parent / (
+        config.experiment_path.name + model_name_suffix
     )
-    config.experiment_name = new_experiment_name
-    config.experiment_path = Path(new_experiment_name)
     config.experiment_path.mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(

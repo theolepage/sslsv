@@ -115,7 +115,7 @@ class DeepCluster(BaseMethod):
             for layer, centroid in zip(self.prototypes, centroids):
                 layer.weight.copy_(centroid)
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         Z_1, Z_2, P_1, P_2 = Z
         # P: (N, P, C)
 

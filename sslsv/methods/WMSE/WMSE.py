@@ -39,7 +39,7 @@ class WMSE(BaseSiameseMethod):
 
         self.loss_fn = WMSELoss()
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         from sslsv.utils.distributed import gather
 
         Z_A = gather(Z[0])

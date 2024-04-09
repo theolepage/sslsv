@@ -36,33 +36,27 @@ class Dataset(TorchDataset):
 
     def __init__(
         self,
-        base_path,
+        config,
         files,
         labels=None,
-        frame_length=32000,
-        frame_sampling=FrameSamplingEnum.DEFAULT,
         num_frames=1,
-        augmentation_config=None,
-        max_samples=None,
     ):
         super().__init__()
 
-        self.base_path = base_path
+        self.config = config
         self.files = files
         self.labels = labels
-        self.frame_length = frame_length
-        self.frame_sampling = frame_sampling
         self.num_frames = num_frames
-        self.max_samples = max_samples
-        self.augmentation_config = augmentation_config
 
         self.augmentation = None
-        if augmentation_config and augmentation_config.enable:
-            self.augmentation = DataAugmentation(augmentation_config, self.base_path)
+        if self.config.augmentation and self.config.augmentation.enable:
+            self.augmentation = DataAugmentation(
+                self.config.augmentation, self.config.base_path
+            )
 
     def __len__(self):
-        if self.max_samples:
-            return min(len(self.files), self.max_samples)
+        if self.config.max_samples:
+            return min(len(self.files), self.config.max_samples)
         return len(self.files)
 
     def preprocess_data(self, data, augment=True):
@@ -73,8 +67,8 @@ class Dataset(TorchDataset):
 
     def __getitem__(self, i):
         data = load_audio(
-            self.base_path / self.files[i],
-            frame_length=self.frame_length,
+            self.config.base_path / self.files[i],
+            frame_length=self.config.frame_length,
             num_frames=self.num_frames,
         )  # (N, T)
 

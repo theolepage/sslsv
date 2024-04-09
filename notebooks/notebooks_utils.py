@@ -13,13 +13,13 @@ def load_models(configs, override_names={}):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = load_model(config).to(device)
 
-        checkpoint = torch.load(config.experiment_path / "model_latest.pt")
+        checkpoint = torch.load(config.model_path / "model_latest.pt")
         model.load_state_dict(checkpoint["model"], strict=False)
         model.eval()
 
-        model_name = config.experiment_name
-        if config.experiment_name in override_names.keys():
-            model_name = override_names[config.experiment_name]
+        model_name = config.model_name
+        if model_name in override_names.keys():
+            model_name = override_names[model_name]
 
         models[model_name] = {
             "model": model,

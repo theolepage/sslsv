@@ -64,7 +64,7 @@ class Supervised(BaseMethod):
         extra_learnable_params = [{"params": self.classifier.parameters()}]
         return super().get_learnable_params() + extra_learnable_params
 
-    def train_step(self, Z, labels, step, samples):
+    def train_step(self, Z, labels=None, step=None, samples=None):
         loss = self.loss_fn(Z, labels)
 
         if self.config.speaker_classification:
