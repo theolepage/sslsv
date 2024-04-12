@@ -133,15 +133,19 @@ class DINO(BaseMomentumMethod):
         init_lr = training_config.learning_rate
         wd = training_config.weight_decay
 
-        lr_schedule = 1e-4 + 0.5 * (init_lr - 1e-4) * (
+        min_lr = 1e-5
+        warmup_lr_schedule = np.linspace(0, init_lr, 10 * nb_steps_per_epoch)
+        lr_schedule = min_lr + 0.5 * (init_lr - min_lr) * (
             1 + np.cos(np.pi * np.arange(nb_steps) / nb_steps)
         )
+        lr_schedule = np.concatenate((warmup_lr_schedule, lr_schedule))
         lr = lr_schedule[step]
 
         for i, param_group in enumerate(optimizer.param_groups):
             param_group["lr"] = lr
             param_group["weight_decay"] = wd if i == 0 else 0
-        return lr
+
+        return lr, wd
 
     def get_learnable_params(self):
         extra_learnable_params = [{"params": self.head.parameters()}]

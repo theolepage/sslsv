@@ -29,8 +29,8 @@ class EvaluationTaskConfig:
 class BaseEvaluationConfig:
 
     batch_size: int = 64
-    num_frames: int = 6
-    frame_length: Union[int, None] = 32000
+    num_frames: int = 10
+    frame_length: Union[int, None] = 64000
 
     validation: List[EvaluationTaskConfig] = field(default_factory=lambda: [])
 

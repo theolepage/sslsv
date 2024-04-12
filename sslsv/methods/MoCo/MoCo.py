@@ -125,18 +125,16 @@ class MoCo(BaseMomentumMethod):
         return Q_1, K_2, Q_2, K_1
 
     def get_learnable_params(self):
+        extra_learnable_params = []
         if self.config.enable_projector:
-            return super().get_learnable_params() + [
-                {"params": self.projector.parameters()}
-            ]
-        return super().get_learnable_params()
+            extra_learnable_params = [{"params": self.projector.parameters()}]
+        return super().get_learnable_params() + extra_learnable_params
 
     def get_momentum_pairs(self):
+        extra_momentum_pairs = []
         if self.config.enable_projector:
-            return super().get_momentum_pairs() + [
-                (self.projector, self.projector_momentum)
-            ]
-        return super().get_momentum_pairs()
+            extra_momentum_pairs = [(self.projector, self.projector_momentum)]
+        return super().get_momentum_pairs() + extra_momentum_pairs
 
     def on_train_epoch_start(self, epoch, max_epochs):
         self.epoch = epoch

@@ -41,13 +41,13 @@ class OptimizerEnum(Enum):
 @dataclass
 class TrainerConfig:
 
-    epochs: int = 300
+    epochs: int = 100
     batch_size: int = 256
     learning_rate: float = 0.001
     weight_decay: float = 0
     optimizer: OptimizerEnum = OptimizerEnum.ADAM
 
-    patience: int = 300
+    patience: int = 100
     tracked_metric: str = "val/sv_cosine/voxceleb1_test_O/eer"
     tracked_mode: TrackedModeEnum = TrackedModeEnum.MIN
 
@@ -89,7 +89,7 @@ class Trainer:
 
             self.model.module.on_train_step_start(step, nb_steps)
 
-            lr = self.model.module.update_optim(
+            lr, wd = self.model.module.update_optim(
                 self.optimizer,
                 self.config.trainer,
                 step=step,
@@ -129,7 +129,13 @@ class Trainer:
 
             self.model.module.on_train_step_end(step, nb_steps)
 
-            logger.update({**metrics, "train/lr": lr})
+            logger.update(
+                {
+                    **metrics,
+                    "train/learning_rate": lr,
+                    "train/weight_decay": wd,
+                }
+            )
 
     def _update_training_stats_file(self, metrics):
         log_file_path = self.config.model_path / "training.json"

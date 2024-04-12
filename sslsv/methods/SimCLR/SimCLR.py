@@ -21,10 +21,11 @@ class SimCLR(BaseSiameseMethod):
     def __init__(self, config, create_encoder_fn):
         super().__init__(config, create_encoder_fn)
 
-        self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
-        )
+        if self.config.enable_projector:
+            self.projector = nn.Sequential(
+                nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
+            )
 
         self.loss_fn = SimCLRLoss(config.temperature)

@@ -81,7 +81,7 @@ class SimSiam(BaseMethod):
         nb_steps,
         nb_steps_per_epoch,
     ):
-        lr = super().update_optim(
+        lr, wd = super().update_optim(
             optimizer,
             training_config,
             step,
@@ -93,7 +93,7 @@ class SimSiam(BaseMethod):
             if "fix_lr" in param_group and param_group["fix_lr"]:
                 param_group["lr"] = training_config.learning_rate
 
-        return lr
+        return lr, wd
 
     def train_step(self, Z, labels=None, step=None, samples=None):
         Z_1, Z_2, P_1, P_2 = Z

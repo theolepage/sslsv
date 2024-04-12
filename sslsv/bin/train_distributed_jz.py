@@ -11,10 +11,12 @@ from torch.nn.parallel import DistributedDataParallel
 from sslsv.trainer.Trainer import Trainer
 from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, evaluate
 
+import idr_torch
+
 
 def train(args):
-    world_size = int(os.environ["WORLD_SIZE"])
-    rank = int(os.environ["LOCAL_RANK"])
+    world_size = idr_torch.size
+    rank = idr_torch.rank
 
     torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
     torch.cuda.set_device(rank)

@@ -187,9 +187,9 @@ class ResNet34(BaseEncoder):
         out_size = base_dim * 8
 
         if config.pooling_mode == PoolingModeEnum.STATS:
-            out_size = 2 * int(80 / 8 * (base_dim * 8))
+            out_size = 2 * int(config.mel_n_mels / 8 * (base_dim * 8))
         if not config.pooling:
-            out_size = int(40 / 8 * (base_dim * 8))
+            out_size = int(config.mel_n_mels / 8 * (base_dim * 8))
 
         self.pooling = None
         if config.pooling:

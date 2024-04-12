@@ -29,7 +29,7 @@ class DatasetConfig:
     label_key: str = "Speaker"
     base_path: Path = Path("./data/")
     num_workers: int = 8
-    pin_memory: bool = False
+    pin_memory: bool = True
 
 
 class Dataset(TorchDataset):
