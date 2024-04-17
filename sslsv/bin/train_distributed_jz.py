@@ -32,7 +32,7 @@ def train(args: argparse.Namespace):
         train_dataloader=train_dataloader,
         config=config,
         evaluate=evaluate,
-        device=rank,
+        device=torch.device("cuda", rank),
     )
     trainer.start()
 

@@ -9,6 +9,7 @@ import argparse
 import torch
 import json
 
+from sslsv.bin.train import ModelWrapper
 from sslsv.utils.helpers import load_config, load_model, evaluate as evaluate_
 
 
@@ -79,7 +80,10 @@ def evaluate(args: argparse.Namespace):
     model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
 
-    model = torch.nn.DataParallel(model)
+    if device == torch.device("cuda"):
+        model = torch.nn.DataParallel(model)
+    else:
+        model = ModelWrapper(model)
 
     metrics = evaluate_(model, config, device, verbose=not args.silent)
 

@@ -286,9 +286,14 @@ class Trainer:
             check=True,
         ).stdout.strip()
 
-        training_mode = (
-            f"DDP ({get_world_size()} GPUs)" if is_dist_initialized() else "DP"
-        )
+        if self.device == torch.device("cpu"):
+            training_mode = "CPU"
+        else:
+            num_gpus = (
+                get_world_size() if is_dist_initialized() else torch.cuda.device_count()
+            )
+            training_mode = "DDP" if is_dist_initialized() else "DP"
+            training_mode += f" ({num_gpus} GPUs)"
 
         wandb_online = self.wandb_url and len(self.wandb_url) > 1
 

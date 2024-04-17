@@ -29,7 +29,12 @@ def evaluate(args: argparse.Namespace):
     model.eval()
     model = DistributedDataParallel(model, device_ids=[rank])
 
-    metrics = evaluate_(model, config, rank, verbose=not args.silent)
+    metrics = evaluate_(
+        model,
+        config,
+        device=torch.device("cuda", rank),
+        verbose=not args.silent,
+    )
 
     if is_main_process():
         if args.silent:
