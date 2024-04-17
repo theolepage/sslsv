@@ -1,15 +1,16 @@
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
 
 class DeepClusterLoss(nn.Module):
 
-    def __init__(self, temperature=0.1):
+    def __init__(self, temperature: float = 0.1):
         super().__init__()
 
         self.temperature = temperature
 
-    def forward(self, preds, assignments):
+    def forward(self, preds: T, assignments: T) -> T:
         P, V, N, C = preds.size()
 
         loss = 0

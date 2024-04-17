@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch import Tensor as T
 
 import torch.distributed as dist
 from sslsv.utils.distributed import is_dist_initialized, get_world_size
@@ -7,13 +8,13 @@ from sslsv.utils.distributed import is_dist_initialized, get_world_size
 
 class BarlowTwinsLoss(nn.Module):
 
-    def __init__(self, lamda=0.05, scale=0.025):
+    def __init__(self, lamda: float = 0.05, scale: float = 0.025):
         super().__init__()
 
         self.lamda = lamda
         self.scale = scale
 
-    def forward(self, Z_a, Z_b):
+    def forward(self, Z_a: T, Z_b: T) -> T:
         N, D = Z_a.size()
 
         bn = nn.BatchNorm1d(D, affine=False).to(Z_a.device)

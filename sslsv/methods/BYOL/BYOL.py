@@ -1,7 +1,11 @@
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+
 from torch import nn
+from torch import Tensor as T
 
 from dataclasses import dataclass
 
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMomentumMethod import (
     BaseMomentumMethod,
     BaseMomentumMethodConfig,
@@ -22,7 +26,11 @@ class BYOLConfig(BaseMomentumMethodConfig):
 
 class BYOL(BaseMomentumMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: BYOLConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
@@ -49,7 +57,7 @@ class BYOL(BaseMomentumMethod):
 
         self.loss_fn = BYOLLoss()
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
         if not training:
             return self.encoder(X)
 
@@ -64,25 +72,35 @@ class BYOL(BaseMomentumMethod):
 
         return Z_1, Z_2, P_1, P_2
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = [
             {"params": self.projector.parameters()},
             {"params": self.predictor.parameters()},
         ]
         return super().get_learnable_params() + extra_learnable_params
 
-    def get_momentum_pairs(self):
+    def get_momentum_pairs(self) -> List[Tuple[nn.Module, nn.Module]]:
         extra_momentum_pairs = [(self.projector, self.projector_momentum)]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, T, T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         Z_1, Z_2, P_1, P_2 = Z
 
         loss = self.loss_fn(P_1, Z_2) + self.loss_fn(P_2, Z_1)
 
-        metrics = {
-            "train/loss": loss,
-            "train/tau": self.momentum_updater.tau,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+                "train/tau": self.momentum_updater.tau,
+            },
+        )
 
-        return loss, metrics
+        return loss

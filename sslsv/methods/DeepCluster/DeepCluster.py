@@ -1,10 +1,12 @@
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, Iterable, Optional, Sequence, Tuple, Union
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
-from dataclasses import dataclass, field
-from typing import Sequence
-
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 
 from .KMeans import KMeans
@@ -28,7 +30,11 @@ class DeepClusterConfig(BaseMethodConfig):
 
 class DeepCluster(BaseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: DeepClusterConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
@@ -51,9 +57,9 @@ class DeepCluster(BaseMethod):
 
         self.loss_fn = DeepClusterLoss(config.temperature)
 
-    def on_train_start(self, trainer):
-        self.dataset_size = len(trainer.train_dataloader.dataset)
-        self.batch_size = trainer.config.trainer.batch_size
+    def on_train_start(self):
+        self.dataset_size = len(self.trainer.train_dataloader.dataset)
+        self.batch_size = self.trainer.config.trainer.batch_size
 
         self.kmeans = KMeans(
             nb_prototypes=self.config.nb_prototypes,
@@ -64,17 +70,17 @@ class DeepCluster(BaseMethod):
         self.assignments = -1 * torch.ones(
             (len(self.config.nb_prototypes), self.dataset_size),
             dtype=torch.long,
-            device=trainer.device,
+            device=self.trainer.device,
         )
 
         size_memory_per_process = (
-            len(trainer.train_dataloader) * self.batch_size // get_world_size()
+            len(self.trainer.train_dataloader) * self.batch_size // get_world_size()
         )
         self.register_buffer(
             "local_memory_indexes",
             torch.zeros(size_memory_per_process)
             .long()
-            .to(trainer.device, non_blocking=True),
+            .to(self.trainer.device, non_blocking=True),
         )
         self.register_buffer(
             "local_memory_embeddings",
@@ -83,10 +89,10 @@ class DeepCluster(BaseMethod):
                     2, size_memory_per_process, self.config.projector_output_dim
                 ),
                 dim=-1,
-            ).to(trainer.device, non_blocking=True),
+            ).to(self.trainer.device, non_blocking=True),
         )
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
         if not training:
             return self.encoder(X)
 
@@ -101,11 +107,11 @@ class DeepCluster(BaseMethod):
 
         return Z_1, Z_2, P_1, P_2
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = [{"params": self.projector.parameters()}]
         return super().get_learnable_params() + extra_learnable_params
 
-    def on_train_epoch_start(self, epoch, max_epochs):
+    def on_train_epoch_start(self, epoch: int, max_epochs: int):
         if epoch > 0:
             self.assignments, centroids = self.kmeans.run(
                 self.local_memory_indexes,
@@ -115,26 +121,36 @@ class DeepCluster(BaseMethod):
             for layer, centroid in zip(self.prototypes, centroids):
                 layer.weight.copy_(centroid)
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, T, T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         Z_1, Z_2, P_1, P_2 = Z
         # P: (N, P, C)
 
         preds = torch.stack(
             (P_1.transpose(0, 1), P_2.transpose(0, 1)), dim=1
         )  # preds: (P, V, N, C)
-        assignments = self.assignments[:, samples]
+        assignments = self.assignments[:, indices]
 
         loss = self.loss_fn(preds, assignments)
 
         # Store indexes and embeddings for the next clustering step
-        start_idx = step * self.batch_size // get_world_size()
-        end_idx = (step + 1) * self.batch_size // get_world_size()
-        self.local_memory_indexes[start_idx:end_idx] = samples
+        start_idx = step_rel * self.batch_size // get_world_size()
+        end_idx = (step_rel + 1) * self.batch_size // get_world_size()
+        self.local_memory_indexes[start_idx:end_idx] = indices
         self.local_memory_embeddings[0, start_idx:end_idx] = Z_1.detach()
         self.local_memory_embeddings[1, start_idx:end_idx] = Z_2.detach()
 
-        metrics = {
-            "train/loss": loss,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+            },
+        )
 
-        return loss, metrics
+        return loss

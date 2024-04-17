@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List
+from typing import Callable, List, Optional, Tuple, Union
 
+from torch import Tensor as T
+
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
 
 from sslsv.methods.CPC.InfoNCELoss import InfoNCELoss
@@ -38,10 +41,14 @@ class Combiner(BaseSiameseMethod):
         LossTypeCombinerEnum.BARLOWTWINS: BarlowTwinsLoss(),
     }
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: CombinerConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
         if not training:
             return self.encoder(X)
 
@@ -56,13 +63,20 @@ class Combiner(BaseSiameseMethod):
 
         return Y_1, Y_2, Z_1, Z_2
 
-    def compute_loss(self, Z_1, Z_2, losses):
+    def compute_loss(self, Z_1: T, Z_2: T, losses: List[LossItemCombinerConfig]) -> T:
         loss = 0
         for l in losses:
             loss += l.weight * Combiner.LOSS_FUNCTIONS[l.type](Z_1, Z_2)
         return loss
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, T, T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         Y_1, Y_2, Z_1, Z_2 = Z
 
         loss = 0
@@ -89,6 +103,12 @@ class Combiner(BaseSiameseMethod):
             }
             loss += Z_loss
 
-        metrics = {**metrics, "train/loss": loss}
+        self.log_step_metrics(
+            step,
+            {
+                **metrics,
+                "train/loss": loss,
+            },
+        )
 
-        return loss, metrics
+        return loss

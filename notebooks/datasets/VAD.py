@@ -4,12 +4,17 @@ import scipy.signal
 
 class VAD:
 
-    def __init__(self, threshold=-50, win_len=0.025, win_hop=0.025):
+    def __init__(
+        self,
+        threshold: float = -50,
+        win_len: float = 0.025,
+        win_hop: float = 0.025,
+    ):
         self.threshold = threshold
         self.win_len = win_len
         self.win_hop = win_hop
 
-    def _frame_signal(self, signal, sr):
+    def _frame_signal(self, signal: np.ndarray, sr: int) -> np.ndarray:
         assert self.win_len >= self.win_hop
 
         frame_length = int(self.win_len * sr)
@@ -31,7 +36,7 @@ class VAD:
         )
         return frames
 
-    def apply(self, audio, sr=16000):
+    def apply(self, audio: np.ndarray, sr: int = 16000) -> np.ndarray:
         frames = self._frame_signal(audio, sr)
         nb_frames, frames_len = frames.shape
 

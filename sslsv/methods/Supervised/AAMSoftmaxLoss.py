@@ -1,13 +1,16 @@
+from typing import Tuple
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
 import math
 
 
 class AAMSoftmaxLoss(nn.Module):
 
-    def __init__(self, m=0.2, s=30):
+    def __init__(self, m: float = 0.2, s: float = 30):
         super().__init__()
 
         self.m = m
@@ -18,7 +21,7 @@ class AAMSoftmaxLoss(nn.Module):
         self.th = math.cos(math.pi - self.m)
         self.mm = math.sin(math.pi - self.m) * self.m
 
-    def forward(self, Z, labels):
+    def forward(self, Z: T, labels: T) -> Tuple[T, T]:
         sine = torch.sqrt((1.0 - torch.mul(Z, Z)).clamp(0, 1))
         phi = Z * self.cos_m - sine * self.sin_m
         phi = torch.where((Z - self.th) > 0, phi, Z - self.mm)

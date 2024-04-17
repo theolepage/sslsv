@@ -1,4 +1,5 @@
 from torch import nn
+from torch import Tensor as T
 
 from .InfoNCELoss import InfoNCELoss
 
@@ -10,7 +11,7 @@ class CPCLoss(nn.Module):
 
         self.infonce = InfoNCELoss(temperature=1.0)
 
-    def forward(self, Y_future_preds, Y_future):
+    def forward(self, Y_future_preds: T, Y_future: T) -> T:
         # Shape: (N, encoded_dim, nb_t_to_predict)
 
         nb_t_to_predict = Y_future.size(2)

@@ -1,3 +1,5 @@
+from typing import Dict, Iterable, Union
+
 import torch
 
 import time
@@ -9,13 +11,13 @@ from sslsv.utils.distributed import is_dist_initialized, get_rank
 
 class EpochLoggerMetric(object):
 
-    def __init__(self, fmt="{global_avg:.6f}"):
+    def __init__(self, fmt: str = "{global_avg:.6f}"):
         self.fmt = fmt
 
         self.total = 0.0
         self.count = 0
 
-    def update(self, value):
+    def update(self, value: float):
         self.count += 1
         self.total += value
 
@@ -31,20 +33,20 @@ class EpochLoggerMetric(object):
         self.total = t[1]
 
     @property
-    def global_avg(self):
+    def global_avg(self) -> float:
         return self.total / self.count
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.fmt.format(global_avg=self.global_avg)
 
 
 class EpochLogger:
 
-    def __init__(self, delimiter=" | "):
+    def __init__(self, delimiter: str = " | "):
         self.metrics = defaultdict(EpochLoggerMetric)
         self.delimiter = delimiter
 
-    def update(self, metrics):
+    def update(self, metrics: Dict[str, Union[torch.Tensor, float, int]]):
         for k, v in metrics.items():
             assert isinstance(v, (torch.Tensor, float, int))
 
@@ -52,20 +54,20 @@ class EpochLogger:
                 v = v.item()
             self.metrics[k].update(v)
 
-    def __str__(self):
+    def __str__(self) -> str:
         res = []
         for name, metric in self.metrics.items():
             res.append("{}: {}".format(name, metric))
         return self.delimiter.join(res)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> EpochLoggerMetric:
         return self.metrics[key]
 
     def synchronize(self):
         for metric in self.metrics.values():
             metric.synchronize()
 
-    def log(self, iterable, print_freq=100):
+    def log(self, iterable: Iterable, print_freq: int = 100):
         i = 0
 
         last_iter_end_time = time.time()

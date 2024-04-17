@@ -1,6 +1,7 @@
-from torch import nn
-
 from dataclasses import dataclass
+
+import torch
+from torch import nn
 
 from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
@@ -13,7 +14,14 @@ class SimpleAudioCNNConfig(BaseEncoderConfig):
 
 class SimpleAudioCNNBlock(nn.Module):
 
-    def __init__(self, in_dim, out_dim, kernel_size, stride, padding):
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        kernel_size: int,
+        stride: int,
+        padding: int,
+    ):
         super().__init__()
 
         self.conv = nn.Conv1d(
@@ -27,13 +35,13 @@ class SimpleAudioCNNBlock(nn.Module):
         self.ln = nn.BatchNorm1d(out_dim)
         self.act = nn.ReLU()
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         return self.act(self.ln(self.conv(X)))
 
 
 class SimpleAudioCNN(BaseEncoder):
 
-    def __init__(self, config):
+    def __init__(self, config: SimpleAudioCNNConfig):
         super().__init__(config)
 
         nb_filters = [512, 512, 512, 512, self.encoder_dim]
@@ -57,7 +65,7 @@ class SimpleAudioCNN(BaseEncoder):
 
         self.blocks = nn.Sequential(*self.blocks)
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         Z = super().forward(X)
 
         Z = Z.unsqueeze(1)

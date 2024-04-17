@@ -1,10 +1,11 @@
 import torch
+from torch import nn
 
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
 from sslsv.methods.SimCLR.SimCLR import SimCLR, SimCLRConfig
 
 
-def count_parameters(model):
+def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
@@ -31,7 +32,8 @@ def test_default():
     assert Z[1].size() == (64, 256)
 
     # Train step
-    loss, metrics = method.train_step(Z)
+    loss = method.train_step(Z, step=0)
+    metrics = method.step_metrics[0]
     assert isinstance(loss, torch.Tensor)
     assert loss.dtype == torch.float32
     assert "train/loss" in metrics

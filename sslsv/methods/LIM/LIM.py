@@ -1,8 +1,11 @@
+from dataclasses import dataclass
+from typing import Callable, Optional, Tuple, Union
+
 import torch
 import torch.nn.functional as F
+from torch import Tensor as T
 
-from dataclasses import dataclass
-
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 
 from .LIMLoss import LIMLoss, LIMLossEnum
@@ -11,17 +14,21 @@ from .LIMLoss import LIMLoss, LIMLossEnum
 @dataclass
 class LIMConfig(BaseMethodConfig):
 
-    loss_name: LIMLossEnum = LIMLossEnum.BCE
+    loss: LIMLossEnum = LIMLossEnum.BCE
 
 
 class LIM(BaseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: LIMConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
-        self.loss_fn = LIMLoss(config.loss_name)
+        self.loss_fn = LIMLoss(config.loss)
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T]]:
         if not training:
             return self.encoder(X)
 
@@ -33,8 +40,15 @@ class LIM(BaseMethod):
 
         return Y_1, Y_2
 
-    def train_step(self, Y, labels=None, step=None, samples=None):
-        Y_1, Y_2 = Y
+    def train_step(
+        self,
+        Z: Tuple[T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
+        Y_1, Y_2 = Z
 
         N, _ = Y_1.size()
 
@@ -46,8 +60,11 @@ class LIM(BaseMethod):
 
         loss = self.loss_fn(pos, neg)
 
-        metrics = {
-            "train/loss": loss,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+            },
+        )
 
-        return loss, metrics
+        return loss

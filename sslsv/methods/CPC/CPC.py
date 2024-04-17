@@ -1,9 +1,13 @@
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
+
 import torch
 from torch import nn
+from torch import Tensor as T
 
 from dataclasses import dataclass
 from enum import Enum
 
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 
 from .CPCLoss import CPCLoss
@@ -33,7 +37,13 @@ class CPCAggregator(nn.Module):
         AggregatorTypeEnum.LSTM: nn.LSTM,
     }
 
-    def __init__(self, module_type, nb_layers, encoder_dim, aggregator_dim):
+    def __init__(
+        self,
+        module_type: AggregatorTypeEnum,
+        nb_layers: int,
+        encoder_dim: int,
+        aggregator_dim: int,
+    ):
         super().__init__()
 
         self.aggregator = CPCAggregator.MODULES_SUPPORTED[module_type](
@@ -43,7 +53,7 @@ class CPCAggregator(nn.Module):
             batch_first=True,
         )
 
-    def forward(self, X):
+    def forward(self, X: T) -> T:
         X = X.transpose(1, 2)  # (N, L, C)
         self.aggregator.flatten_parameters()
         Z, _ = self.aggregator(X)
@@ -52,20 +62,24 @@ class CPCAggregator(nn.Module):
 
 class CPCPredictor(nn.Module):
 
-    def __init__(self, aggregator_dim, encoder_dim, nb_t_to_predict):
+    def __init__(self, aggregator_dim: int, encoder_dim: int, nb_t_to_predict: int):
         super().__init__()
 
         self.predictors = nn.ModuleList(
             [nn.Linear(aggregator_dim, encoder_dim) for _ in range(nb_t_to_predict)]
         )
 
-    def forward(self, X):
+    def forward(self, X: T) -> T:
         return torch.stack([predictor(X) for predictor in self.predictors], axis=2)
 
 
 class CPC(BaseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: CPCConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.bidirectional = config.bidirectional
@@ -100,7 +114,11 @@ class CPC(BaseMethod):
 
         self.loss_fn = CPCLoss()
 
-    def forward(self, X, training=False):
+    def forward(
+        self,
+        X: T,
+        training: bool = False,
+    ) -> Union[T, Tuple[T, T, Optional[T], Optional[T]]]:
         if not training:
             Z = self.aggregator(self.encoder(X))
 
@@ -121,7 +139,7 @@ class CPC(BaseMethod):
 
         return Y_1, Y_2, Y_1_r, Y_2_r
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = [
             {"params": self.aggregator.parameters()},
             {"params": self.predictor.parameters()},
@@ -133,7 +151,13 @@ class CPC(BaseMethod):
             ]
         return super().get_learnable_params() + extra_learnable_params
 
-    def train_step_(self, Y_1, Y_2, aggregator, predictor):
+    def train_step_(
+        self,
+        Y_1: T,
+        Y_2: T,
+        aggregator: CPCAggregator,
+        predictor: CPCPredictor,
+    ) -> Tuple[T, float]:
         # Y: (N, encoded_dim, frame_length)
 
         Y_past = Y_1[:, :, : -self.nb_t_to_predict]
@@ -157,8 +181,15 @@ class CPC(BaseMethod):
 
         return loss, accuracy
 
-    def train_step(self, Y, labels=None, step=None, samples=None):
-        Y_1, Y_2, Y_1_r, Y_2_r = Y
+    def train_step(
+        self,
+        Z: Tuple[T, T, Optional[T], Optional[T]],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
+        Y_1, Y_2, Y_1_r, Y_2_r = Z
 
         loss, accuracy = self.train_step_(Y_1, Y_2, self.aggregator, self.predictor)
 
@@ -172,9 +203,12 @@ class CPC(BaseMethod):
             loss = (loss + loss_r) / 2
             accuracy = (accuracy + accuracy_r) / 2
 
-        metrics = {
-            "train/loss": loss,
-            # 'train/accuracy': accuracy
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+                # 'train/accuracy': accuracy
+            },
+        )
 
-        return loss, metrics
+        return loss

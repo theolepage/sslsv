@@ -1,9 +1,14 @@
+from dataclasses import dataclass
+from typing import Callable, Optional, Tuple
+
 import torch
 from torch import nn
+from torch import Tensor as T
 
-from dataclasses import dataclass
-
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
+
+from sslsv.utils.distributed import gather
 
 from .WMSELoss import WMSELoss
 from .Whitening2d import Whitening2d
@@ -22,7 +27,11 @@ class WMSEConfig(BaseSiameseMethodConfig):
 
 class WMSE(BaseSiameseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: WMSEConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
@@ -39,9 +48,14 @@ class WMSE(BaseSiameseMethod):
 
         self.loss_fn = WMSELoss()
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
-        from sslsv.utils.distributed import gather
-
+    def train_step(
+        self,
+        Z: Tuple[T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         Z_A = gather(Z[0])
         Z_B = gather(Z[1])
 
@@ -59,8 +73,11 @@ class WMSE(BaseSiameseMethod):
             loss += self.loss_fn(z[:N], z[N : 2 * N])
         loss /= self.config.whitening_iters
 
-        metrics = {
-            "train/loss": loss,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+            },
+        )
 
-        return loss, metrics
+        return loss

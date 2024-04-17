@@ -1,16 +1,17 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
 
 class SwAVLoss(nn.Module):
 
-    def __init__(self, temperature=0.1):
+    def __init__(self, temperature: float = 0.1):
         super().__init__()
 
         self.temperature = temperature
 
-    def forward(self, preds, assignments):
+    def forward(self, preds: T, assignments: T) -> T:
         losses = []
         for i, A in enumerate(assignments):
             for j, P in enumerate(preds):

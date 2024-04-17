@@ -1,3 +1,4 @@
+from typing import Any, Callable, Dict
 from dataclasses import dataclass
 from enum import Enum
 
@@ -5,7 +6,6 @@ from datetime import datetime
 from pathlib import Path
 import json
 import subprocess
-
 import os
 
 os.environ["WANDB_SILENT"] = "true"
@@ -17,6 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, SGD
 from torch.cuda.amp import GradScaler, autocast
 
+from sslsv.methods._BaseMethod import BaseMethod
 from sslsv.utils.distributed import (
     is_main_process,
     is_dist_initialized,
@@ -63,11 +64,11 @@ class Trainer:
 
     def __init__(
         self,
-        model,
-        train_dataloader,
-        config,
-        evaluate,
-        device,
+        model: BaseMethod,
+        train_dataloader: torch.utils.data.DataLoader,
+        config: Any,  # FIXME: use Config
+        evaluate: Callable[..., Dict[str, float]],
+        device: torch.device,
     ):
         self.model = model
         self.train_dataloader = train_dataloader
@@ -81,17 +82,20 @@ class Trainer:
             else float("inf")
         )
 
-    def _train_step_loop(self, logger):
+    def _train_step_loop(self, logger: EpochLogger):
         nb_steps = self.config.trainer.epochs * len(self.train_dataloader)
 
-        for i, (idx, X, info) in enumerate(logger.log(self.train_dataloader)):
-            step = self.epoch * len(self.train_dataloader) + i
+        for step_rel, (indices, X, info) in enumerate(
+            logger.log(self.train_dataloader)
+        ):
+            step = self.epoch * len(self.train_dataloader) + step_rel
 
             self.model.module.on_train_step_start(step, nb_steps)
 
             lr, wd = self.model.module.update_optim(
                 self.optimizer,
-                self.config.trainer,
+                self.config.trainer.learning_rate,
+                self.config.trainer.weight_decay,
                 step=step,
                 nb_steps=nb_steps,
                 nb_steps_per_epoch=len(self.train_dataloader),
@@ -103,11 +107,12 @@ class Trainer:
             # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):
                 Z = self.model(X, training=True)
-                loss, metrics = self.model.module.train_step(
+                loss = self.model.module.train_step(
                     Z,
+                    step=step,
+                    step_rel=step_rel,
+                    indices=indices,
                     labels=labels,
-                    step=i,
-                    samples=idx,
                 )
 
             self.optimizer.zero_grad(set_to_none=True)
@@ -131,13 +136,13 @@ class Trainer:
 
             logger.update(
                 {
-                    **metrics,
+                    **self.model.module.step_metrics[step],
                     "train/learning_rate": lr,
                     "train/weight_decay": wd,
                 }
             )
 
-    def _update_training_stats_file(self, metrics):
+    def _update_training_stats_file(self, metrics: Dict[str, float]):
         log_file_path = self.config.model_path / "training.json"
         log_file_data = {}
         if log_file_path.exists():
@@ -147,7 +152,7 @@ class Trainer:
         with open(log_file_path, "w") as f:
             json.dump(log_file_data, f, indent=4)
 
-    def _log_end_epoch(self, metrics):
+    def _log_end_epoch(self, metrics: Dict[str, float]):
         time = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
         print(f"Time: {time}")
 
@@ -166,7 +171,7 @@ class Trainer:
 
         self._update_training_stats_file(metrics)
 
-    def _early_stopping(self, metrics):
+    def _early_stopping(self, metrics: Dict[str, float]) -> bool:
         improved = False
 
         if self.config.trainer.tracked_metric in metrics.keys():
@@ -198,7 +203,7 @@ class Trainer:
 
         return True
 
-    def _train_epoch_loop(self, start_epoch=0):
+    def _train_epoch_loop(self, start_epoch: int = 0):
         self.nb_epochs_remaining = 0
 
         max_epochs = self.config.trainer.epochs
@@ -242,7 +247,7 @@ class Trainer:
                 if not self._early_stopping(metrics):
                     break
 
-    def _load_checkpoint(self):
+    def _load_checkpoint(self) -> Any:
         init_weights = self.config.trainer.init_weights
         checkpoint_path = self.config.model_path / "model_latest.pt"
 
@@ -262,7 +267,7 @@ class Trainer:
         self.optimizer.load_state_dict(checkpoint["optimizer"])
         return checkpoint
 
-    def _save_checkpoint(self, suffix):
+    def _save_checkpoint(self, suffix: str):
         torch.save(
             {
                 "epoch": self.epoch + 1,
@@ -273,7 +278,7 @@ class Trainer:
             self.config.model_path / f"model_{suffix}.pt",
         )
 
-    def _log_start_training(self, resuming):
+    def _log_start_training(self, resuming: bool):
         gitHash = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             text=True,
@@ -341,7 +346,7 @@ class Trainer:
             config=vars(self.config),
         ).get_url()
 
-    def start(self, resume=True):
+    def start(self, resume: bool = True):
         if is_dist_initialized() and self.config.trainer.ddp_sync_batchnorm:
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
 
@@ -351,7 +356,9 @@ class Trainer:
             self._init_tensorboard()
             self._init_wandb()
 
-        self.model.module.on_train_start(self)
+        self.model.module.trainer = self
+
+        self.model.module.on_train_start()
 
         checkpoint = self._load_checkpoint() if resume else None
 
@@ -360,7 +367,7 @@ class Trainer:
 
         self._train_epoch_loop(start_epoch=(checkpoint["epoch"] if checkpoint else 0))
 
-        self.model.module.on_train_end(self)
+        self.model.module.on_train_end()
 
         if is_main_process():
             wandb.finish()

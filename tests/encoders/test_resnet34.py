@@ -1,9 +1,10 @@
 import torch
+from torch import nn
 
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
 
 
-def count_parameters(model):
+def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 

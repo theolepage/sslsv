@@ -6,7 +6,7 @@ import numpy as np
 from utils import glob
 
 
-def create_cremad_train_csv(test_split=0.9):
+def create_cremad_train_csv(test_split: float = 0.9):
     files = glob("cremad/AudioWAV/*.wav")
 
     LABELS = {

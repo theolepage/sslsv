@@ -1,5 +1,6 @@
 from collections import defaultdict
-from pathlib import Path
+from typing import Iterable
+
 import numpy as np
 
 from torch.utils.data import Sampler as TorchSampler
@@ -59,13 +60,13 @@ def test_prevent_class_collisions(batch_size=64):
 
 class DummySampler(TorchSampler):
 
-    def __init__(self, count):
+    def __init__(self, count: int):
         self.count = count
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.count
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[int]:
         return iter(np.arange(self.count))
 
 

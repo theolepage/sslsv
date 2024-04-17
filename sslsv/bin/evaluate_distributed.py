@@ -14,7 +14,7 @@ from sslsv.utils.helpers import load_config, load_model, evaluate as evaluate_
 from evaluate import print_metrics
 
 
-def evaluate(args):
+def evaluate(args: argparse.Namespace):
     world_size = int(os.environ["WORLD_SIZE"])  # idr_torch.size
     rank = int(os.environ["LOCAL_RANK"])  # idr_torch.rank
 

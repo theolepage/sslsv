@@ -1,8 +1,11 @@
+from typing import List, Tuple
+
 import numpy as np
 from scipy.sparse import csr_matrix
 
 import torch
 import torch.nn.functional as F
+from torch import Tensor as T
 
 import torch.distributed as dist
 from sslsv.utils.distributed import (
@@ -14,20 +17,24 @@ from sslsv.utils.distributed import (
 
 class KMeans:
 
-    def __init__(self, nb_prototypes, nb_iters, dataset_size):
+    def __init__(self, nb_prototypes: int, nb_iters: int, dataset_size: int):
         self.nb_prototypes = nb_prototypes
         self.nb_iters = nb_iters
         self.dataset_size = dataset_size
 
     @staticmethod
-    def get_indices_sparse(data):
+    def get_indices_sparse(data: np.ndarray) -> List[np.ndarray]:
         cols = np.arange(data.size)
         M = csr_matrix(
             (cols, (data.ravel(), cols)), shape=(int(data.max()) + 1, data.size)
         )
         return [np.unravel_index(row.data, data.shape) for row in M]
 
-    def run(self, local_memory_index, local_memory_embeddings):
+    def run(
+        self,
+        local_memory_index: T,
+        local_memory_embeddings: T,
+    ) -> Tuple[T, List[T]]:
         V, N, D = local_memory_embeddings.size()
         device = local_memory_embeddings.device
 

@@ -26,7 +26,7 @@ class BaseEncoder(nn.Module):
         "hann": torch.hann_window,
     }
 
-    def __init__(self, config):
+    def __init__(self, config: BaseEncoderConfig):
         super().__init__()
 
         self.encoder_dim = config.encoder_dim
@@ -44,7 +44,7 @@ class BaseEncoder(nn.Module):
             )
             self.instance_norm = nn.InstanceNorm1d(config.mel_n_mels)
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         # X: (B, 32000)
 
         if self.features_extractor:

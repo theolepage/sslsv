@@ -27,7 +27,7 @@ def fix_aug_structure():
     subprocess.call("rm -r musan.tar.gz", shell=True)
 
 
-def split_musan(length=16000 * 8, stride=16000 * 8):
+def split_musan(length: int = 16000 * 8, stride: int = 16000 * 8):
     files = glob("musan/*/*/*.wav")
 
     for file in tqdm(files):

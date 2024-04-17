@@ -1,10 +1,14 @@
+from typing import List
+
+from sslsv.evaluations._BaseEvaluation import BaseEvaluation
+
 import torch
 import torch.nn as nn
 import numpy as np
 
 
-def cllr(target_llrs, nontarget_llrs):
-    def neg_log_sigmoid(lodds):
+def cllr(target_llrs: torch.Tensor, nontarget_llrs: torch.Tensor) -> torch.Tensor:
+    def neg_log_sigmoid(lodds: torch.Tensor) -> torch.Tensor:
         return torch.log1p(torch.exp(-lodds))
 
     return (
@@ -19,7 +23,7 @@ def cllr(target_llrs, nontarget_llrs):
 
 class ScoreCalibrationModel(nn.Module):
 
-    def __init__(self, input_dim):
+    def __init__(self, input_dim: int):
         super().__init__()
 
         self.W = nn.Linear(input_dim, 1)
@@ -27,13 +31,13 @@ class ScoreCalibrationModel(nn.Module):
         nn.init.constant_(self.W.weight, 1.0 / input_dim)
         nn.init.constant_(self.W.bias, 0)
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         return self.W(X)
 
 
 class ScoreCalibration:
 
-    def __init__(self, evaluations):
+    def __init__(self, evaluations: List[BaseEvaluation]):
         self.scores = [evaluation.scores for evaluation in evaluations]
         self.targets = evaluations[0].targets
 
@@ -62,7 +66,7 @@ class ScoreCalibration:
             self.target_llrs[:, i] = target_llrs_
             self.nontarget_llrs[:, i] = nontarget_llrs_
 
-    def train(self, epochs=50):
+    def train(self, epochs: int = 50):
         losses = [cllr(self.target_llrs, self.nontarget_llrs)]
 
         for _ in range(epochs):
@@ -83,5 +87,5 @@ class ScoreCalibration:
 
             losses.append(loss.item())
 
-    def predict(self, scores):
+    def predict(self, scores: torch.Tensor) -> torch.Tensor:
         return self.model(scores)

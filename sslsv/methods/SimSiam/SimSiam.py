@@ -1,7 +1,11 @@
-from torch import nn
-
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 
+import torch
+from torch import nn
+from torch import Tensor as T
+
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 
 from .SimSiamLoss import SimSiamLoss
@@ -18,7 +22,11 @@ class SimSiamConfig(BaseMethodConfig):
 
 class SimSiam(BaseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: SimSiamConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
@@ -51,7 +59,7 @@ class SimSiam(BaseMethod):
 
         self.loss_fn = SimSiamLoss()
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
         if not training:
             return self.encoder(X)
 
@@ -66,7 +74,7 @@ class SimSiam(BaseMethod):
 
         return Z_1, Z_2, P_1, P_2
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = [
             {"params": self.projector.parameters()},
             {"params": self.predictor.parameters(), "fix_lr": True},
@@ -75,15 +83,17 @@ class SimSiam(BaseMethod):
 
     def update_optim(
         self,
-        optimizer,
-        training_config,
-        step,
-        nb_steps,
-        nb_steps_per_epoch,
-    ):
+        optimizer: torch.optim.Optimizer,
+        init_lr: float,
+        init_wd: float,
+        step: int,
+        nb_steps: int,
+        nb_steps_per_epoch: int,
+    ) -> Tuple[float, float]:
         lr, wd = super().update_optim(
             optimizer,
-            training_config,
+            init_lr,
+            init_wd,
             step,
             nb_steps,
             nb_steps_per_epoch,
@@ -91,17 +101,27 @@ class SimSiam(BaseMethod):
 
         for param_group in optimizer.param_groups:
             if "fix_lr" in param_group and param_group["fix_lr"]:
-                param_group["lr"] = training_config.learning_rate
+                param_group["lr"] = init_lr
 
         return lr, wd
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, T, T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         Z_1, Z_2, P_1, P_2 = Z
 
         loss = (self.loss_fn(P_1, Z_2) + self.loss_fn(P_2, Z_1)) / 2
 
-        metrics = {
-            "train/loss": loss,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+            },
+        )
 
-        return loss, metrics
+        return loss

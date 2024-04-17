@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+from typing import List, Optional
 
+from pathlib import Path
 import numpy as np
 import pickle
 import pandas as pd
@@ -17,7 +19,11 @@ from sslsv.evaluations._SpeakerVerificationEvaluation import (
 )
 
 
-def create_stat_object(modelset, segset, embeddings):
+def create_stat_object(
+    modelset: np.ndarray,
+    segset: Optional[np.ndarray],
+    embeddings: np.ndarray,
+) -> StatObject_SB:
     return StatObject_SB(
         modelset=modelset,
         segset=segset,
@@ -39,7 +45,7 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _prepare_evaluation_aux(self, trials, key):
+    def _prepare_evaluation_aux(self, trials: List[Path], key: str) -> StatObject_SB:
         stat_path = self.config.model_path / f"plda_{key}_stat.pkl"
 
         if stat_path.exists():
@@ -106,6 +112,8 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
             plda.Sigma,
         )
 
-    def _get_sv_score(self, a, b):
-        score = self.scores.scoremat[self.scores.modelset == a, self.scores.segset == b]
+    def _get_sv_score(self, enrol: str, test: str) -> float:
+        score = self.scores.scoremat[
+            self.scores.modelset == enrol, self.scores.segset == test
+        ]
         return score.item()

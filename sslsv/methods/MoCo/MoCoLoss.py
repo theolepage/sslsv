@@ -1,16 +1,26 @@
+from typing import Optional
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
 
 class MoCoLoss(nn.Module):
 
-    def __init__(self, temperature=0.2):
+    def __init__(self, temperature: float = 0.2):
         super().__init__()
 
         self.temperature = temperature
 
-    def forward(self, query, key, queue, current_labels=None, queue_labels=None):
+    def forward(
+        self,
+        query: T,
+        key: T,
+        queue: T,
+        current_labels: Optional[T] = None,
+        queue_labels: Optional[T] = None,
+    ) -> T:
         N, _ = query.size()
 
         pos = torch.einsum("nc,nc->n", (query, key)).unsqueeze(-1)

@@ -12,11 +12,11 @@ from sslsv.utils.helpers import load_config
 
 
 @pytest.fixture
-def default_config():
+def default_config() -> Config:
     return Config()
 
 
-def test_default(default_config):
+def test_default(default_config: Config):
     assert default_config.model_name == "default"
     assert default_config.model_path == Path("default")
     assert default_config.seed == 1717

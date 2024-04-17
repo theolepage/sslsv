@@ -1,4 +1,5 @@
-from pathlib import Path
+from typing import List, Tuple
+
 import pandas as pd
 import torch
 
@@ -8,7 +9,7 @@ from sslsv.datasets.SSLDataset import SSLDataset
 from sslsv.utils.helpers import load_train_dataloader
 
 
-def get_files_labels(path):
+def get_files_labels(path: str) -> Tuple[List[str], List[int]]:
     df = pd.read_csv(path)
     files = df["File"].tolist()
     labels = pd.factorize(df["Speaker"])[0].tolist()

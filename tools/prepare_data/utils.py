@@ -1,15 +1,18 @@
+from typing import List, Tuple, Union
+
+from pathlib import Path
 import subprocess
 import hashlib
 from glob import glob as _glob
 
 
-def glob(path):
+def glob(path: Union[str, Path]) -> List[str]:
     paths = _glob(path)
     paths = [p.replace("\\", "/") for p in paths]
     return paths
 
 
-def get_md5(path):
+def get_md5(path: str) -> str:
     hash_md5 = hashlib.md5()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
@@ -17,7 +20,7 @@ def get_md5(path):
     return hash_md5.hexdigest()
 
 
-def download(entries):
+def download(entries: List[Tuple[str, str]]):
     for url, md5 in entries:
         filename = url.split("/")[-1]
         status = subprocess.call("wget %s -O %s" % (url, filename), shell=True)
@@ -28,7 +31,7 @@ def download(entries):
             raise Warning("Checksum of %s failed" % filename)
 
 
-def concatenate(entries):
+def concatenate(entries: List[Tuple[str, str]]):
     for src, dst, md5 in entries:
         subprocess.call("cat %s > %s" % (src, dst), shell=True)
         subprocess.call("rm %s" % (src), shell=True)
@@ -37,7 +40,7 @@ def concatenate(entries):
             raise Warning("Checksum of %s failed" % dst)
 
 
-def extract(entries):
+def extract(entries: List[str]):
     for filename in entries:
         if filename.endswith(".tar.gz"):
             subprocess.call("tar xf %s" % (filename), shell=True)

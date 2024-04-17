@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Union
+from typing import Dict, List, Optional, Union
 
 import torch
 from torch.utils.data import DataLoader, DistributedSampler
@@ -9,11 +9,12 @@ import numpy as np
 
 from tqdm import tqdm
 
+from sslsv.methods._BaseMethod import BaseMethod
 from sslsv.datasets.Dataset import Dataset, DatasetConfig
 from sslsv.utils.distributed import get_world_size, is_dist_initialized, is_main_process
 
 
-def seed_dataloader_worker(worker_id):
+def seed_dataloader_worker(worker_id: int):
     worker_seed = torch.initial_seed() % 2**32
     random.seed(worker_seed)
     np.random.seed(worker_seed)
@@ -30,7 +31,7 @@ class BaseEvaluationConfig:
 
     batch_size: int = 64
     num_frames: int = 10
-    frame_length: Union[int, None] = 64000
+    frame_length: Optional[int] = 64000
 
     validation: List[EvaluationTaskConfig] = field(default_factory=lambda: [])
 
@@ -41,12 +42,12 @@ class BaseEvaluation:
 
     def __init__(
         self,
-        model,
-        config,
-        task_config,
-        device="cpu",
-        verbose=False,
-        validation=False,
+        model: BaseMethod,
+        config: BaseEvaluationConfig,
+        task_config: EvaluationTaskConfig,
+        device: torch.device,
+        verbose: bool = False,
+        validation: bool = False,
     ):
         self.model = model
         self.config = config
@@ -55,7 +56,10 @@ class BaseEvaluation:
         self.verbose = verbose
         self.validation = validation
 
-    def _ddp_sync_embeddings(self, embeddings):
+    def _ddp_sync_embeddings(
+        self,
+        embeddings: Dict[str, Union[torch.Tensor, np.ndarray]],
+    ) -> Dict[str, Union[torch.Tensor, np.ndarray]]:
         embeddings_all = [None for _ in range(get_world_size())]
         torch.distributed.all_gather_object(embeddings_all, embeddings)
         embeddings = {}
@@ -63,16 +67,22 @@ class BaseEvaluation:
             embeddings.update(d)
         return embeddings
 
-    def _extract_embeddings_pre(self, X):
+    def _extract_embeddings_pre(self, X: torch.Tensor) -> torch.Tensor:
         return X
 
-    def _extract_embeddings_inference(self, X):
+    def _extract_embeddings_inference(self, X: torch.Tensor) -> torch.Tensor:
         return self.model(X)
 
-    def _extract_embeddings_post(self, Y):
+    def _extract_embeddings_post(self, Y: torch.Tensor) -> torch.Tensor:
         return Y
 
-    def _extract_embeddings(self, files, labels=None, desc=None, numpy=False):
+    def _extract_embeddings(
+        self,
+        files: List[str],
+        labels: Optional[List[int]] = None,
+        desc: Optional[str] = None,
+        numpy: bool = False,
+    ) -> Dict[str, Union[torch.Tensor, np.ndarray]]:
         dataset_config = DatasetConfig(
             frame_length=self.config.evaluation.frame_length,
             base_path=self.config.dataset.base_path,

@@ -1,26 +1,29 @@
+from typing import Tuple
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
 from sslsv.utils.distributed import gather, get_rank, get_world_size
 
 
 class SimCLRLoss(nn.Module):
 
-    def __init__(self, temperature=0.2):
+    def __init__(self, temperature: float = 0.2):
         super().__init__()
 
         self.temperature = temperature
 
     @staticmethod
     def create_contrastive_masks(
-        N,
-        V_A,
-        V_B,
-        rank,
-        world_size,
-        discard_identity=True,
-    ):
+        N: int,
+        V_A: int,
+        V_B: int,
+        rank: int,
+        world_size: int,
+        discard_identity: bool = True,
+    ) -> Tuple[T, T]:
         # Create a mask with the same shape as the similarity matrix
         # and by considering all pairs as negatives by default
         pos_mask = torch.zeros((N * V_A, N * V_B * world_size), dtype=torch.bool)
@@ -45,7 +48,7 @@ class SimCLRLoss(nn.Module):
 
         return pos_mask, neg_mask
 
-    def forward(self, Z_1, Z_2):
+    def forward(self, Z_1: T, Z_2: T) -> T:
         N, D = Z_1.size()
 
         Z = torch.cat((Z_1, Z_2), dim=0)

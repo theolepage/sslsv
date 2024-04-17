@@ -1,9 +1,13 @@
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
 from dataclasses import dataclass
 
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMomentumMethod import (
     BaseMomentumMethod,
     BaseMomentumMethodConfig,
@@ -40,7 +44,11 @@ class MoCoConfig(BaseMomentumMethodConfig):
 
 class MoCo(BaseMomentumMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: MoCoConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.epoch = 0
@@ -76,7 +84,7 @@ class MoCo(BaseMomentumMethod):
         self.loss_fn = MoCoLoss(config.temperature)
 
     @torch.no_grad()
-    def _batch_shuffle_ddp(self, x):
+    def _batch_shuffle_ddp(self, x: T) -> Tuple[T, T]:
         x_gather = gather(x)
 
         idx_shuffle = torch.randperm(x_gather.size(0), device=get_rank())
@@ -90,14 +98,14 @@ class MoCo(BaseMomentumMethod):
         return x_gather[idx_this], idx_unshuffle
 
     @torch.no_grad()
-    def _batch_unshuffle_ddp(self, x, idx_unshuffle):
+    def _batch_unshuffle_ddp(self, x: T, idx_unshuffle: T) -> T:
         x_gather = gather(x)
 
         idx_this = idx_unshuffle.view(get_world_size(), -1)[get_rank()]
 
         return x_gather[idx_this]
 
-    def _compute_embeddings(self, X, momentum=False):
+    def _compute_embeddings(self, X: T, momentum: bool = False) -> T:
         if not momentum:
             if self.config.enable_projector:
                 return self.projector(self.encoder(X))
@@ -107,7 +115,7 @@ class MoCo(BaseMomentumMethod):
                 return self.projector_momentum(self.encoder_momentum(X))
             return self.encoder_momentum(X)
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
         if not training:
             return self.encoder(X)
 
@@ -124,23 +132,23 @@ class MoCo(BaseMomentumMethod):
 
         return Q_1, K_2, Q_2, K_1
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = []
         if self.config.enable_projector:
             extra_learnable_params = [{"params": self.projector.parameters()}]
         return super().get_learnable_params() + extra_learnable_params
 
-    def get_momentum_pairs(self):
+    def get_momentum_pairs(self) -> List[Tuple[nn.Module, nn.Module]]:
         extra_momentum_pairs = []
         if self.config.enable_projector:
             extra_momentum_pairs = [(self.projector, self.projector_momentum)]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
-    def on_train_epoch_start(self, epoch, max_epochs):
+    def on_train_epoch_start(self, epoch: int, max_epochs: int):
         self.epoch = epoch
 
     @torch.no_grad()
-    def _enqueue(self, keys):
+    def _enqueue(self, keys: T):
         batch_size = keys.size(1)
 
         assert self.queue_size % batch_size == 0
@@ -151,7 +159,7 @@ class MoCo(BaseMomentumMethod):
         self.queue_ptr[0] = (ptr + batch_size) % self.queue_size
 
     @torch.no_grad()
-    def _enqueue_labels(self, labels):
+    def _enqueue_labels(self, labels: T):
         batch_size = labels.size(0)
 
         assert self.queue_size % batch_size == 0
@@ -161,7 +169,14 @@ class MoCo(BaseMomentumMethod):
 
         self.queue_labels_ptr[0] = (ptr + batch_size) % self.queue_size
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, T, T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         Q_1, K_2, Q_2, K_1 = Z
 
         Q_1 = F.normalize(Q_1, p=2, dim=1)
@@ -186,9 +201,12 @@ class MoCo(BaseMomentumMethod):
         if self.config.prevent_class_collisions:
             self._enqueue_labels(gather(labels))
 
-        metrics = {
-            "train/loss": loss,
-            "train/tau": self.momentum_updater.tau,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+                "train/tau": self.momentum_updater.tau,
+            },
+        )
 
-        return loss, metrics
+        return loss

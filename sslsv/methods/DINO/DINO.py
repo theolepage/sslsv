@@ -1,10 +1,14 @@
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
+
 import numpy as np
 
-from dataclasses import dataclass
-
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMomentumMethod import (
     BaseMomentumMethod,
     BaseMomentumMethodConfig,
@@ -16,7 +20,13 @@ from .DINOLoss import DINOLoss
 
 class DINOHead(nn.Module):
 
-    def __init__(self, input_dim, hidden_dim, bottleneck_dim, output_dim):
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        bottleneck_dim: int,
+        output_dim: int,
+    ):
         super().__init__()
 
         self.mlp = nn.Sequential(
@@ -37,13 +47,13 @@ class DINOHead(nn.Module):
         self.last_layer.weight_g.data.fill_(1)
         self.last_layer.weight_g.requires_grad = False
 
-    def _init_weights(self, m):
+    def _init_weights(self, m: nn.Module):
         if isinstance(m, nn.Linear):
             torch.nn.init.trunc_normal_(m.weight, std=0.02)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x: T) -> T:
         x = self.mlp(x)
         x = F.normalize(x, p=2, dim=-1)
         x = self.last_layer(x)
@@ -64,12 +74,16 @@ class DINOConfig(BaseMomentumMethodConfig):
     student_temperature: float = 0.1
     teacher_temperature: float = 0.04
     teacher_temperature_warmup: float = 0.04
-    teacher_temperature_warmup_epochs: float = 10
+    teacher_temperature_warmup_epochs: int = 10
 
 
 class DINO(BaseMomentumMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: DINOConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.current_epoch = 0
@@ -99,7 +113,7 @@ class DINO(BaseMomentumMethod):
             teacher_temp_warmup_epochs=config.teacher_temperature_warmup_epochs,
         )
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T]]:
         if not training:
             return self.encoder_momentum(X)
 
@@ -124,15 +138,13 @@ class DINO(BaseMomentumMethod):
 
     def update_optim(
         self,
-        optimizer,
-        training_config,
-        step,
-        nb_steps,
-        nb_steps_per_epoch,
-    ):
-        init_lr = training_config.learning_rate
-        wd = training_config.weight_decay
-
+        optimizer: torch.optim.Optimizer,
+        init_lr: float,
+        init_wd: float,
+        step: int,
+        nb_steps: int,
+        nb_steps_per_epoch: int,
+    ) -> Tuple[float, float]:
         min_lr = 1e-5
         warmup_lr_schedule = np.linspace(0, init_lr, 10 * nb_steps_per_epoch)
         lr_schedule = min_lr + 0.5 * (init_lr - min_lr) * (
@@ -143,11 +155,11 @@ class DINO(BaseMomentumMethod):
 
         for i, param_group in enumerate(optimizer.param_groups):
             param_group["lr"] = lr
-            param_group["weight_decay"] = wd if i == 0 else 0
+            param_group["weight_decay"] = init_wd if i == 0 else 0
 
-        return lr, wd
+        return lr, init_wd
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = [{"params": self.head.parameters()}]
         params = super().get_learnable_params() + extra_learnable_params
 
@@ -166,23 +178,33 @@ class DINO(BaseMomentumMethod):
 
         return [{"params": regularized}, {"params": not_regularized}]
 
-    def get_momentum_pairs(self):
+    def get_momentum_pairs(self) -> List[Tuple[nn.Module, nn.Module]]:
         extra_momentum_pairs = [(self.head, self.head_momentum)]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         S, T = Z
 
         loss = self.loss_fn(S, T)
 
-        metrics = {
-            "train/loss": loss,
-            "train/tau": self.momentum_updater.tau,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+                "train/tau": self.momentum_updater.tau,
+            },
+        )
 
-        return loss, metrics
+        return loss
 
-    def on_train_epoch_start(self, epoch, max_epochs):
+    def on_train_epoch_start(self, epoch: int, max_epochs: int):
         self.current_epoch = epoch
         self.loss_fn.epoch = epoch
 

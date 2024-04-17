@@ -6,11 +6,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from dataclasses import dataclass
 
 import argparse
-from pathlib import Path
 
 import torch
 
+from sslsv.Config import Config
 from sslsv.datasets.Sampler import SamplerConfig
+from sslsv.methods._BaseMethod import BaseMethod
 from sslsv.methods.Supervised.Supervised import Supervised, SupervisedConfig
 from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, evaluate
 from sslsv.trainer.Trainer import OptimizerEnum, Trainer
@@ -24,11 +25,15 @@ class ClassifierConfig(SupervisedConfig):
 
 class Classifier(Supervised):
 
-    def __init__(self, config, model):
+    def __init__(self, config: Config, model: BaseMethod):
         super().__init__(ClassifierConfig(), lambda: model.encoder)
 
 
-def get_model_name_suffix(nb_samples_per_spk, fine_tune, supervised):
+def get_model_name_suffix(
+    nb_samples_per_spk: int,
+    fine_tune: bool,
+    supervised: bool,
+) -> str:
     suffix = "_label-efficient-"
     suffix += str(nb_samples_per_spk) + "-"
     if supervised:
@@ -38,7 +43,12 @@ def get_model_name_suffix(nb_samples_per_spk, fine_tune, supervised):
     return suffix
 
 
-def train(args, nb_samples_per_spk, fine_tune=False, supervised=False):
+def train(
+    args: argparse.Namespace,
+    nb_samples_per_spk: int,
+    fine_tune: bool = False,
+    supervised: bool = False,
+):
     config = load_config(args.config)
 
     config.dataset.sampler = SamplerConfig(nb_samples_per_spk=nb_samples_per_spk)

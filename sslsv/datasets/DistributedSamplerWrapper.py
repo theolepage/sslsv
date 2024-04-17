@@ -1,3 +1,6 @@
+from typing import Iterable, Optional
+
+import torch
 from torch.utils.data import DistributedSampler
 
 from sslsv.utils.distributed import get_rank, get_world_size
@@ -7,14 +10,19 @@ import math
 
 class DistributedSamplerWrapper(DistributedSampler):
 
-    def __init__(self, sampler, world_size=None, rank=None):
+    def __init__(
+        self,
+        sampler: torch.utils.data.Sampler,
+        world_size: Optional[int] = None,
+        rank: Optional[int] = None,
+    ):
         self.sampler = sampler
 
         self.num_replicas = world_size if world_size else get_world_size()
         self.rank = rank if rank else get_rank()
         self.num_samples = 0
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[int]:
         indices = list(self.sampler.__iter__())
 
         self.num_samples = math.ceil(len(indices) / self.num_replicas)
@@ -32,5 +40,5 @@ class DistributedSamplerWrapper(DistributedSampler):
 
         return iter(indices)
 
-    def set_epoch(self, epoch):
+    def set_epoch(self, epoch: int):
         self.sampler.set_epoch(epoch)

@@ -1,8 +1,8 @@
-import torch
-from torch import nn
-
 from dataclasses import dataclass, field
 from typing import List
+
+import torch
+from torch import nn
 
 from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
@@ -21,7 +21,7 @@ class TDNNConfig(BaseEncoderConfig):
 
 class TDNNBlock(nn.Module):
 
-    def __init__(self, in_dim, out_dim, kernel_size, dilation):
+    def __init__(self, in_dim: int, out_dim: int, kernel_size: int, dilation: int):
         super().__init__()
 
         self.conv = nn.Conv1d(
@@ -30,13 +30,13 @@ class TDNNBlock(nn.Module):
         self.activation = nn.LeakyReLU()
         self.bn = nn.BatchNorm1d(out_dim)
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         return self.bn(self.activation(self.conv(X)))
 
 
 class TDNN(BaseEncoder):
 
-    def __init__(self, config):
+    def __init__(self, config: TDNNConfig):
         super().__init__(config)
 
         self.blocks = nn.Sequential(
@@ -53,7 +53,7 @@ class TDNN(BaseEncoder):
 
         self.last_fc = nn.Linear(config.channels[-1] * 2, config.encoder_dim)
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         Z = super().forward(X)
         # Z shape: (B, C, L) = (B, 40, 200)
 

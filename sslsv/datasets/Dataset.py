@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Dict, List, Optional, Tuple, Union
+
 from pathlib import Path
+import numpy as np
 
 import torch
 from torch.utils.data import Dataset as TorchDataset
@@ -36,10 +39,10 @@ class Dataset(TorchDataset):
 
     def __init__(
         self,
-        config,
-        files,
-        labels=None,
-        num_frames=1,
+        config: DatasetConfig,
+        files: List[str],
+        labels: Optional[List[int]] = None,
+        num_frames: int = 1,
     ):
         super().__init__()
 
@@ -54,18 +57,20 @@ class Dataset(TorchDataset):
                 self.config.augmentation, self.config.base_path
             )
 
-    def __len__(self):
+    def __len__(self) -> int:
         if self.config.max_samples:
             return min(len(self.files), self.config.max_samples)
         return len(self.files)
 
-    def preprocess_data(self, data, augment=True):
+    def preprocess_data(self, data: np.ndarray, augment: bool = True) -> np.ndarray:
         if augment and self.augmentation:
             assert data.ndim == 2 and data.shape[0] == 1  # (1, T)
             data = self.augmentation(data)
         return data
 
-    def __getitem__(self, i):
+    def __getitem__(
+        self, i: int
+    ) -> Tuple[int, torch.Tensor, Dict[str, Union[str, int]]]:
         data = load_audio(
             self.config.base_path / self.files[i],
             frame_length=self.config.frame_length,

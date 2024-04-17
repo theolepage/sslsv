@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+from typing import Callable
 
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
 
 from .VICRegLoss import VICRegLoss
@@ -15,7 +17,11 @@ class VICRegConfig(BaseSiameseMethodConfig):
 
 class VICReg(BaseSiameseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: VICRegConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.loss_fn = VICRegLoss(

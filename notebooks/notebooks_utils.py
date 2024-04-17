@@ -1,10 +1,27 @@
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
 import torch
 import pandas as pd
 
+from sslsv.Config import Config
+from sslsv.methods._BaseMethod import BaseMethod
+from sslsv.evaluations._BaseEvaluation import BaseEvaluation, EvaluationTaskConfig
 from sslsv.utils.helpers import load_config, load_model
 
 
-def load_models(configs, override_names={}):
+@dataclass
+class Model:
+
+    model: BaseMethod
+    config: Config
+    device: torch.device
+
+
+def load_models(
+    configs: List[str],
+    override_names: Dict[str, str] = {},
+) -> Dict[str, Model]:
     models = {}
 
     for config_path in configs:
@@ -21,16 +38,17 @@ def load_models(configs, override_names={}):
         if model_name in override_names.keys():
             model_name = override_names[model_name]
 
-        models[model_name] = {
-            "model": model,
-            "config": config,
-            "device": device,
-        }
+        models[model_name] = Model(model, config, device)
 
     return models
 
 
-def evaluate_models(models, evaluation_cls, task_config, return_evals=False):
+def evaluate_models(
+    models: Dict[str, Model],
+    evaluation_cls: BaseEvaluation,
+    task_config: EvaluationTaskConfig,
+    return_evals: bool = False,
+) -> Optional[List[BaseEvaluation]]:
     evaluations = []
 
     for model_name, model_entry in models.items():
@@ -58,7 +76,7 @@ def evaluate_models(models, evaluation_cls, task_config, return_evals=False):
         return evaluations
 
 
-def create_metrics_df(models):
+def create_metrics_df(models: Dict[str, Model]) -> pd.DataFrame:
     df = pd.DataFrame()
 
     for model_name, model_entry in models.items():

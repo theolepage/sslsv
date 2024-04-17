@@ -1,10 +1,13 @@
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
+
 import math
 
 import torch
 from torch import nn
+from torch import Tensor as T
 
-from dataclasses import dataclass
-
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 
 from .SimCLRCustomLoss import SimCLRCustomLoss, SimCLRCustomLossEnum
@@ -38,7 +41,11 @@ class SimCLRCustomConfig(BaseMethodConfig):
 
 class SimCLRCustom(BaseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: SimCLRCustomConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.epoch = 0
@@ -51,9 +58,19 @@ class SimCLRCustom(BaseMethod):
                 nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
             )
 
-        self.loss_fn = SimCLRCustomLoss(config)
+        self.loss_fn = SimCLRCustomLoss(
+            enable_multi_views=config.enable_multi_views,
+            loss=config.loss,
+            loss_scale=config.loss_scale,
+            loss_margin=config.loss_margin,
+            loss_margin_simo=config.loss_margin_simo,
+            loss_margin_simo_K=config.loss_margin_simo_K,
+            loss_margin_simo_alpha=config.loss_margin_simo_alpha,
+            loss_margin_learnable=config.loss_margin_learnable,
+            loss_reg_weight=config.loss_reg_weight,
+        )
 
-    def _compute_embeddings(self, X):
+    def _compute_embeddings(self, X: T) -> T:
         Y = self.encoder(X)
 
         if self.config.enable_projector:
@@ -61,7 +78,7 @@ class SimCLRCustom(BaseMethod):
 
         return Y
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, ...]]:
         if not training:
             return self.encoder(X)
 
@@ -82,7 +99,7 @@ class SimCLRCustom(BaseMethod):
 
         return Z
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = [{"params": self.loss_fn.parameters()}]
         if self.config.enable_projector:
             extra_learnable_params += [
@@ -90,7 +107,7 @@ class SimCLRCustom(BaseMethod):
             ]
         return super().get_learnable_params() + extra_learnable_params
 
-    def on_train_epoch_start(self, epoch, max_epochs):
+    def on_train_epoch_start(self, epoch: int, max_epochs: int):
         self.epoch = epoch
         self.max_epochs = max_epochs
 
@@ -105,7 +122,14 @@ class SimCLRCustom(BaseMethod):
             / 2
         )
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, ...],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         loss_margin = self.config.loss_margin
 
         if self.config.loss_margin_scheduler:
@@ -114,9 +138,12 @@ class SimCLRCustom(BaseMethod):
 
         loss = self.loss_fn(Z)
 
-        metrics = {
-            "train/loss": loss,
-            "train/margin": loss_margin,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+                "train/margin": loss_margin,
+            },
+        )
 
-        return loss, metrics
+        return loss

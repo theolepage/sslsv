@@ -11,7 +11,7 @@ from sslsv.trainer.Trainer import Trainer
 from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, evaluate
 
 
-def train(args):
+def train(args: argparse.Namespace):
     config = load_config(args.config)
     train_dataloader = load_train_dataloader(config)
 

@@ -166,7 +166,7 @@ def create_vox2_train_csv():
     df.to_csv(VOX2_TRAIN_FILE, index=False)
 
 
-def create_vox1_train_csv_gender(test_split=0.7):
+def create_vox1_train_csv_gender(test_split: float = 0.7):
     df = pd.read_csv(VOX1_TRAIN_FILE)
 
     # Add gender column

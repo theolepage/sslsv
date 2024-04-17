@@ -1,10 +1,13 @@
+from typing import Any, Dict, List, Tuple
+from enum import Enum
+
 from pathlib import Path
 import random
 import os
+
 import numpy as np
 import pandas as pd
 
-from enum import Enum
 from ruamel.yaml import YAML
 from dacite import from_dict
 from dacite import Config as DaciteConfig
@@ -29,6 +32,7 @@ from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 from sslsv.encoders.ECAPATDNN import ECAPATDNN, ECAPATDNNConfig
 
 # Methods
+from sslsv.methods._BaseMethod import BaseMethod
 from sslsv.methods.Supervised.Supervised import Supervised, SupervisedConfig
 from sslsv.methods.CPC.CPC import CPC, CPCConfig
 from sslsv.methods.LIM.LIM import LIM, LIMConfig
@@ -47,6 +51,7 @@ from sslsv.methods.Combiner.Combiner import Combiner, CombinerConfig
 from sslsv.methods.SimCLRCustom.SimCLRCustom import SimCLRCustom, SimCLRCustomConfig
 
 # Evaluations
+from sslsv.evaluations._BaseEvaluation import EvaluationTaskConfig
 from sslsv.evaluations.CosineSVEvaluation import (
     CosineSVEvaluation,
     CosineSVEvaluationTaskConfig,
@@ -96,7 +101,11 @@ REGISTERED_METHODS = {
 }
 
 
-def bind_custom_config(data, key, registered_dict):
+def bind_custom_config(
+    data: Dict[str, Any],
+    key: str,
+    registered_dict: Dict[str, Tuple[Any, Any]],
+) -> Any:
     type_ = data[key]["type"]
     if type_ not in registered_dict.keys():
         raise Exception("{} `{}` not supported".format(key.capitalize(), type_))
@@ -106,7 +115,11 @@ def bind_custom_config(data, key, registered_dict):
     return res
 
 
-def bind_evaluate_tasks_config(data, key, default_config):
+def bind_evaluate_tasks_config(
+    data: Dict[str, Any],
+    key: str,
+    default_config: List[EvaluationTaskConfig],
+) -> List[EvaluationTaskConfig]:
     if "evaluation" not in data.keys() or key not in data["evaluation"].keys():
         return default_config
 
@@ -129,7 +142,7 @@ def bind_evaluate_tasks_config(data, key, default_config):
     return tasks
 
 
-def load_config(path, verbose=True):
+def load_config(path: str, verbose: bool = True) -> Config:
     data = YAML(typ="safe", pure=True).load(open(path, "r"))
     config = from_dict(Config, data, DaciteConfig(cast=[Enum]))
 
@@ -166,13 +179,13 @@ def load_config(path, verbose=True):
     return config
 
 
-def seed_dataloader_worker(worker_id):
+def seed_dataloader_worker(worker_id: int):
     worker_seed = torch.initial_seed() % 2**32
     random.seed(worker_seed)
     np.random.seed(worker_seed)
 
 
-def load_train_dataloader(config):
+def load_train_dataloader(config: Config) -> torch.utils.data.DataLoader:
     df = pd.read_csv(config.dataset.base_path / config.dataset.train)
     if "Set" in df.columns:
         df = df[df["Set"] == "train"]
@@ -209,7 +222,7 @@ def load_train_dataloader(config):
     return dataloader
 
 
-def load_model(config):
+def load_model(config: Config) -> BaseMethod:
     encoder_cls = REGISTERED_ENCODERS[config.encoder.__type__][0]
     create_encoder_fn = lambda: encoder_cls(config.encoder)
 
@@ -219,14 +232,23 @@ def load_model(config):
     return model
 
 
-def evaluate(model, config, device, validation=False, verbose=True):
-    def add_prefix_to_dict_keys(old_dict, prefix):
+def evaluate(
+    model: BaseMethod,
+    config: Config,
+    device: torch.device,
+    validation: bool = False,
+    verbose: bool = True,
+) -> Dict[str, float]:
+    def add_prefix_to_dict_keys(
+        old_dict: Dict[str, Any],
+        prefix: str,
+    ) -> Dict[str, Any]:
         new_dict = {}
         for old_key in old_dict.keys():
             new_dict[f"{prefix}{old_key}"] = old_dict[old_key]
         return new_dict
 
-    def evaluate_(tasks, prefix):
+    def evaluate_(tasks: List[EvaluationTaskConfig], prefix: str) -> Dict[str, float]:
         if not validation and prefix == "val":
             return {}
 

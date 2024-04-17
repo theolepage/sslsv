@@ -24,7 +24,7 @@ def test_basic():
     X2 = torch.randn(256, 32000).cuda()
 
     Z = model(X1, training=True)
-    loss, _ = model.module.train_step(Z)
+    loss = model.module.train_step(Z, step=0)
 
     optimizer.zero_grad()
     loss.backward()
@@ -32,4 +32,4 @@ def test_basic():
 
     Z = model(X2)
 
-    assert pytest.approx(Z.sum().item()) == 2418.97265625
+    assert pytest.approx(Z.sum().item()) == 2419.561279296875

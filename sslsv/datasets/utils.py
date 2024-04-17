@@ -1,12 +1,19 @@
+from typing import Optional, Tuple
+
 import numpy as np
 import soundfile as sf
 
 
-def read_audio(path):
+def read_audio(path: str) -> Tuple[np.ndarray, int]:
     return sf.read(path)
 
 
-def load_audio(path, frame_length, num_frames=1, min_length=None):
+def load_audio(
+    path: str,
+    frame_length: int,
+    num_frames: int = 1,
+    min_length: Optional[int] = None,
+) -> np.ndarray:
     audio, sr = read_audio(path)
 
     # Convert to mono if audio is stereo

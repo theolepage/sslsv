@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple
 
+from pathlib import Path
 import glob
 import os
 import numpy as np
@@ -27,7 +28,7 @@ class DataAugmentationConfig:
 
 class DataAugmentation:
 
-    def __init__(self, config, base_path):
+    def __init__(self, config: DataAugmentationConfig, base_path: Path):
         self.config = config
 
         self.rir_path = base_path / "simulated_rirs" / "*/*/*.wav"
@@ -41,7 +42,7 @@ class DataAugmentation:
                 self.musan_files[category] = []
             self.musan_files[category].append(file)
 
-    def reverberate(self, audio):
+    def reverberate(self, audio: np.ndarray) -> np.ndarray:
         rir_file = random.choice(self.rir_files)
 
         rir, fs = read_audio(rir_file)
@@ -50,7 +51,7 @@ class DataAugmentation:
 
         return convolve(audio, rir, mode="full")[:, : audio.shape[1]]
 
-    def _get_noise_snr(self, category):
+    def _get_noise_snr(self, category: str) -> int:
         CATEGORY_TO_SNR = {
             "noise": self.config.musan_noise_snr,
             "speech": self.config.musan_speech_snr,
@@ -59,7 +60,7 @@ class DataAugmentation:
         min_, max_ = CATEGORY_TO_SNR[category]
         return random.uniform(min_, max_)
 
-    def _get_noise_num(self, category):
+    def _get_noise_num(self, category: str) -> int:
         CATEGORY_TO_NUM = {
             "noise": self.config.musan_noise_num,
             "speech": self.config.musan_speech_num,
@@ -68,7 +69,7 @@ class DataAugmentation:
         min_, max_ = CATEGORY_TO_NUM[category]
         return random.randint(min_, max_)
 
-    def add_noise(self, audio, category):
+    def add_noise(self, audio: np.ndarray, category: str) -> np.ndarray:
         noise_files = random.sample(
             self.musan_files[category], self._get_noise_num(category)
         )
@@ -88,7 +89,7 @@ class DataAugmentation:
         noises = np.sum(np.concatenate(noises, axis=0), axis=0, keepdims=True)
         return noises + audio
 
-    def __call__(self, audio):
+    def __call__(self, audio: np.ndarray) -> np.ndarray:
         if self.config.musan:
             for _ in range(self.config.musan_nb_iters):
                 musan_category = random.randint(0, 2)

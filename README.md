@@ -145,7 +145,7 @@ sslsv runs on Python 3.8 with the following dependencies.
 | prettyprinter         | *         |
 | tqdm                  | *         |
 
-**Note**: developers will also need `pre-commit` and `twine` to work on this project.
+**Note**: developers will also need `pytest`, `pre-commit` and `twine` to work on this project.
 
 ---
 

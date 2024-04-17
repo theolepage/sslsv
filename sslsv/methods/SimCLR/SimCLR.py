@@ -1,7 +1,9 @@
+from dataclasses import dataclass
+from typing import Callable
+
 from torch import nn
 
-from dataclasses import dataclass
-
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
 
 from .SimCLRLoss import SimCLRLoss
@@ -18,7 +20,11 @@ class SimCLRConfig(BaseSiameseMethodConfig):
 
 class SimCLR(BaseSiameseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: SimCLRConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         if self.config.enable_projector:

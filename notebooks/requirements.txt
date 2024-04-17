@@ -1,3 +1,4 @@
 plotnine
 plotly
 seaborn
+matplotlib

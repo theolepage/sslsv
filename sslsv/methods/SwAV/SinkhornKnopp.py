@@ -2,6 +2,7 @@
 
 import torch
 from torch import nn
+from torch import Tensor as T
 
 import torch.distributed as dist
 from sslsv.utils.distributed import is_dist_initialized, get_world_size
@@ -9,14 +10,14 @@ from sslsv.utils.distributed import is_dist_initialized, get_world_size
 
 class SinkhornKnopp(nn.Module):
 
-    def __init__(self, nb_iters=3, epsilon=0.05):
+    def __init__(self, nb_iters: int = 3, epsilon: float = 0.05):
         super().__init__()
 
         self.nb_iters = nb_iters
         self.epsilon = epsilon
 
     @torch.no_grad()
-    def forward(self, Q):
+    def forward(self, Q: T) -> T:
         B, K = Q.size()
         B *= get_world_size()
 

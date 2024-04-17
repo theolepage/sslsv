@@ -1,7 +1,9 @@
+from dataclasses import dataclass
+from typing import Callable
+
 from torch import nn
 
-from dataclasses import dataclass
-
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
 
 from .IterNorm import IterNorm
@@ -18,7 +20,11 @@ class VIbCRegConfig(BaseSiameseMethodConfig):
 
 class VIbCReg(BaseSiameseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: VIbCRegConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(

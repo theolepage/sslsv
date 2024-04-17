@@ -1,23 +1,26 @@
+from typing import Tuple
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
 from sslsv.utils.distributed import gather, get_rank, get_world_size
 
 
 class InfoNCELoss(nn.Module):
 
-    def __init__(self, temperature=0.2):
+    def __init__(self, temperature: float = 0.2):
         super().__init__()
 
         self.temperature = temperature
 
     @staticmethod
-    def dot(Z_a, Z_b):
+    def dot(Z_a: T, Z_b: T) -> T:
         return F.normalize(Z_a, p=2, dim=1) @ F.normalize(Z_b, p=2, dim=1).T
 
     @staticmethod
-    def determine_accuracy(Z_a, Z_b):
+    def determine_accuracy(Z_a: T, Z_b: T) -> T:
         N, D = Z_a.size()
 
         dot = InfoNCELoss.dot(Z_a, Z_b)
@@ -28,7 +31,7 @@ class InfoNCELoss(nn.Module):
         accuracy = torch.count_nonzero(preds_acc) / N
         return accuracy
 
-    def _create_masks(self, N):
+    def _create_masks(self, N: int) -> Tuple[T, T]:
         indexes = torch.arange(N)
         p1 = N * get_rank()
         p2 = N * (get_rank() + 1)
@@ -41,7 +44,7 @@ class InfoNCELoss(nn.Module):
 
         return pos_mask, neg_mask
 
-    def forward(self, Z_a, Z_b):
+    def forward(self, Z_a: T, Z_b: T) -> T:
         N, D = Z_a.size()
 
         dot = InfoNCELoss.dot(Z_a, gather(Z_b)) / self.temperature

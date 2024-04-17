@@ -104,18 +104,18 @@ class iterative_normalization_py(torch.autograd.Function):
         return grad_input, None, None, None, None, None, None, None
 
 
-class IterNorm(torch.nn.Module):
+class IterNorm(nn.Module):
 
     def __init__(
         self,
-        nb_features,
-        nb_groups=64,
-        nb_channels=None,
-        T=5,
-        dim=2,
-        eps=1e-5,
-        momentum=0.1,
-        affine=True,
+        nb_features: int,
+        nb_groups: int = 64,
+        nb_channels: int = None,
+        T: int = 5,
+        dim: int = 2,
+        eps: float = 1e-5,
+        momentum: float = 0.1,
+        affine: bool = True,
     ):
         super(IterNorm, self).__init__()
         # assert dim == 4, 'IterNorm does not support 2D'
@@ -158,7 +158,7 @@ class IterNorm(torch.nn.Module):
             torch.nn.init.ones_(self.weight)
             torch.nn.init.zeros_(self.bias)
 
-    def forward(self, X: torch.Tensor):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         X_hat = iterative_normalization_py.apply(
             X,
             self.running_mean,
@@ -174,7 +174,7 @@ class IterNorm(torch.nn.Module):
 
         return X_hat
 
-    def extra_repr(self):
+    def extra_repr(self) -> str:
         return (
             f"{self.nb_features}, "
             f"nb_channels={self.nb_channels}, "

@@ -1,14 +1,19 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict, List, Tuple
 
+import torch
 import torch.nn.functional as F
 
+from pathlib import Path
 import numpy as np
 
 from sslsv.evaluations._BaseEvaluation import BaseEvaluation, EvaluationTaskConfig
 
 
-def compute_error_rates(scores, targets):
+def compute_error_rates(
+    scores: List[float],
+    targets: List[int],
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     scores = np.array(scores)
     targets = np.array(targets)
 
@@ -36,14 +41,14 @@ def compute_error_rates(scores, targets):
     return fprs, fnrs, scores[sorted_idx]
 
 
-def cllr(scores, labels):
+def cllr(scores: List[float], labels: List[int]) -> float:
     scores = np.array(scores)
     labels = np.array(labels)
 
     target_llrs = scores[labels == 1]
     nontarget_llrs = scores[labels == 0]
 
-    def neglogsigmoid(lodds):
+    def neglogsigmoid(lodds: np.ndarray) -> np.ndarray:
         # -log(sigmoid(x))
         return np.log1p(np.exp(-lodds))
 
@@ -56,16 +61,22 @@ def cllr(scores, labels):
         / np.log(2)
     )
 
-    return cllr
+    return cllr.item()
 
 
-def eer(fprs, fnrs):
+def eer(fprs: np.ndarray, fnrs: np.ndarray) -> float:
     idx = np.nanargmin(np.abs(fnrs - fprs))
     eer = max(fprs[idx], fnrs[idx]) * 100
-    return eer
+    return eer.item()
 
 
-def mindcf(fprs, fnrs, p_target=0.01, c_miss=1, c_fa=1):
+def mindcf(
+    fprs: np.ndarray,
+    fnrs: np.ndarray,
+    p_target: float = 0.01,
+    c_miss: float = 1,
+    c_fa: float = 1,
+) -> float:
     # Equations are from Section 3 of
     # NIST 2016 Speaker Recognition Evaluation Plan
 
@@ -82,10 +93,17 @@ def mindcf(fprs, fnrs, p_target=0.01, c_miss=1, c_fa=1):
     c_def = min(c_miss * p_target, c_fa * (1 - p_target))
     min_dcf = min_c_det / c_def
 
-    return min_dcf
+    return min_dcf.item()
 
 
-def actdcf(fprs, fnrs, sorted_scores, p_target=0.01, c_miss=1, c_fa=1):
+def actdcf(
+    fprs: np.ndarray,
+    fnrs: np.ndarray,
+    sorted_scores: np.ndarray,
+    p_target: float = 0.01,
+    c_miss: float = 1,
+    c_fa: float = 1,
+) -> float:
     beta = np.log((c_fa / c_miss) * (1 - p_target) / p_target)
     i = sorted_scores.searchsorted(beta).item()
 
@@ -94,10 +112,10 @@ def actdcf(fprs, fnrs, sorted_scores, p_target=0.01, c_miss=1, c_fa=1):
     c_def = min(p_target, 1 - p_target)
     act_dcf = c_det / c_def
 
-    return act_dcf
+    return act_dcf.item()
 
 
-def avgrprec(trials):
+def avgrprec(trials: Dict[str, Tuple[List[int], List[float]]]) -> float:
     rprec = []
 
     for e, (targets, scores) in trials.items():
@@ -109,7 +127,7 @@ def avgrprec(trials):
         rprec.append(sum(targets_sorted_by_scores[-r:]) / r)
 
     avgrprec = np.mean(rprec)
-    return avgrprec
+    return avgrprec.item()
 
 
 @dataclass
@@ -145,18 +163,24 @@ class SpeakerVerificationEvaluation(BaseEvaluation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _extract_embeddings_inference(self, X):
+    def _extract_embeddings_inference(self, X: torch.Tensor) -> torch.Tensor:
         Y = self.model(X)
         return Y
 
-    def _extract_embeddings_post(self, Y):
+    def _extract_embeddings_post(self, Y: torch.Tensor) -> torch.Tensor:
         Y = F.normalize(Y, p=2, dim=-1)
         return Y
 
-    def _get_sv_score(self, a, b):
+    def _get_sv_score(self, enrol: str, test: str) -> float:
         raise NotImplementedError
 
-    def _get_metrics(self, trials, scores, targets, file):
+    def _get_metrics(
+        self,
+        trials: Dict[str, Tuple[List[int], List[float]]],
+        scores: List[float],
+        targets: List[int],
+        file: Path,
+    ) -> Dict[str, float]:
         metrics = {}
 
         fprs, fnrs, sorted_scores = compute_error_rates(scores, targets)
@@ -191,7 +215,7 @@ class SpeakerVerificationEvaluation(BaseEvaluation):
 
         return metrics
 
-    def _evaluate_trials(self, file):
+    def _evaluate_trials(self, file: Path) -> Dict[str, float]:
         trials, scores, targets = {}, [], []
 
         with open(self.config.dataset.base_path / file) as f:
@@ -215,7 +239,7 @@ class SpeakerVerificationEvaluation(BaseEvaluation):
 
         return self._get_metrics(trials, scores, targets, file)
 
-    def evaluate(self):
+    def evaluate(self) -> Dict[str, float]:
         self._prepare_evaluation()
 
         metrics = {}

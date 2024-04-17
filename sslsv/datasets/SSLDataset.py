@@ -1,12 +1,17 @@
+from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as np
 
 import torch
 
-from sslsv.datasets.Dataset import Dataset, FrameSamplingEnum
+from sslsv.datasets.Dataset import Dataset, DatasetConfig, FrameSamplingEnum
 from sslsv.datasets.utils import load_audio
 
 
-def sample_frames(audio, frame_length):
+def sample_frames(
+    audio: np.ndarray,
+    frame_length: int,
+) -> List[np.ndarray]:
     audio_length = audio.shape[1]
     assert audio_length >= 2 * frame_length, "audio_length should >= 2 * frame_length"
 
@@ -29,13 +34,13 @@ def sample_frames(audio, frame_length):
 
 
 def sample_frames_dino(
-    audio,
-    frame_length,
-    large_frames_count=2,
-    large_frames_length=4 * 16000,
-    small_frames_count=4,
-    small_frames_length=2 * 16000,
-):
+    audio: np.ndarray,
+    frame_length: int,
+    large_frames_count: int = 2,
+    large_frames_length: int = 4 * 16000,
+    small_frames_count: int = 4,
+    small_frames_length: int = 2 * 16000,
+) -> List[np.ndarray]:
     audio_length = audio.shape[1]
 
     frames = []
@@ -62,10 +67,16 @@ class SSLDataset(Dataset):
         FrameSamplingEnum.DINO: sample_frames_dino,
     }
 
-    def __init__(self, config, files, labels=None, num_frames=1):
+    def __init__(
+        self,
+        config: DatasetConfig,
+        files: List[str],
+        labels: Optional[List[int]] = None,
+        num_frames: int = 1,
+    ):
         super().__init__(config, files, labels, num_frames)
 
-    def _pad_smaller_frames(self, frames):
+    def _pad_smaller_frames(self, frames: List[np.ndarray]) -> List[np.ndarray]:
         max_frame_length = max([f.shape[1] for f in frames])
         res = []
         for frame in frames:
@@ -80,7 +91,9 @@ class SSLDataset(Dataset):
             )
         return res
 
-    def __getitem__(self, i):
+    def __getitem__(
+        self, i: int
+    ) -> Tuple[int, torch.Tensor, Dict[str, Union[str, int]]]:
         if isinstance(i, int):
             file, label = self.files[i], self.labels[i]
             data = load_audio(

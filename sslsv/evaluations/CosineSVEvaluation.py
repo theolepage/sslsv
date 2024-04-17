@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import List
 
 import torch
+
+from pathlib import Path
 import pandas as pd
 
 from sslsv.evaluations._SpeakerVerificationEvaluation import (
@@ -42,7 +45,7 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
             )
         )
 
-    def _extract_test_embeddings(self, trials):
+    def _extract_test_embeddings(self, trials: List[Path]):
         test_files = list(
             dict.fromkeys(
                 [
@@ -64,10 +67,10 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
 
         self._extract_test_embeddings(self.task_config.trials)
 
-    def _compute_score(self, enrol, test):
+    def _compute_score(self, enrol: torch.Tensor, test: torch.Tensor) -> torch.Tensor:
         return torch.mean(enrol @ test.T, dim=(-2, -1))
 
-    def _compute_norm_stats(self, enrol, test):
+    def _compute_norm_stats(self, enrol: torch.Tensor, test: torch.Tensor):
         cohort_size = self.task_config.score_norm_cohort_size
 
         score_e_c = self._compute_score(self.train_embeddings, enrol)
@@ -80,7 +83,7 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
         self.mean_t_c = torch.mean(score_t_c)
         self.std_t_c = torch.std(score_t_c)
 
-    def _normalize_score(self, score):
+    def _normalize_score(self, score: torch.Tensor) -> torch.Tensor:
         if self.task_config.score_norm == ScoreNormEnum.ZNORM:
             score = (score - self.mean_e_c) / self.std_e_c
         elif self.task_config.score_norm == ScoreNormEnum.TNORM:
@@ -92,9 +95,9 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
 
         return score
 
-    def _get_sv_score(self, a, b):
-        enrol = self.test_embeddings[a]
-        test = self.test_embeddings[b]
+    def _get_sv_score(self, enrol: str, test: str) -> float:
+        enrol = self.test_embeddings[enrol]
+        test = self.test_embeddings[test]
 
         if self.task_config.score_norm.value:
             self._compute_norm_stats(enrol, test)

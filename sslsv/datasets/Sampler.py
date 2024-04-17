@@ -1,17 +1,19 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Iterable, Optional
 
 from collections import defaultdict
 
 import numpy as np
 from torch.utils.data import Sampler as TorchSampler
 
+from sslsv.datasets import Dataset
+
 
 @dataclass
 class SamplerConfig:
 
     enable: bool = True
-    nb_samples_per_spk: Union[int, None] = None
+    nb_samples_per_spk: Optional[int] = None
     create_contrastive_pairs: bool = False
     prevent_class_collisions: bool = False
     randomize_at_each_epoch: bool = False
@@ -19,7 +21,13 @@ class SamplerConfig:
 
 class Sampler(TorchSampler):
 
-    def __init__(self, dataset, batch_size, config, seed=0):
+    def __init__(
+        self,
+        dataset: Dataset,
+        batch_size: int,
+        config: SamplerConfig,
+        seed: int = 0,
+    ):
         self.labels = dataset.labels
         self.batch_size = batch_size
         self.config = config
@@ -28,13 +36,13 @@ class Sampler(TorchSampler):
         self.epoch = 0
         self.count = 0
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.count
 
-    def set_epoch(self, epoch):
+    def set_epoch(self, epoch: int):
         self.epoch = epoch
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[int]:
         if self.config.randomize_at_each_epoch:
             self.seed = self.seed + self.epoch
         rng = np.random.default_rng(seed=self.seed)

@@ -14,7 +14,7 @@ from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, 
 import idr_torch
 
 
-def train(args):
+def train(args: argparse.Namespace):
     world_size = idr_torch.size
     rank = idr_torch.rank
 

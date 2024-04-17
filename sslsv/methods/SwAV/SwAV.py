@@ -1,9 +1,12 @@
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
-from dataclasses import dataclass
-
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 
 from .SinkhornKnopp import SinkhornKnopp
@@ -33,7 +36,11 @@ class SwAVConfig(BaseMethodConfig):
 
 class SwAV(BaseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: SwAVConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         self.epoch = 0
@@ -62,7 +69,7 @@ class SwAV(BaseMethod):
 
         self.loss_fn = SwAVLoss(config.temperature)
 
-    def on_train_start(self, trainer):
+    def on_train_start(self):
         if self.config.queue_size > 0:
             self.register_buffer(
                 "queue",
@@ -70,11 +77,11 @@ class SwAV(BaseMethod):
                     2,
                     self.config.queue_size // get_world_size(),
                     self.config.projector_output_dim,
-                    device=trainer.device,
+                    device=self.trainer.device,
                 ),
             )
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
         if not training:
             return self.encoder(X)
 
@@ -89,17 +96,17 @@ class SwAV(BaseMethod):
 
         return Z_1, Z_2, P_1, P_2
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = [
             {"params": self.projector.parameters()},
             {"params": self.prototypes.parameters()},
         ]
         return super().get_learnable_params() + extra_learnable_params
 
-    def on_train_epoch_start(self, epoch, max_epochs):
+    def on_train_epoch_start(self, epoch: int, max_epochs: int):
         self.epoch = epoch
 
-    def _get_sk_assignments(self, preds):
+    def _get_sk_assignments(self, preds: List[T]) -> List[T]:
         N = preds[0].size(0)
 
         assignments = []
@@ -116,7 +123,14 @@ class SwAV(BaseMethod):
 
         return assignments
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, T, T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         Z_1, Z_2, P_1, P_2 = Z
 
         N, _ = Z_1.size()
@@ -132,11 +146,14 @@ class SwAV(BaseMethod):
             self.queue[0, :N] = Z_1.detach()
             self.queue[1, :N] = Z_2.detach()
 
-        metrics = {
-            "train/loss": loss,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+            },
+        )
 
-        return loss, metrics
+        return loss
 
     def on_after_backward(self):
         if self.epoch < self.config.freeze_prototypes_epochs:

@@ -1,16 +1,16 @@
+from dataclasses import dataclass
+from enum import Enum
+
 import torch
 from torch import nn
 import torch.nn.functional as F
-
-from dataclasses import dataclass
-from enum import Enum
 
 from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
 
 class ResNetBlock(nn.Module):
 
-    def __init__(self, in_size, out_size, stride):
+    def __init__(self, in_size: int, out_size: int, stride: int):
         super().__init__()
 
         self.conv1 = nn.Conv2d(
@@ -49,7 +49,7 @@ class ResNetBlock(nn.Module):
                 nn.BatchNorm2d(out_size),
             )
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         residual = X
         if self.downsample:
             residual = self.downsample(residual)
@@ -69,7 +69,7 @@ class ResNetBlock(nn.Module):
 
 class SELayer(nn.Module):
 
-    def __init__(self, in_size, reduction=8):
+    def __init__(self, in_size: int, reduction: int = 8):
         super().__init__()
 
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
@@ -80,7 +80,7 @@ class SELayer(nn.Module):
             nn.Sigmoid(),
         )
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         b, c, _, _ = X.size()
 
         Y = self.fc(self.avg_pool(X).view(b, c)).view(b, c, 1, 1)
@@ -89,7 +89,7 @@ class SELayer(nn.Module):
 
 class SelfAttentivePooling(nn.Module):
 
-    def __init__(self, out_size, dim=128):
+    def __init__(self, out_size: int, dim: int = 128):
         super().__init__()
 
         # self.attention = nn.Sequential(
@@ -105,7 +105,7 @@ class SelfAttentivePooling(nn.Module):
 
         self.sap_linear = nn.Linear(out_size, out_size)
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         b, c, h, w = X.size()
         # B 1 40 200
 
@@ -121,10 +121,10 @@ class SelfAttentivePooling(nn.Module):
 
 class StatsPooling(nn.Module):
 
-    def __init__(self, out_size):
+    def __init__(self, out_size: int):
         super().__init__()
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         X = X.view(X.size(0), -1, X.size(-1))  # B C L
 
         mean = torch.mean(X, dim=-1, keepdim=True)
@@ -161,7 +161,7 @@ class ResNet34(BaseEncoder):
         PoolingModeEnum.STATS: StatsPooling,
     }
 
-    def __init__(self, config):
+    def __init__(self, config: ResNet34Config):
         super().__init__(config)
 
         self.pooling = config.pooling
@@ -211,14 +211,20 @@ class ResNet34(BaseEncoder):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    def __make_block(self, num_layers, in_size, out_size, stride):
+    def __make_block(
+        self,
+        num_layers: int,
+        in_size: int,
+        out_size: int,
+        stride: int,
+    ) -> nn.Module:
         layers = []
         layers.append(ResNetBlock(in_size, out_size, stride))
         for i in range(1, num_layers):
             layers.append(ResNetBlock(out_size, out_size, 1))
         return nn.Sequential(*layers)
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         Z = super().forward(X)
         # Z: (B, C, L) = (B, 40, 200)
 

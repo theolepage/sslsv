@@ -3,6 +3,8 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
+from typing import Dict
+
 import argparse
 import torch
 import json
@@ -10,7 +12,9 @@ import json
 from sslsv.utils.helpers import load_config, load_model, evaluate as evaluate_
 
 
-def metrics_to_nested_dict(data):
+def metrics_to_nested_dict(
+    data: Dict[str, float]
+) -> Dict[str, Dict[str, Dict[str, float]]]:
     res = {}
 
     tasks = set([k.split("/")[1] for k in data.keys() if k.split("/")[0] == "test"])
@@ -47,7 +51,7 @@ def metrics_to_nested_dict(data):
     return res
 
 
-def print_metrics(metrics):
+def print_metrics(metrics: Dict[str, float]):
     metrics = metrics_to_nested_dict(metrics)
 
     for task in metrics.keys():
@@ -64,7 +68,7 @@ def print_metrics(metrics):
                 print(f"      {metric_name}:{space}{metric_value}")
 
 
-def evaluate(args):
+def evaluate(args: argparse.Namespace):
     config = load_config(args.config, verbose=not args.silent)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

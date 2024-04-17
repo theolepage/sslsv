@@ -1,20 +1,26 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch import Tensor as T
 
 from sslsv.utils.distributed import gather
 
 
 class VICRegLoss(nn.Module):
 
-    def __init__(self, inv_weight=1.0, var_weight=1.0, cov_weight=0.04):
+    def __init__(
+        self,
+        inv_weight: float = 1.0,
+        var_weight: float = 1.0,
+        cov_weight: float = 0.04,
+    ):
         super().__init__()
 
         self.inv_weight = inv_weight
         self.var_weight = var_weight
         self.cov_weight = cov_weight
 
-    def forward(self, Z_a, Z_b):
+    def forward(self, Z_a: T, Z_b: T) -> T:
         # Invariance loss
         inv_loss = F.mse_loss(Z_a, Z_b)
 

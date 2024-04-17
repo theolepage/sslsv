@@ -1,5 +1,6 @@
-import math
+from typing import Dict, List, Optional, Tuple
 
+import math
 import torch
 import numpy as np
 import pandas as pd
@@ -7,13 +8,18 @@ import pandas as pd
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 
+import matplotlib
+import matplotlib.pyplot as plt
+import plotnine
 from plotnine import *
+import plotly
 import plotly.graph_objects as go
 import seaborn as sns
-import matplotlib.pyplot as plt
+
+from notebooks.notebooks_utils import Model
 
 
-def _ppndf(p):
+def _ppndf(p: float) -> float:
     SPLIT = 0.42
     A0 = 2.5066282388
     A1 = -18.6150006252
@@ -56,7 +62,13 @@ def _ppndf(p):
     return round(retval, 5)
 
 
-def _determine_det_curve_pts(scores, targets, p_target=0.01, c_miss=10, c_fa=1):
+def _determine_det_curve_pts(
+    scores: List[float],
+    targets: List[int],
+    p_target: float = 0.01,
+    c_miss: float = 10,
+    c_fa: float = 1,
+) -> Tuple[Tuple[float, float], int, Tuple[float, float]]:
     pos = [s for i, s in enumerate(scores) if targets[i] == 1]
     neg = [s for i, s in enumerate(scores) if targets[i] == 0]
     pts_x = []
@@ -106,7 +118,7 @@ def _determine_det_curve_pts(scores, targets, p_target=0.01, c_miss=10, c_fa=1):
     return (pts_x, pts_y), eer_idx, mindcf_coords
 
 
-def det_curve(models):
+def det_curve(models: Dict[str, Model]) -> plotnine.ggplot.ggplot:
     scale_labels = [
         "0.001",
         "0.01",
@@ -194,7 +206,10 @@ def det_curve(models):
     return plot
 
 
-def scores_distribution(models, use_angle=False):
+def scores_distribution(
+    models: Dict[str, Model],
+    use_angle: bool = False,
+) -> plotnine.ggplot.ggplot:
     df = []
     means = []
     for model_name, model_entry in models.items():
@@ -252,7 +267,12 @@ def scores_distribution(models, use_angle=False):
     return plot
 
 
-def _filter_embeddings(embeddings, nb_speakers, nb_samples, speakers=None):
+def _filter_embeddings(
+    embeddings: Dict[str, torch.Tensor],
+    nb_speakers: int,
+    nb_samples: int,
+    speakers: Optional[List[str]] = None,
+) -> Tuple[np.ndarray, List[int]]:
     if speakers is None:
         speakers = [key.split("/")[1] for key in embeddings.keys()]
         speakers = [s for s in list(set(speakers)) if speakers.count(s) >= nb_samples]
@@ -270,7 +290,11 @@ def _filter_embeddings(embeddings, nb_speakers, nb_samples, speakers=None):
     return np.array(Z), y
 
 
-def tsne_3D(model, nb_speakers=7, nb_samples=150):
+def tsne_3D(
+    model: Model,
+    nb_speakers: int = 7,
+    nb_samples: int = 150,
+) -> plotly.graph_objs._figure.Figure:
     Z, y = _filter_embeddings(model["embeddings"], nb_speakers, nb_samples)
 
     Z = TSNE(n_components=3, init="random").fit_transform(Z)
@@ -278,7 +302,7 @@ def tsne_3D(model, nb_speakers=7, nb_samples=150):
     # Project on unit sphere
     Z = Z / np.expand_dims(np.sqrt(Z[:, 0] ** 2 + Z[:, 1] ** 2 + Z[:, 2] ** 2), -1)
 
-    def add_unit_sphere(resolution=50):
+    def add_unit_sphere(resolution: int = 50) -> plotly.graph_objs.Surface:
         u, v = np.mgrid[0 : 2 * np.pi : resolution * 2j, 0 : np.pi : resolution * 1j]
         X_s = np.cos(u) * np.sin(v)
         Y_s = np.sin(u) * np.sin(v)
@@ -289,7 +313,7 @@ def tsne_3D(model, nb_speakers=7, nb_samples=150):
         )
 
     data = [
-        #     add_unit_sphere(),
+        # add_unit_sphere(),
         go.Scatter3d(
             x=Z[:, 0],
             y=Z[:, 1],
@@ -305,7 +329,11 @@ def tsne_3D(model, nb_speakers=7, nb_samples=150):
     return fig
 
 
-def tsne_2D(model, nb_speakers=10, nb_samples=150):
+def tsne_2D(
+    model: Model,
+    nb_speakers: int = 10,
+    nb_samples: int = 150,
+) -> matplotlib.figure.Figure:
     Z, y = _filter_embeddings(model["embeddings"], nb_speakers, nb_samples)
 
     Z_2d = TSNE(n_components=2, init="random").fit_transform(Z)
@@ -328,7 +356,13 @@ def tsne_2D(model, nb_speakers=10, nb_samples=150):
     plt.show()
 
 
-def pca_2D(model, components=[0, 1], speakers=None, nb_speakers=6, nb_samples=150):
+def pca_2D(
+    model: Model,
+    components: List[int] = [0, 1],
+    speakers: Optional[List[str]] = None,
+    nb_speakers: int = 6,
+    nb_samples: int = 150,
+) -> matplotlib.figure.Figure:
     Z, y = _filter_embeddings(model["embeddings"], nb_speakers, nb_samples, speakers)
 
     n_components = max(components) + 1

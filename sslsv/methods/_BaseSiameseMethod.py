@@ -1,7 +1,10 @@
-from torch import nn
-
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
+from torch import nn
+from torch import Tensor as T
+
+from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 
 
@@ -16,7 +19,11 @@ class BaseSiameseMethodConfig(BaseMethodConfig):
 
 class BaseSiameseMethod(BaseMethod):
 
-    def __init__(self, config, create_encoder_fn):
+    def __init__(
+        self,
+        config: BaseSiameseMethodConfig,
+        create_encoder_fn: Callable[[], BaseEncoder],
+    ):
         super().__init__(config, create_encoder_fn)
 
         if config.enable_projector:
@@ -30,7 +37,7 @@ class BaseSiameseMethod(BaseMethod):
                 nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
             )
 
-    def forward(self, X, training=False):
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T]]:
         if not training:
             return self.encoder(X)
 
@@ -45,19 +52,29 @@ class BaseSiameseMethod(BaseMethod):
 
         return Z_1, Z_2
 
-    def get_learnable_params(self):
+    def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         extra_learnable_params = []
         if self.config.enable_projector:
             extra_learnable_params = [{"params": self.projector.parameters()}]
         return super().get_learnable_params() + extra_learnable_params
 
-    def train_step(self, Z, labels=None, step=None, samples=None):
+    def train_step(
+        self,
+        Z: Tuple[T, T],
+        step: int,
+        step_rel: Optional[int] = None,
+        indices: Optional[T] = None,
+        labels: Optional[T] = None,
+    ) -> T:
         Z_1, Z_2 = Z
 
         loss = self.loss_fn(Z_1, Z_2)
 
-        metrics = {
-            "train/loss": loss,
-        }
+        self.log_step_metrics(
+            step,
+            {
+                "train/loss": loss,
+            },
+        )
 
-        return loss, metrics
+        return loss

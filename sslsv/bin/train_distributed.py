@@ -12,7 +12,7 @@ from sslsv.trainer.Trainer import Trainer
 from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, evaluate
 
 
-def train(args):
+def train(args: argparse.Namespace):
     world_size = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["LOCAL_RANK"])
 

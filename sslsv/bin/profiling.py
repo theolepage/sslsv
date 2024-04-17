@@ -13,12 +13,12 @@ from sslsv.utils.helpers import load_config, load_dataloader, load_model, evalua
 
 
 def train_with_profiling(
-    args,
-    wait=1,
-    warmup=1,
-    active=3,
-    repeat=1,
-    path="./profiling",
+    args: argparse.Namespace,
+    wait: int = 1,
+    warmup: int = 1,
+    active: int = 3,
+    repeat: int = 1,
+    path: str = "./profiling",
 ):
     config = load_config(args.config)
     config.trainer.epochs = 1

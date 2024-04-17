@@ -1,5 +1,6 @@
-from pathlib import Path
 import torch
+
+from pathlib import Path
 
 from sslsv.trainer.Trainer import Trainer
 from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, evaluate

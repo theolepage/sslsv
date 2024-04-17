@@ -1,11 +1,11 @@
+from dataclasses import dataclass, field
+from typing import List, Tuple
+
 import math
 
 import torch
 from torch import nn
 import torch.nn.functional as F
-
-from dataclasses import dataclass, field
-from typing import List
 
 from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
@@ -14,13 +14,13 @@ class Conv1dSamePaddingReflect(nn.Module):
 
     def __init__(
         self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        stride=1,
-        dilation=1,
-        groups=1,
-        bias=True,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int = 1,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
     ):
         super().__init__()
 
@@ -38,7 +38,7 @@ class Conv1dSamePaddingReflect(nn.Module):
             bias=bias,
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Determine padding
         L_in = x.size(-1)
         L_out = (
@@ -56,7 +56,13 @@ class Conv1dSamePaddingReflect(nn.Module):
 
 class TDNNBlock(nn.Module):
 
-    def __init__(self, in_channels, out_channels, kernel_size, dilation):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        dilation: int,
+    ):
         super().__init__()
 
         self.conv = Conv1dSamePaddingReflect(
@@ -68,7 +74,7 @@ class TDNNBlock(nn.Module):
         self.activation = nn.ReLU()
         self.norm = nn.BatchNorm1d(out_channels)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.norm(self.activation(self.conv(x)))
 
 
@@ -76,11 +82,11 @@ class Res2NetBlock(nn.Module):
 
     def __init__(
         self,
-        in_channels,
-        out_channels,
-        scale=8,
-        kernel_size=3,
-        dilation=1,
+        in_channels: int,
+        out_channels: int,
+        scale: int = 8,
+        kernel_size: int = 3,
+        dilation: int = 1,
     ):
         super().__init__()
 
@@ -103,7 +109,7 @@ class Res2NetBlock(nn.Module):
         )
         self.scale = scale
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = []
         for i, x_i in enumerate(torch.chunk(x, self.scale, dim=1)):
             if i == 0:
@@ -119,7 +125,7 @@ class Res2NetBlock(nn.Module):
 
 class SEBlock(nn.Module):
 
-    def __init__(self, in_channels, se_channels, out_channels):
+    def __init__(self, in_channels: int, se_channels: int, out_channels: int):
         super().__init__()
 
         self.conv1 = Conv1dSamePaddingReflect(
@@ -132,7 +138,7 @@ class SEBlock(nn.Module):
         )
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         s = x.mean(dim=2, keepdim=True)
         s = self.relu(self.conv1(s))
         s = self.sigmoid(self.conv2(s))
@@ -143,12 +149,12 @@ class SERes2NetBlock(nn.Module):
 
     def __init__(
         self,
-        in_channels,
-        out_channels,
-        res2net_scale=8,
-        se_channels=128,
-        kernel_size=1,
-        dilation=1,
+        in_channels: int,
+        out_channels: int,
+        res2net_scale: int = 8,
+        se_channels: int = 128,
+        kernel_size: int = 1,
+        dilation: int = 1,
     ):
         super().__init__()
 
@@ -168,7 +174,7 @@ class SERes2NetBlock(nn.Module):
                 kernel_size=1,
             )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         residual = x
         if self.shortcut:
             residual = self.shortcut(x)
@@ -183,7 +189,12 @@ class SERes2NetBlock(nn.Module):
 
 class AttentiveStatisticsPooling(nn.Module):
 
-    def __init__(self, channels, attention_channels=128, global_context=True):
+    def __init__(
+        self,
+        channels: int,
+        attention_channels: int = 128,
+        global_context: bool = True,
+    ):
         super().__init__()
 
         self.global_context = global_context
@@ -196,12 +207,17 @@ class AttentiveStatisticsPooling(nn.Module):
             in_channels=attention_channels, out_channels=channels, kernel_size=1
         )
 
-    def _compute_statistics(self, x, m, eps=1e-12):
+    def _compute_statistics(
+        self,
+        x: torch.Tensor,
+        m: torch.Tensor,
+        eps: float = 1e-12,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         mean = (m * x).sum(dim=2)
         std = torch.sqrt((m * (x - mean.unsqueeze(dim=2)).pow(2)).sum(dim=2).clamp(eps))
         return mean, std
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.global_context:
             L = x.size(-1)
             mean, std = self._compute_statistics(x, 1 / L)
@@ -244,7 +260,7 @@ class ECAPATDNNConfig(BaseEncoderConfig):
 
 class ECAPATDNN(BaseEncoder):
 
-    def __init__(self, config):
+    def __init__(self, config: ECAPATDNNConfig):
         super().__init__(config)
 
         self.pooling = config.pooling
@@ -293,7 +309,7 @@ class ECAPATDNN(BaseEncoder):
             in_channels=last_in_channels, out_channels=config.encoder_dim, kernel_size=1
         )
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         Z = super().forward(X)
         # Z shape: (B, C, L) = (B, 40, 200)
 
