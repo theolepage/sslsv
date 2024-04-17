@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
-from sslsv.methods.SimCLR.SimCLR import SimCLR, SimCLRConfig
+from sslsv.methods.DINO.DINO import DINO, DINOConfig
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -10,10 +10,10 @@ def count_parameters(model: nn.Module) -> int:
 
 
 def test_default():
-    config = SimCLRConfig()
-    method = SimCLR(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
+    config = DINOConfig()
+    method = DINO(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
 
-    assert count_parameters(method) == 3012246
+    assert count_parameters(method) == 23994006
 
     # Inference
     Z = method(torch.randn(64, 32000))
@@ -22,13 +22,14 @@ def test_default():
     assert Z.size() == (64, 512)
 
     # Training
-    Z = method(torch.randn(64, 2, 32000), training=True)
+    Z = method(torch.randn(64, 6, 32000), training=True)
     assert isinstance(Z, tuple)
-    assert len(Z) == 2
-    for z in Z:
-        assert isinstance(z, torch.Tensor)
-        assert z.dtype == torch.float32
-        assert z.size() == (64, 256)
+    assert isinstance(Z[0], torch.Tensor)
+    assert isinstance(Z[1], torch.Tensor)
+    assert Z[0].dtype == torch.float32
+    assert Z[1].dtype == torch.float32
+    assert Z[0].size() == (64 * 6, 65536)
+    assert Z[1].size() == (64 * 2, 65536)
 
     # Train step
     loss = method.train_step(Z, step=0)

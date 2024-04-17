@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
-from sslsv.methods.SimCLR.SimCLR import SimCLR, SimCLRConfig
+from sslsv.methods.VICReg.VICReg import VICReg, VICRegConfig
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -10,10 +10,10 @@ def count_parameters(model: nn.Module) -> int:
 
 
 def test_default():
-    config = SimCLRConfig()
-    method = SimCLR(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
+    config = VICRegConfig()
+    method = VICReg(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
 
-    assert count_parameters(method) == 3012246
+    assert count_parameters(method) == 10888598
 
     # Inference
     Z = method(torch.randn(64, 32000))
@@ -28,7 +28,7 @@ def test_default():
     for z in Z:
         assert isinstance(z, torch.Tensor)
         assert z.dtype == torch.float32
-        assert z.size() == (64, 256)
+        assert z.size() == (64, 2048)
 
     # Train step
     loss = method.train_step(Z, step=0)

@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
-from sslsv.methods.SimCLR.SimCLR import SimCLR, SimCLRConfig
+from sslsv.methods.MoCo.MoCo import MoCo, MoCoConfig
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -10,8 +10,8 @@ def count_parameters(model: nn.Module) -> int:
 
 
 def test_default():
-    config = SimCLRConfig()
-    method = SimCLR(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
+    config = MoCoConfig()
+    method = MoCo(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
 
     assert count_parameters(method) == 3012246
 
@@ -24,7 +24,7 @@ def test_default():
     # Training
     Z = method(torch.randn(64, 2, 32000), training=True)
     assert isinstance(Z, tuple)
-    assert len(Z) == 2
+    assert len(Z) == 4
     for z in Z:
         assert isinstance(z, torch.Tensor)
         assert z.dtype == torch.float32
