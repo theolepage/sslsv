@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://i.postimg.cc/CLFZLW7k/sslsv-logo-3-1.png" width=130 />
+  <img src="logo.png" width=180 />
 </p>
 
 <!-- <p align="center">
@@ -14,6 +14,12 @@
 
 Our aim is to: **(1) provide self-supervised SOTA methods** by porting algorithms from the computer vision domain; and **(2) evaluate them in a comparable environment**.
 
+Our training framework is depicted by the figure below.
+
+<p align="center">
+  <img src="training_framework.svg" width=900 />
+</p>
+
 ---
 
 ## News
@@ -27,9 +33,18 @@ Our aim is to: **(1) provide self-supervised SOTA methods** by porting algorithm
 
 **General**
 
-- **Data**: supervised and self-supervised datasets + augmentation (noise and reverberation)
-- **Training**: CPU / multi-GPU (DP and DDP), resuming, early stopping, tensorboard, wandb, ...
-- **Evaluation**: speaker verification (cosine and PLDA) and classification (emotion, language, ...)
+- **Data**:
+  - Supervised and Self-supervised datasets (siamese and DINO sampling)
+  - Audio augmentation (noise and reverberation)
+- **Training**:
+  - CPU, GPU and multi-GPUs (*DataParallel* and *DistributedDataParallel*)
+  - Checkpointing, resuming, early stopping and logging
+  - Tensorboard and wandb
+- **Evaluation**:
+  - Speaker verification
+    - Backend: Cosine scoring and PLDA
+    - Metrics: EER, MinDCF, ActDFC, CLLR, AvgRPrec
+  - Classification (emotion, language, ...)
 - **Notebooks**: DET curve, scores distribution, t-SNE on embeddings, ...
 - **Misc**: scalable config, typing, documentation and tests
 
@@ -127,7 +142,7 @@ Our aim is to: **(1) provide self-supervised SOTA methods** by porting algorithm
 
 ## Requirements
 
-sslsv runs on Python 3.8 with the following dependencies.
+*sslsv* runs on Python 3.8 with the following dependencies.
 
 | Module                | Versions  |
 |-----------------------|:---------:|
@@ -211,16 +226,23 @@ Other datasets have to be manually downloaded and extracted but their train and 
 
 ---
 
+## Installation
+
+1. **Clone this repository**: `git clone https://github.com/theolepage/sslsv.git`.
+2. **Install dependencies**: `pip install -r requirements.txt`.
+
+**Note**: *sslsv* can also be installed as a standalone package via pip with `pip install sslsv` or with `pip install .` (in the project root folder) to get the latest version.
+
+---
+
 ## Usage
 
-1. **Clone the repository**: `git clone https://github.com/theolepage/sslsv.git`.
-2. **Install dependencies**: `pip install -r requirements.txt`.
-3. **Start a training** (*2 GPUs*): `./train_ddp.sh 2 <config_path>`.
-4. **Evaluate your model** (*2 GPUs*): `./evaluate_ddp.sh 2 <config_path>`.
 
-**Note 1**: with a CPU or a single GPU you can use `sslsv/bin/train.py` and `sslsv/bin/evaluate.py`, respectively.
+- **Start a training** (*2 GPUs*): `./train_ddp.sh 2 <config_path>`.
+- **Evaluate your model** (*2 GPUs*): `./evaluate_ddp.sh 2 <config_path>`.
 
-**Note 2**: alternatively you can install sslsv using `pip install .` and use its modules separately from your code.
+**Note**: use `sslsv/bin/train.py` and `sslsv/bin/evaluate.py` for non-distributed mode to run with a CPU, a single GPU or multiple GPUs (*DataParallel*).
+
 
 ### Tensorboard
 
@@ -255,13 +277,13 @@ Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments 
 
 ## Acknowledgements
 
-sslsv contains third-party components and code adapted from other open-source projects, including: [voxceleb_trainer](https://github.com/clovaai/voxceleb_trainer), [voxceleb_unsupervised](https://github.com/joonson/voxceleb_unsupervised) and [solo-learn](https://github.com/vturrisi/solo-learn).
+*sslsv* contains third-party components and code adapted from other open-source projects, including: [voxceleb_trainer](https://github.com/clovaai/voxceleb_trainer), [voxceleb_unsupervised](https://github.com/joonson/voxceleb_unsupervised) and [solo-learn](https://github.com/vturrisi/solo-learn).
 
 ---
 
 ## Citations
 
-If you use sslsv, please consider starring this repository on GitHub and citing one the following papers.
+If you use *sslsv*, please consider starring this repository on GitHub and citing one the following papers.
 
 ```BibTeX
 @InProceedings{lepage2023ExperimentingAdditiveMarginsSSLSV,
