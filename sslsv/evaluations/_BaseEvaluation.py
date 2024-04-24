@@ -25,13 +25,13 @@ class EvaluationTaskConfig:
 
     __type__: str = None
 
+    batch_size: int = 64
+    num_frames: int = 1
+    frame_length: Optional[int] = 64000
+
 
 @dataclass
 class BaseEvaluationConfig:
-
-    batch_size: int = 64
-    num_frames: int = 10
-    frame_length: Optional[int] = 64000
 
     validation: List[EvaluationTaskConfig] = field(default_factory=lambda: [])
 
@@ -83,8 +83,11 @@ class BaseEvaluation:
         desc: Optional[str] = None,
         numpy: bool = False,
     ) -> Dict[str, Union[torch.Tensor, np.ndarray]]:
+        if self.task_config.frame_length is None and self.task_config.batch_size != 1:
+            raise Exception("Batch size must be set to 1 when frame length is None.")
+
         dataset_config = DatasetConfig(
-            frame_length=self.config.evaluation.frame_length,
+            frame_length=self.task_config.frame_length,
             base_path=self.config.dataset.base_path,
             num_workers=self.config.dataset.num_workers,
             pin_memory=self.config.dataset.pin_memory,
@@ -94,7 +97,7 @@ class BaseEvaluation:
             dataset_config,
             files,
             labels,
-            num_frames=self.config.evaluation.num_frames,
+            num_frames=self.task_config.num_frames,
         )
 
         sampler = None
@@ -104,7 +107,7 @@ class BaseEvaluation:
         dataloader = DataLoader(
             dataset,
             sampler=sampler,
-            batch_size=max(1, self.config.evaluation.batch_size // get_world_size()),
+            batch_size=max(1, self.task_config.batch_size // get_world_size()),
             num_workers=self.config.dataset.num_workers,
             pin_memory=self.config.dataset.pin_memory,
             worker_init_fn=seed_dataloader_worker,

@@ -77,7 +77,7 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
         embeddings_keys = np.array(list(embeddings.keys()))
         embeddings_values = np.array(list(embeddings.values())).squeeze(axis=1)
 
-        assert self.config.evaluation.num_frames == 1
+        assert self.task_config.num_frames == 1
 
         if key == "train":
             stat = create_stat_object(np.array(labels), None, embeddings_values)

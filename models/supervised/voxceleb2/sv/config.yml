@@ -6,8 +6,6 @@ method:
 trainer:
   epochs: 200
 evaluation:
-  num_frames: 10
-  frame_length: 64000
   validation:
     - type: 'sv_cosine'
   test:

@@ -118,7 +118,7 @@ def _determine_det_curve_pts(
     return (pts_x, pts_y), eer_idx, mindcf_coords
 
 
-def det_curve(models: Dict[str, Model]) -> plotnine.ggplot.ggplot:
+def det_curve(models: Dict[str, Model]) -> plotnine.ggplot:
     scale_labels = [
         "0.001",
         "0.01",
@@ -172,7 +172,7 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot.ggplot:
 
     for model_name, model_entry in models.items():
         pts, eer_idx, mindcf_coords = _determine_det_curve_pts(
-            model_entry["scores"], model_entry["targets"]
+            model_entry.scores, model_entry.targets
         )
 
         df = pd.DataFrame()
@@ -209,18 +209,15 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot.ggplot:
 def scores_distribution(
     models: Dict[str, Model],
     use_angle: bool = False,
-) -> plotnine.ggplot.ggplot:
+) -> plotnine.ggplot:
     df = []
     means = []
     for model_name, model_entry in models.items():
         df_ = pd.DataFrame()
         df_["Score"] = [
-            (s if not use_angle else torch.acos(s).item())
-            for s in model_entry["scores"]
+            (s if not use_angle else torch.acos(s).item()) for s in model_entry.scores
         ]
-        df_["Target"] = [
-            ("Positive" if l else "Negative") for l in model_entry["targets"]
-        ]
+        df_["Target"] = [("Positive" if l else "Negative") for l in model_entry.targets]
         df_["Model"] = model_name
         df.append(df_)
 
@@ -294,8 +291,8 @@ def tsne_3D(
     model: Model,
     nb_speakers: int = 7,
     nb_samples: int = 150,
-) -> plotly.graph_objs._figure.Figure:
-    Z, y = _filter_embeddings(model["embeddings"], nb_speakers, nb_samples)
+) -> plotly.graph_objs.Figure:
+    Z, y = _filter_embeddings(model.embeddings, nb_speakers, nb_samples)
 
     Z = TSNE(n_components=3, init="random").fit_transform(Z)
 
@@ -334,7 +331,7 @@ def tsne_2D(
     nb_speakers: int = 10,
     nb_samples: int = 150,
 ) -> matplotlib.figure.Figure:
-    Z, y = _filter_embeddings(model["embeddings"], nb_speakers, nb_samples)
+    Z, y = _filter_embeddings(model.embeddings, nb_speakers, nb_samples)
 
     Z_2d = TSNE(n_components=2, init="random").fit_transform(Z)
 
@@ -363,7 +360,7 @@ def pca_2D(
     nb_speakers: int = 6,
     nb_samples: int = 150,
 ) -> matplotlib.figure.Figure:
-    Z, y = _filter_embeddings(model["embeddings"], nb_speakers, nb_samples, speakers)
+    Z, y = _filter_embeddings(model.embeddings, nb_speakers, nb_samples, speakers)
 
     n_components = max(components) + 1
 

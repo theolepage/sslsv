@@ -8,9 +8,9 @@ dataset:
   ssl: true
   max_samples: 1024
 evaluation:
-  num_frames: 10
-  frame_length: 56240
   validation:
     - type: 'sv_cosine'
+      frame_length: 56240
   test:
     - type: 'sv_cosine'
+      frame_length: 56240

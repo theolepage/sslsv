@@ -133,6 +133,8 @@ def avgrprec(trials: Dict[str, Tuple[List[int], List[float]]]) -> float:
 @dataclass
 class SpeakerVerificationEvaluationTaskConfig(EvaluationTaskConfig):
 
+    num_frames: int = 10
+
     trials: List[str] = field(
         default_factory=lambda: [
             "voxceleb1_test_O",

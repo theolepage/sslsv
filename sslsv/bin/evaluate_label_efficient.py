@@ -96,24 +96,28 @@ def train(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", help="Path to model config file.")
+    parser.add_argument("config", type=str, help="Path to model config file.")
     parser.add_argument(
         "--epochs",
+        type=int,
         default=200,
         help="Number of epochs for trainings.",
     )
     parser.add_argument(
         "--lr",
+        type=float,
         default=0.001,
         help="Learning rate used during trainings.",
     )
     parser.add_argument(
         "--batch_size",
+        type=int,
         default=64,
         help="Batch size used during trainings.",
     )
     parser.add_argument(
         "--patience",
+        type=int,
         default=20,
         help="Number of epochs without a lower EER before ending training.",
     )

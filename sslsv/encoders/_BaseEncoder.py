@@ -33,13 +33,15 @@ class BaseEncoder(nn.Module):
 
         self.features_extractor = None
         if config.extract_mel_features:
-            self.features_extractor = MelSpectrogram(
-                n_fft=config.mel_n_fft,
-                win_length=config.mel_win_length,
-                hop_length=config.mel_hop_length,
-                window_fn=self.MEL_WIN_FUNCTIONS[config.mel_win_fn],
-                n_mels=config.mel_n_mels,
-                sample_rate=config.mel_sample_rate,
+            self.features_extractor = nn.Sequential(
+                MelSpectrogram(
+                    n_fft=config.mel_n_fft,
+                    win_length=config.mel_win_length,
+                    hop_length=config.mel_hop_length,
+                    window_fn=self.MEL_WIN_FUNCTIONS[config.mel_win_fn],
+                    n_mels=config.mel_n_mels,
+                    sample_rate=config.mel_sample_rate,
+                )
             )
             self.instance_norm = nn.InstanceNorm1d(config.mel_n_mels)
 

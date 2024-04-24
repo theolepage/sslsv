@@ -57,7 +57,7 @@ def train_with_profiling(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", help="Path to model config file.")
+    parser.add_argument("config", type=str, help="Path to model config file.")
     args = parser.parse_args()
 
     train_with_profiling(args)

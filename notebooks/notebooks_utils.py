@@ -21,6 +21,7 @@ class Model:
 def load_models(
     configs: List[str],
     override_names: Dict[str, str] = {},
+    checkpoint_name: str = "model_latest.pt",
 ) -> Dict[str, Model]:
     models = {}
 
@@ -30,7 +31,7 @@ def load_models(
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = load_model(config).to(device)
 
-        checkpoint = torch.load(config.model_path / "model_latest.pt")
+        checkpoint = torch.load(config.model_path / checkpoint_name)
         model.load_state_dict(checkpoint["model"], strict=False)
         model.eval()
 
@@ -48,27 +49,29 @@ def evaluate_models(
     evaluation_cls: BaseEvaluation,
     task_config: EvaluationTaskConfig,
     return_evals: bool = False,
+    verbose: bool = True,
 ) -> Optional[List[BaseEvaluation]]:
     evaluations = []
 
-    for model_name, model_entry in models.items():
+    for _, model_entry in models.items():
         evaluation = evaluation_cls(
-            model=model_entry["model"],
-            config=model_entry["config"],
+            model=model_entry.model,
+            config=model_entry.config,
             task_config=task_config,
-            device=model_entry["device"],
-            verbose=True,
+            device=model_entry.device,
+            verbose=verbose,
             validation=False,
         )
+        metrics = evaluation.evaluate()
 
-        models[model_name].update(
-            {
-                "metrics": evaluation.evaluate(),
-                "embeddings": evaluation.test_embeddings,
-                "scores": evaluation.scores,
-                "targets": evaluation.targets,
-            }
-        )
+        metrics_ = {}
+        for old_key in metrics.keys():
+            metrics_[f"test/{task_config.__type__}/{old_key}"] = metrics[old_key]
+
+        model_entry.metrics = metrics_
+        model_entry.embeddings = evaluation.test_embeddings
+        model_entry.scores = evaluation.scores
+        model_entry.targets = evaluation.targets
 
         evaluations.append(evaluation)
 
@@ -80,7 +83,7 @@ def create_metrics_df(models: Dict[str, Model]) -> pd.DataFrame:
     df = pd.DataFrame()
 
     for model_name, model_entry in models.items():
-        metrics = {k: round(v, 4) for k, v in model_entry["metrics"].items()}
+        metrics = {k: round(v, 4) for k, v in model_entry.metrics.items()}
         df_ = pd.DataFrame({"Model": model_name, **metrics}, index=[0])
         df = pd.concat((df, df_))
 

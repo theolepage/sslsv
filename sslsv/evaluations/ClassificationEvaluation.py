@@ -31,7 +31,7 @@ class ClassificationEvaluation(BaseEvaluation):
         return Y
 
     def _get_embeddings(self, file: Path, subset: str) -> Tuple[np.ndarray, np.ndarray]:
-        assert self.config.evaluation.num_frames == 1
+        assert self.task_config.num_frames == 1
 
         df = pd.read_csv(self.config.dataset.base_path / file)
         df["Label"] = pd.factorize(df[self.task_config.key])[0]

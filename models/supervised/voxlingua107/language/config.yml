@@ -10,8 +10,6 @@ trainer:
   tracked_metric: 'val/classification/voxlingua107_train/accuracy'
   tracked_mode: 'max'
 evaluation:
-  num_frames: 1
-  frame_length: 64000
   validation:
     - type: 'classification'
       csv: 'voxlingua107_train.csv'

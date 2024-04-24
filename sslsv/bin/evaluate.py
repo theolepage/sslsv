@@ -98,16 +98,11 @@ def evaluate(args: argparse.Namespace):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", help="Path to model config file.")
+    parser.add_argument("config", type=str, help="Path to model config file.")
     parser.add_argument(
         "--silent",
         action="store_true",
         help="Whether to hide status messages and progress bars.",
-    )
-    parser.add_argument(
-        "--save_embeddings",
-        action="store_true",
-        help="Whether to save embeddings of test utterances.",
     )
     args = parser.parse_args()
 
