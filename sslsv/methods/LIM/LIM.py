@@ -7,6 +7,7 @@ from torch import Tensor as T
 
 from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
+from sslsv.utils.distributed import gather
 
 from .LIMLoss import LIMLoss, LIMLossEnum
 
@@ -52,8 +53,10 @@ class LIM(BaseMethod):
 
         N, _ = Y_1.size()
 
-        shift = torch.randint(1, N, size=(1,)).item()
-        Y_R = torch.roll(Y_2, shifts=shift, dims=0)
+        # Determine negatives
+        Y_2_all = gather(Y_2)
+        neg_idx = torch.randint(0, Y_2_all.size(0), size=(N,))
+        Y_R = Y_2_all[neg_idx]
 
         pos = F.cosine_similarity(Y_1, Y_2, dim=-1)
         neg = F.cosine_similarity(Y_1, Y_R, dim=-1)

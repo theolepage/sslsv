@@ -3,6 +3,7 @@ from typing import Callable, Optional, Tuple
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch import Tensor as T
 
 from sslsv.encoders._BaseEncoder import BaseEncoder
@@ -73,10 +74,15 @@ class WMSE(BaseSiameseMethod):
             loss += self.loss_fn(z[:N], z[N : 2 * N])
         loss /= self.config.whitening_iters
 
+        z1_std = F.normalize(Z_A, dim=-1).std(dim=0).mean()
+        z2_std = F.normalize(Z_B, dim=-1).std(dim=0).mean()
+        z_std = (z1_std + z2_std) / 2
+
         self.log_step_metrics(
             step,
             {
                 "train/loss": loss,
+                "train/z_std": z_std.detach(),
             },
         )
 
