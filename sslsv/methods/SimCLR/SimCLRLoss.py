@@ -9,8 +9,23 @@ from sslsv.utils.distributed import gather, get_rank, get_world_size
 
 
 class SimCLRLoss(nn.Module):
+    """
+    SimCLR loss.
+
+    Attributes:
+        temperature (float): Temperature value.
+    """
 
     def __init__(self, temperature: float = 0.2):
+        """
+        Initialize a SimCLR loss.
+
+        Args:
+            temperature (float): Temperature value. Defaults to 0.2.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.temperature = temperature
@@ -24,6 +39,20 @@ class SimCLRLoss(nn.Module):
         world_size: int,
         discard_identity: bool = True,
     ) -> Tuple[T, T]:
+        """
+        Create masks to extract positives and negatives from the dot product result.
+
+        Args:
+            N (int): Size of the masks.
+            V_A (int): Number of views in first embeddings tensor.
+            V_B (int): Number of views in second embeddings tensor.
+            rank (int): Rank of the current process (distributed).
+            world_size (int): Total number of processes (distributed).
+            discard_identity (bool): Whether to discard the identity. Defaults to True.
+
+        Returns:
+            Tuple[T, T]: Positive and negative masks.
+        """
         # Create a mask with the same shape as the similarity matrix
         # and by considering all pairs as negatives by default
         pos_mask = torch.zeros((N * V_A, N * V_B * world_size), dtype=torch.bool)
@@ -49,6 +78,16 @@ class SimCLRLoss(nn.Module):
         return pos_mask, neg_mask
 
     def forward(self, Z_1: T, Z_2: T) -> T:
+        """
+        Compute loss.
+
+        Args:
+            Z_1 (T): Embeddings tensor of view 1.
+            Z_2 (T): Embeddings tensor of view 2.
+
+        Returns:
+            T: Loss tensor.
+        """
         N, D = Z_1.size()
 
         Z = torch.cat((Z_1, Z_2), dim=0)

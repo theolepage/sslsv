@@ -29,7 +29,7 @@ def test_default():
 
     # Train step
     loss = method.train_step(Z, step=0, labels=torch.ones(Z.size(0), dtype=torch.int64))
-    metrics = method.step_metrics[0]
+    metrics = method.step_metrics
     assert isinstance(loss, torch.Tensor)
     assert loss.dtype == torch.float32
     assert "train/loss" in metrics

@@ -9,13 +9,44 @@ import argparse
 import torch
 import json
 
-from sslsv.bin.train import ModelWrapper
+from sslsv.bin.train import MethodWrapper
 from sslsv.utils.helpers import load_config, load_model, evaluate as evaluate_
 
 
 def metrics_to_nested_dict(
     data: Dict[str, float]
 ) -> Dict[str, Dict[str, Dict[str, float]]]:
+    """
+    Convert a flat dictionary of metrics data into a nested dictionary with
+    task, dataset, and metric levels.
+
+    Args:
+        data (Dict[str, float]): Dictionary of metrics with the format 'test/task/dataset/metric'.
+
+    Returns:
+        Dict[str, Dict[str, Dict[str, float]]]: Nested dictionary with tasks as the first level,
+            datasets as the second level, and metrics as the third level.
+
+    Example:
+        >>> metrics_to_nested_dict({
+            'test/task1/dataset1/metric1': 10.0,
+            'test/task1/dataset1/metric2': 20.0,
+            'test/task2/dataset2/metric1': 15.0
+        })
+        {
+            'task1': {
+                'dataset1': {
+                    'metric1': 10.0,
+                    'metric2': 20.0
+                }
+            },
+            'task2': {
+                'dataset2': {
+                    'metric1': 15.0
+                }
+            }
+        }
+    """
     res = {}
 
     tasks = set([k.split("/")[1] for k in data.keys() if k.split("/")[0] == "test"])
@@ -53,6 +84,15 @@ def metrics_to_nested_dict(
 
 
 def print_metrics(metrics: Dict[str, float]):
+    """
+    Print metrics in a nested format.
+
+    Args:
+        metrics (Dict[str, float]): Dictionary of metrics with the format 'test/task/dataset/metric'.
+
+    Returns:
+        None
+    """
     metrics = metrics_to_nested_dict(metrics)
 
     for task in metrics.keys():
@@ -70,6 +110,15 @@ def print_metrics(metrics: Dict[str, float]):
 
 
 def evaluate(args: argparse.Namespace):
+    """
+    Evaluate a model from the CLI.
+
+    Args:
+        args (argparse.Namespace): Arguments parsed from the command line.
+
+    Returns:
+        None
+    """
     config = load_config(args.config, verbose=not args.silent)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -83,7 +132,7 @@ def evaluate(args: argparse.Namespace):
     if device == torch.device("cuda"):
         model = torch.nn.DataParallel(model)
     else:
-        model = ModelWrapper(model)
+        model = MethodWrapper(model)
 
     metrics = evaluate_(model, config, device, verbose=not args.silent)
 

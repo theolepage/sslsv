@@ -14,6 +14,19 @@ def compute_error_rates(
     scores: List[float],
     targets: List[int],
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute the error rates for a list of scores and corresponding targets.
+
+    Args:
+        scores (List[float]): List of scores.
+        targets (List[int]): List of targets (0 for nontarget, 1 for target).
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: Tuple containing:
+            - fprs: False Positive Rates for different score thresholds.
+            - fnrs: False Negative Rates for different score thresholds.
+            - sorted_scores: Scores sorted in ascending order representing the thresholds.
+    """
     scores = np.array(scores)
     targets = np.array(targets)
 
@@ -42,6 +55,16 @@ def compute_error_rates(
 
 
 def cllr(scores: List[float], labels: List[int]) -> float:
+    """
+    Compute the Cllr (Log-Likelihood Ratio Cost).
+
+    Args:
+        scores (List[float]): List of scores.
+        labels (List[int]): List of labels (0 for nontarget, 1 for target).
+
+    Returns:
+        float: Cllr value.
+    """
     scores = np.array(scores)
     labels = np.array(labels)
 
@@ -65,6 +88,16 @@ def cllr(scores: List[float], labels: List[int]) -> float:
 
 
 def eer(fprs: np.ndarray, fnrs: np.ndarray) -> float:
+    """
+    Compute the Equal Error Rate (EER).
+
+    Args:
+        fprs (numpy.ndarray): Array of False Positive Rates.
+        fnrs (numpy.ndarray): Array of False Negative Rates.
+
+    Returns:
+        float: EER value.
+    """
     idx = np.nanargmin(np.abs(fnrs - fprs))
     eer = max(fprs[idx], fnrs[idx]) * 100
     return eer.item()
@@ -77,8 +110,20 @@ def mindcf(
     c_miss: float = 1,
     c_fa: float = 1,
 ) -> float:
-    # Equations are from Section 3 of
-    # NIST 2016 Speaker Recognition Evaluation Plan
+    """
+    Compute the minimum Detection Cost Function (minDCF).
+
+    Args:
+        fprs (numpy.ndarray): Array of False Positive Rates.
+        fnrs (numpy.ndarray): Array of False Negative Rates.
+        p_target (float): Prior probability of the target speaker. Defaults to 0.01.
+        c_miss (float): Cost associated with a missed detection. Defaults to 1.
+        c_fa (float): Cost associated with a false alarm. Defaults to 1.
+
+    Returns:
+        float: minDCF value.
+    """
+    # Equations are from Section 3 of NIST 2016 Speaker Recognition Evaluation Plan
 
     # Equation (2)
     min_c_det = float("inf")
@@ -104,6 +149,20 @@ def actdcf(
     c_miss: float = 1,
     c_fa: float = 1,
 ) -> float:
+    """
+    Compute the actual Detection Cost Function (actDCF).
+
+    Args:
+        fprs (numpy.ndarray): Array of False Positive Rates.
+        fnrs (numpy.ndarray): Array of False Negative Rates.
+        sorted_scores (np.ndarray): Array of sorted scores (thresholds).
+        p_target (float): Prior probability of the target speaker. Defaults to 0.01.
+        c_miss (float): Cost associated with a missed detection. Defaults to 1.
+        c_fa (float): Cost associated with a false alarm. Defaults to 1.
+
+    Returns:
+        float: actDCF value.
+    """
     beta = np.log((c_fa / c_miss) * (1 - p_target) / p_target)
     i = sorted_scores.searchsorted(beta).item()
 
@@ -116,6 +175,16 @@ def actdcf(
 
 
 def avgrprec(trials: Dict[str, Tuple[List[int], List[float]]]) -> float:
+    """
+    Compute the average R-Precision (avgRPrec).
+
+    Args:
+        trials (Dict[str, Tuple[List[int], List[float]]): Dictionary mapping an enrollment ID to a list
+            of targets and scores.
+
+    Returns:
+        float: avgRPrec value.
+    """
     rprec = []
 
     for e, (targets, scores) in trials.items():
@@ -132,6 +201,17 @@ def avgrprec(trials: Dict[str, Tuple[List[int], List[float]]]) -> float:
 
 @dataclass
 class SpeakerVerificationEvaluationTaskConfig(EvaluationTaskConfig):
+    """
+    Speaker Verification evaluation configuration.
+
+    Attributes:
+        num_frames (int): Number of frames to extract from each audio file.
+        trials (List[str]): List of paths to trial files.
+        metrics (List[str]): List of metrics to compute.
+        mindcf_p_target (float): Prior target probability for the minDCF.
+        mindcf_c_miss (float): Cost associated with a missed detection for the minDCF. Defaults to 1.
+        mindcf_c_fa (float): Cost associated with a false alarm for the minDCF. Defaults to 1.
+    """
 
     num_frames: int = 10
 
@@ -161,19 +241,63 @@ class SpeakerVerificationEvaluationTaskConfig(EvaluationTaskConfig):
 
 
 class SpeakerVerificationEvaluation(BaseEvaluation):
+    """
+    Speaker Verification (SV) evaluation.
+    """
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize a Speaker Verification evaluation.
+
+        Args:
+            *args: Positional arguments for base class.
+            **kwargs: Keyword arguments for base class.
+
+        Returns:
+            None
+        """
         super().__init__(*args, **kwargs)
 
     def _extract_embeddings_inference(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        Method to perform model inference.
+
+        Args:
+            X (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         Y = self.model(X)
         return Y
 
     def _extract_embeddings_post(self, Y: torch.Tensor) -> torch.Tensor:
+        """
+        Postprocessing (L2 normalization) applied after model inference.
+
+        Args:
+            Y (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         Y = F.normalize(Y, p=2, dim=-1)
         return Y
 
     def _get_sv_score(self, enrol: str, test: str) -> float:
+        """
+        Get the score for a given enrollment and test trial.
+
+        Args:
+            enrol (str): Enrollment ID.
+            test (str): Test ID.
+
+        Returns:
+            float: Score value.
+
+        Raises:
+            NotImplementedError: This method is not implemented and should be overridden in a subclass.
+        """
         raise NotImplementedError
 
     def _get_metrics(
@@ -183,6 +307,19 @@ class SpeakerVerificationEvaluation(BaseEvaluation):
         targets: List[int],
         file: Path,
     ) -> Dict[str, float]:
+        """
+        Determine metrics for a trials file.
+
+        Args:
+            trials (Dict[str, Tuple[List[int], List[float]]): Dictionary mapping an enrollment ID
+                to a list of targets and scores.
+            scores (List[float]): List of scores.
+            targets (List[int]): List of targets.
+            file (Path): Path to the trials file.
+
+        Returns:
+            Dict[str, float]: Dictionary of metrics.
+        """
         metrics = {}
 
         fprs, fnrs, sorted_scores = compute_error_rates(scores, targets)
@@ -218,6 +355,15 @@ class SpeakerVerificationEvaluation(BaseEvaluation):
         return metrics
 
     def _evaluate_trials(self, file: Path) -> Dict[str, float]:
+        """
+        Evaluate on a trials file and return the metrics.
+
+        Args:
+            file (Path): Path to the trials file.
+
+        Returns:
+            Dict[str, float]: Dictionary of metrics.
+        """
         trials, scores, targets = {}, [], []
 
         with open(self.config.dataset.base_path / file) as f:
@@ -242,6 +388,12 @@ class SpeakerVerificationEvaluation(BaseEvaluation):
         return self._get_metrics(trials, scores, targets, file)
 
     def evaluate(self) -> Dict[str, float]:
+        """
+        Evaluate the model on Speaker Verification (SV).
+
+        Returns:
+            Dict[str, float]: Dictionary of metrics.
+        """
         self._prepare_evaluation()
 
         metrics = {}

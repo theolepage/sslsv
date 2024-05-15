@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Sequence, Tuple
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -16,8 +16,29 @@ from sslsv.utils.distributed import (
 
 
 class KMeans:
+    """
+    K-Means algorithm.
 
-    def __init__(self, nb_prototypes: int, nb_iters: int, dataset_size: int):
+    Adapted from https://github.com/facebookresearch/swav/blob/main/main_deepclusterv2.py.
+
+    Attributes:
+        nb_prototypes (Sequence[int]): Number of prototypes.
+        nb_iters (int): Number of iterations.
+        dataset_size (int): Size of the dataset.
+    """
+
+    def __init__(self, nb_prototypes: Sequence[int], nb_iters: int, dataset_size: int):
+        """
+        Initialize a K-Means object.
+
+        Args:
+            nb_prototypes (Sequence[int]): Number of prototypes.
+            nb_iters (int): Number of iterations.
+            dataset_size (int): Size of the dataset.
+
+        Returns:
+            None
+        """
         self.nb_prototypes = nb_prototypes
         self.nb_iters = nb_iters
         self.dataset_size = dataset_size
@@ -35,6 +56,16 @@ class KMeans:
         local_memory_index: T,
         local_memory_embeddings: T,
     ) -> Tuple[T, List[T]]:
+        """
+        Run the K-means clustering algorithm.
+
+        Args:
+            local_memory_index (T): Tensor of training indexes.
+            local_memory_embeddings (T): Tensor of training embeddings.
+
+        Returns:
+            Tuple[T, List[T]]: Assignments tensor and list of centroids tensors.
+        """
         V, N, D = local_memory_embeddings.size()
         device = local_memory_embeddings.device
 

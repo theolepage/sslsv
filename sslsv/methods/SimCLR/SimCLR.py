@@ -11,6 +11,14 @@ from .SimCLRLoss import SimCLRLoss
 
 @dataclass
 class SimCLRConfig(BaseSiameseMethodConfig):
+    """
+    SimCLR method configuration.
+
+    Attributes:
+        temperature (float): Temperature value.
+        projector_hidden_dim (int): Hhidden dimension of the projector network.
+        projector_output_dim (int): Output dimension of the projector network.
+    """
 
     temperature: float = 0.2
 
@@ -19,12 +27,35 @@ class SimCLRConfig(BaseSiameseMethodConfig):
 
 
 class SimCLR(BaseSiameseMethod):
+    """
+    SimCLR (SIMple framework for Contrastive Learning of visual Representations) method.
+
+    Paper:
+        A Simple Framework for Contrastive Learning of Visual Representations
+        *Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton*
+        ICML 2020
+        https://arxiv.org/abs/2002.05709
+
+    Attributes:
+        projector (nn.Sequential): Projector module.
+        loss_fn (SimCLRLoss): Loss function.
+    """
 
     def __init__(
         self,
         config: SimCLRConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize a SimCLR method.
+
+        Args:
+            config (SimCLRConfig): Method configuration.
+            create_encoder_fn (Callable): Function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         if self.config.enable_projector:

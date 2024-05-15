@@ -7,6 +7,14 @@ from sslsv.utils.distributed import gather
 
 
 class VICRegLoss(nn.Module):
+    """
+    VICReg loss.
+
+    Attributes:
+        inv_weight (float): Weight of the invariance loss term.
+        var_weight (float): Weight of the variance loss term.
+        cov_weight (float): Weight of the covariance loss term.
+    """
 
     def __init__(
         self,
@@ -14,6 +22,17 @@ class VICRegLoss(nn.Module):
         var_weight: float = 1.0,
         cov_weight: float = 0.04,
     ):
+        """
+        Initialize a VICReg loss.
+
+        Args:
+            inv_weight (float): Weight of the invariance loss term. Defaults to 1.0.
+            var_weight (float): Weight of the variance loss term. Defaults to 1.0.
+            cov_weight (float): Weight of the covariance loss term. Defaults to 0.04.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.inv_weight = inv_weight
@@ -21,6 +40,16 @@ class VICRegLoss(nn.Module):
         self.cov_weight = cov_weight
 
     def forward(self, Z_a: T, Z_b: T) -> T:
+        """
+        Compute loss.
+
+        Args:
+            Z_a (T): Embeddings tensor of view A.
+            Z_b (T): Embeddings tensor of view B.
+
+        Returns:
+            T: Loss tensor.
+        """
         # Invariance loss
         inv_loss = F.mse_loss(Z_a, Z_b)
 

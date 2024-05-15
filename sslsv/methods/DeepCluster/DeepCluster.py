@@ -17,6 +17,16 @@ from sslsv.utils.distributed import get_world_size
 
 @dataclass
 class DeepClusterConfig(BaseMethodConfig):
+    """
+    DeepCluster method configuration.
+
+    Attributes:
+        temperature (float): Temperature value.
+        nb_prototypes (Sequence[int]): List of number of prototypes.
+        kmeans_nb_iters (int): Number of iterations for K-Means clustering.
+        projector_hidden_dim (int): Hidden dimension of the projector network.
+        projector_output_dim (int): Output dimension of the projector network.
+    """
 
     temperature: float = 0.1
 
@@ -29,12 +39,42 @@ class DeepClusterConfig(BaseMethodConfig):
 
 
 class DeepCluster(BaseMethod):
+    """
+    DeepCluster v2 method.
+
+    Paper:
+        Deep Clustering for Unsupervised Learning of Visual Features
+        *Mathilde Caron, Piotr Bojanowski, Armand Joulin, Matthijs Douze*
+        ECCV 2018
+        https://arxiv.org/abs/1807.05520
+
+    Attributes:
+        projector (nn.Sequential): Projector module.
+        prototypes (nn.ModuleList): List of linear layers representing prototypes.
+        loss_fn (DeepClusterLoss): Loss function.
+        dataset_size (int): Size of the dataset.
+        batch_size (int): Batch size for training.
+        kmeans (KMeans): K-Means clustering module.
+        assignments (T): Tensor to store cluster assignments.
+        local_memory_indexes (T): Tensor to store training indexes.
+        local_memory_embeddings (T): Tensor to store training embeddings.
+    """
 
     def __init__(
         self,
         config: DeepClusterConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize a DeepCluster method.
+
+        Args:
+            config (DeepClusterConfig): Method configuration.
+            create_encoder_fn (Callable): A function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
@@ -58,6 +98,12 @@ class DeepCluster(BaseMethod):
         self.loss_fn = DeepClusterLoss(config.temperature)
 
     def on_train_start(self):
+        """
+        Initialize K-Means and create buffers to store indexes and embeddings.
+
+        Returns:
+            None
+        """
         self.dataset_size = len(self.trainer.train_dataloader.dataset)
         self.batch_size = self.trainer.config.trainer.batch_size
 
@@ -93,6 +139,16 @@ class DeepCluster(BaseMethod):
         )
 
     def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
+        """
+        Forward pass.
+
+        Args:
+            X (T): Input tensor.
+            training (bool): Whether the forward pass is for training. Defaults to False.
+
+        Returns:
+            Union[T, Tuple[T, T, T, T]]: Encoder output for inference or embeddings for training.
+        """
         if not training:
             return self.encoder(X)
 
@@ -108,10 +164,26 @@ class DeepCluster(BaseMethod):
         return Z_1, Z_2, P_1, P_2
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
+        """
+        Get the learnable parameters.
+
+        Returns:
+            Iterable[Dict[str, Any]]: Collection of parameters.
+        """
         extra_learnable_params = [{"params": self.projector.parameters()}]
         return super().get_learnable_params() + extra_learnable_params
 
     def on_train_epoch_start(self, epoch: int, max_epochs: int):
+        """
+        Run K-Means at the beginning of each epoch (except the first one).
+
+        Args:
+            epoch (int): Current epoch.
+            max_epochs (int): Total number of epochs.
+
+        Returns:
+            None
+        """
         if epoch > 0:
             self.assignments, centroids = self.kmeans.run(
                 self.local_memory_indexes,
@@ -129,6 +201,19 @@ class DeepCluster(BaseMethod):
         indices: Optional[T] = None,
         labels: Optional[T] = None,
     ) -> T:
+        """
+        Perform a training step.
+
+        Args:
+            Z (Tuple[T, T, T, T]): Embedding tensors.
+            step (int): Current training step.
+            step_rel (Optional[int]): Current training step (relative to the epoch).
+            indices (Optional[T]): Training sample indices.
+            labels (Optional[T]): Training sample labels.
+
+        Returns:
+            T: Loss tensor.
+        """
         Z_1, Z_2, P_1, P_2 = Z
         # P: (N, P, C)
 
@@ -147,7 +232,6 @@ class DeepCluster(BaseMethod):
         self.local_memory_embeddings[1, start_idx:end_idx] = Z_2.detach()
 
         self.log_step_metrics(
-            step,
             {
                 "train/loss": loss,
             },

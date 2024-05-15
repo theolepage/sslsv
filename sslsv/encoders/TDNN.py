@@ -9,6 +9,15 @@ from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
 @dataclass
 class TDNNConfig(BaseEncoderConfig):
+    """
+    TDNN encoder configuration.
+
+    Attributes:
+        nb_blocks (int): Number of TDNN blocks.
+        channels (List[int]): Number of channels for each TDNN block.
+        kernel_sizes (List[int]): Kernel sizes for each TDNN block.
+        dilations (List[int]): Dilations for each TDNN block.
+    """
 
     nb_blocks: int = 5
 
@@ -20,8 +29,28 @@ class TDNNConfig(BaseEncoderConfig):
 
 
 class TDNNBlock(nn.Module):
+    """
+    TDNN main module.
+
+    Attributes:
+        conv (nn.Conv1d): Convolutional layer.
+        activation (nn.LeakyReLU): Activation function.
+        bn (nn.BatchNorm1d): Batch normalization layer.
+    """
 
     def __init__(self, in_dim: int, out_dim: int, kernel_size: int, dilation: int):
+        """
+        Initialize a TDNNBlock module.
+
+        Args:
+            in_dim (int): Number of input channels.
+            out_dim (int): Number of output channels.
+            kernel_size (int): Size of the convolutional kernel.
+            dilation (int): Dilation factor for the convolution.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.conv = nn.Conv1d(
@@ -31,12 +60,43 @@ class TDNNBlock(nn.Module):
         self.bn = nn.BatchNorm1d(out_dim)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
+
+        Args:
+            X (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         return self.bn(self.activation(self.conv(X)))
 
 
 class TDNN(BaseEncoder):
+    """
+    Time Delay Neural Network (TDNN) encoder.
+
+    Paper:
+        X-vectors: Robust dnn embeddings for speaker recognition
+        *David Snyder, Daniel Garcia-Romero, Gregory Sell, Daniel Povey, Sanjeev Khudanpur*
+        ICASSP 2018
+        https://www.danielpovey.com/files/2018_icassp_xvectors.pdf
+
+    Attributes:
+        blocks (nn.Sequential): Sequential module of TDNN blocks.
+        last_fc (nn.Linear): Final linear layer.
+    """
 
     def __init__(self, config: TDNNConfig):
+        """
+        Initialize a TDNN encoder.
+
+        Args:
+            config (TDNNConfig): Encoder configuration.
+
+        Returns:
+            None
+        """
         super().__init__(config)
 
         self.blocks = nn.Sequential(
@@ -54,6 +114,15 @@ class TDNN(BaseEncoder):
         self.last_fc = nn.Linear(config.channels[-1] * 2, config.encoder_dim)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
+
+        Args:
+            X (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         Z = super().forward(X)
         # Z shape: (B, C, L) = (B, 40, 200)
 

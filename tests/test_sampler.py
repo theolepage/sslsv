@@ -15,10 +15,8 @@ from .test_dataset import get_files_labels
 def test_nb_samples_per_spk():
     files, labels = get_files_labels("data/voxceleb1_train.csv")
 
-    dataset = Dataset(DatasetConfig(), files, labels)
-
     config = SamplerConfig(nb_samples_per_spk=5)
-    sampler = Sampler(dataset, 64, config)
+    sampler = Sampler(labels, 64, config)
 
     d = defaultdict(int)
     for i in iter(sampler):
@@ -30,10 +28,8 @@ def test_nb_samples_per_spk():
 def test_create_contrastive_pairs():
     files, labels = get_files_labels("data/voxceleb1_train.csv")
 
-    dataset = Dataset(DatasetConfig(), files, labels)
-
     config = SamplerConfig(create_contrastive_pairs=True)
-    sampler = Sampler(dataset, 64, config)
+    sampler = Sampler(labels, 64, config)
 
     for i in iter(sampler):
         assert isinstance(i, tuple)
@@ -43,10 +39,8 @@ def test_create_contrastive_pairs():
 def test_prevent_class_collisions(batch_size=64):
     files, labels = get_files_labels("data/voxceleb1_train.csv")
 
-    dataset = Dataset(DatasetConfig(), files, labels)
-
     config = SamplerConfig(prevent_class_collisions=True)
-    sampler = Sampler(dataset, batch_size, config)
+    sampler = Sampler(labels, batch_size, config)
 
     idx = list(iter(sampler))
     labels = np.array(labels)[idx]

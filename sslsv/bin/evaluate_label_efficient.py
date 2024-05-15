@@ -8,25 +8,38 @@ from dataclasses import dataclass
 import argparse
 
 import torch
+import torch.nn as nn
 
 from sslsv.Config import Config
 from sslsv.datasets.Sampler import SamplerConfig
-from sslsv.methods._BaseMethod import BaseMethod
 from sslsv.methods.Supervised.Supervised import Supervised, SupervisedConfig
 from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, evaluate
 from sslsv.trainer.Trainer import OptimizerEnum, Trainer
 
 
 @dataclass
-class ClassifierConfig(SupervisedConfig):
+class SupervisedWithPretrainedEncoderConfig(SupervisedConfig):
 
     pass
 
 
-class Classifier(Supervised):
+class SupervisedWithPretrainedEncoder(Supervised):
+    """
+    Supervised method with a pre-trained encoder.
+    """
 
-    def __init__(self, config: Config, model: BaseMethod):
-        super().__init__(ClassifierConfig(), lambda: model.encoder)
+    def __init__(self, config: Config, encoder: nn.Module):
+        """
+        Initialize a Supervised method with a pre-trained encoder.
+
+        Args:
+            config (Config): Method configuration.
+            model (torch.nn.Module): Pre-trained encoder module.
+
+        Returns:
+            None
+        """
+        super().__init__(SupervisedWithPretrainedEncoderConfig(), lambda: encoder)
 
 
 def get_model_name_suffix(
@@ -34,6 +47,17 @@ def get_model_name_suffix(
     fine_tune: bool,
     supervised: bool,
 ) -> str:
+    """
+    Return a suffix for a model name based on the training configuration.
+
+    Args:
+        nb_samples_per_spk (int): Number of samples per speaker.
+        fine_tune (bool): Whether the model is fine-tuned.
+        supervised (bool): Whether the model is supervised.
+
+    Returns:
+        str: Suffix for the model name.
+    """
     suffix = "_label-efficient-"
     suffix += str(nb_samples_per_spk) + "-"
     if supervised:
@@ -49,6 +73,18 @@ def train(
     fine_tune: bool = False,
     supervised: bool = False,
 ):
+    """
+    Train a model with a limited amount of samples per speaker (label-efficient evaluation).
+
+    Args:
+        args (argparse.Namespace): Arguments parsed from the command line.
+        nb_samples_per_spk (int): Number of samples per speaker.
+        fine_tune (bool): Whether the model is fine-tuned. Defaults to False.
+        supervised (bool): Whether the model is supervised. Defaults to False.
+
+    Returns:
+        None
+    """
     config = load_config(args.config)
 
     config.dataset.sampler = SamplerConfig(nb_samples_per_spk=nb_samples_per_spk)
@@ -74,7 +110,7 @@ def train(
 
     # Create classifier
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    classifier = Classifier(config, model).to(device)
+    classifier = SupervisedWithPretrainedEncoder(config, model.encoder).to(device)
     classifier = torch.nn.DataParallel(classifier)
 
     model_name_suffix = get_model_name_suffix(nb_samples_per_spk, fine_tune, supervised)

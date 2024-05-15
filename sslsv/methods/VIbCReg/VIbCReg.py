@@ -12,6 +12,14 @@ from .VIbCRegLoss import VIbCRegLoss
 
 @dataclass
 class VIbCRegConfig(BaseSiameseMethodConfig):
+    """
+    VIbCReg method configuration.
+
+    Attributes:
+        inv_weight (float): Weight of invariance loss term.
+        var_weight (float): Weight of variance loss term.
+        cov_weight (float): Weight of covariance loss term.
+    """
 
     inv_weight: float = 1.0
     var_weight: float = 1.0
@@ -19,12 +27,35 @@ class VIbCRegConfig(BaseSiameseMethodConfig):
 
 
 class VIbCReg(BaseSiameseMethod):
+    """
+    VIbCReg (Variance-Invariance-better-Covariance Regularization) method.
+
+    Paper:
+        Computer Vision Self-supervised Learning Methods on Time Series
+        *Daesoo Lee, Erlend Aune*
+        arXiv preprint 2022
+        https://arxiv.org/abs/2109.00783
+
+    Attributes:
+        projector (nn.Sequential): Projection module.
+        loss_fn (VIbCRegLoss): Loss function.
+    """
 
     def __init__(
         self,
         config: VIbCRegConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize a VIbCReg method.
+
+        Args:
+            config (VIbCRegConfig): Method configuration.
+            create_encoder_fn (Callable[[], BaseEncoder]): Function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(

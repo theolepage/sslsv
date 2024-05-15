@@ -19,6 +19,13 @@ from .DINOLoss import DINOLoss
 
 
 class DINOHead(nn.Module):
+    """
+    Head module for DINO.
+
+    Attributes:
+        mlp (nn.Sequential): MLP module.
+        last_layer (nn.utils.weight_norm): Last layer module.
+    """
 
     def __init__(
         self,
@@ -27,6 +34,18 @@ class DINOHead(nn.Module):
         bottleneck_dim: int,
         output_dim: int,
     ):
+        """
+        Initialize a DINO head module.
+
+        Args:
+            input_dim (int): Dimension of the input.
+            hidden_dim (int): Dimension of the hidden layers.
+            bottleneck_dim (int): Dimension of the bottleneck layer.
+            output_dim (int): Dimension of the output.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.mlp = nn.Sequential(
@@ -48,12 +67,30 @@ class DINOHead(nn.Module):
         self.last_layer.weight_g.requires_grad = False
 
     def _init_weights(self, m: nn.Module):
+        """
+        Initialize weights.
+
+        Args:
+            m (nn.Module): PyTorch module.
+
+        Returns:
+            None
+        """
         if isinstance(m, nn.Linear):
             torch.nn.init.trunc_normal_(m.weight, std=0.02)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x: T) -> T:
+        """
+        Forward pass.
+
+        Args:
+            x (T): Input tensor.
+
+        Returns:
+            T: Output tensor.
+        """
         x = self.mlp(x)
         x = F.normalize(x, p=2, dim=-1)
         x = self.last_layer(x)
@@ -62,6 +99,20 @@ class DINOHead(nn.Module):
 
 @dataclass
 class DINOConfig(BaseMomentumMethodConfig):
+    """
+    DINO method configuration.
+
+    Attributes:
+        start_tau (float): Initial value for tau (momentum parameters update).
+        head_hidden_dim (int): Head hidden dimension.
+        head_bottleneck_dim (int): Head bottleneck dimension.
+        head_output_dim (int): Head output dimension.
+        freeze_last_layer (int): Whether to freeze the last layer of the head.
+        student_temperature (float): Temperature value for the student.
+        teacher_temperature (float): Temperature value for the teacher.
+        teacher_temperature_warmup (float): Initial temperature value for the teacher.
+        teacher_temperature_warmup_epochs (int): Number of epochs for the teacher temperature warmup.
+    """
 
     start_tau: float = 0.996
 
@@ -78,12 +129,38 @@ class DINOConfig(BaseMomentumMethodConfig):
 
 
 class DINO(BaseMomentumMethod):
+    """
+    DINO (self-DIstillation with NO labels) method.
+
+    Paper:
+        Emerging Properties in Self-Supervised Vision Transformers
+        *Mathilde Caron, Hugo Touvron, Ishan Misra, Hervé Jégou, Julien Mairal, Piotr Bojanowski, Armand Joulin*
+        ICCV 2021
+        https://arxiv.org/abs/2104.14294
+
+    Attributes:
+        current_epoch (int): Current training epoch.
+        freeze_last_layer (bool): Whether to freeze the last layer of the head.
+        head (DINOHead): Head module.
+        head_momentum (DINOHead): Head momentum module.
+        loss_fn (DINOLoss): Loss function.
+    """
 
     def __init__(
         self,
         config: DINOConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize a DINO method.
+
+        Args:
+            config (DINOConfig): Method configuration.
+            create_encoder_fn (Callable[[], BaseEncoder]): Function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         self.current_epoch = 0
@@ -114,6 +191,17 @@ class DINO(BaseMomentumMethod):
         )
 
     def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T]]:
+        """
+        Forward pass.
+
+        Args:
+            X (T): Input tensor.
+            training (bool): Whether the forward pass is for training. Defaults to False.
+
+        Returns:
+            Union[T, Tuple[T, T, Optional[T], Optional[T]]]: Encoder output for inference or
+                embeddings for training.
+        """
         if not training:
             return self.encoder_momentum(X)
 
@@ -145,6 +233,20 @@ class DINO(BaseMomentumMethod):
         nb_steps: int,
         nb_steps_per_epoch: int,
     ) -> Tuple[float, float]:
+        """
+        Update the learning rate for DINO method.
+
+        Args:
+            optimizer (torch.optim.Optimizer): Optimizer used for training.
+            init_lr (float): Initial learning rate from configuration.
+            init_wd (float): Initial weight decay from configuration.
+            step (int): Current training step.
+            nb_steps (int): Total number of training steps.
+            nb_steps_per_epoch (int): Number of training steps per epoch.
+
+        Returns:
+            Tuple[float, float]: Updated learning rate and initial weight decay.
+        """
         min_lr = 1e-5
         warmup_lr_schedule = np.linspace(0, init_lr, 10 * nb_steps_per_epoch)
         lr_schedule = min_lr + 0.5 * (init_lr - min_lr) * (
@@ -160,6 +262,12 @@ class DINO(BaseMomentumMethod):
         return lr, init_wd
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
+        """
+        Get the learnable parameters.
+
+        Returns:
+            Iterable[Dict[str, Any]]: Collection of parameters.
+        """
         extra_learnable_params = [{"params": self.head.parameters()}]
         params = super().get_learnable_params() + extra_learnable_params
 
@@ -179,6 +287,12 @@ class DINO(BaseMomentumMethod):
         return [{"params": regularized}, {"params": not_regularized}]
 
     def get_momentum_pairs(self) -> List[Tuple[nn.Module, nn.Module]]:
+        """
+        Get a list of modules and their associated momentum module.
+
+        Returns:
+            List[Tuple[nn.Module, nn.Module]]: List of (module, module_momentum) pairs.
+        """
         extra_momentum_pairs = [(self.head, self.head_momentum)]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
@@ -190,12 +304,24 @@ class DINO(BaseMomentumMethod):
         indices: Optional[T] = None,
         labels: Optional[T] = None,
     ) -> T:
+        """
+        Perform a training step.
+
+        Args:
+            Z (Tuple[T, T]): Embedding tensors.
+            step (int): Current training step.
+            step_rel (Optional[int]): Current training step (relative to the epoch).
+            indices (Optional[T]): Training sample indices.
+            labels (Optional[T]): Training sample labels.
+
+        Returns:
+            T: Loss tensor.
+        """
         S, T = Z
 
         loss = self.loss_fn(S, T)
 
         self.log_step_metrics(
-            step,
             {
                 "train/loss": loss,
                 "train/tau": self.momentum_updater.tau,
@@ -205,11 +331,26 @@ class DINO(BaseMomentumMethod):
         return loss
 
     def on_train_epoch_start(self, epoch: int, max_epochs: int):
+        """
+        Update training epoch value.
+
+        Args:
+            epoch (int): Current epoch.
+            max_epochs (int): Total number of epochs.
+
+        Returns:
+            None
+        """
         self.current_epoch = epoch
         self.loss_fn.epoch = epoch
 
     def on_after_backward(self):
-        # Freeze last layer of head
+        """
+        Freeze last layer of head.
+
+        Returns:
+            None
+        """
         if self.current_epoch < self.freeze_last_layer:
             for p in self.head.last_layer.parameters():
                 p.grad = None

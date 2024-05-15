@@ -13,6 +13,15 @@ from sslsv.utils.helpers import load_config, load_model
 
 
 def inference(args: argparse.Namespace):
+    """
+    Perform model inference from the CLI (using DistributedDataParallel).
+
+    Args:
+        args (argparse.Namespace): Arguments parsed from the command line.
+
+    Returns:
+        None
+    """
     world_size = int(os.environ["WORLD_SIZE"])  # idr_torch.size
     rank = int(os.environ["LOCAL_RANK"])  # idr_torch.rank
 

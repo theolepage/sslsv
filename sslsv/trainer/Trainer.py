@@ -28,12 +28,26 @@ from .EpochLogger import EpochLogger
 
 
 class TrackedModeEnum(Enum):
+    """
+    Enumeration representing tracked mode options for early stopping.
+
+    Attributes:
+        MIN (str): Model has improved if the metric is lower.
+        MAX (str): Model has improved if the metric is higher.
+    """
 
     MIN = "min"
     MAX = "max"
 
 
 class OptimizerEnum(Enum):
+    """
+    Enumeration representing different training optimizers.
+
+    Attributes:
+        ADAM (str): Adam optimizer.
+        SGD (str): SGD optimizer.
+    """
 
     ADAM = "adam"
     SGD = "sgd"
@@ -41,6 +55,24 @@ class OptimizerEnum(Enum):
 
 @dataclass
 class TrainerConfig:
+    """
+    Trainer configuration.
+
+    Attributes:
+        epochs (int): Number of epochs.
+        batch_size (int): Batch size for training.
+        learning_rate (float): Initial learning rate.
+        weight_decay (float): Weight decay for optimizer.
+        optimizer (OptimizerEnum): Optimizer type.
+        patience (int): Number of epochs to wait for improvement before early stopping.
+        tracked_metric (str): Metric used for tracking improvement for early stopping.
+        tracked_mode (TrackedModeEnum): Mode for tracking the the improvement of the tracked metric.
+        ddp_sync_batchnorm (bool): Whether to synchronize BatchNorm statistics when using DDP.
+        mixed_precision (bool): Whether to use mixed precision training.
+        init_weights (str): Path to initial weights for the model.
+        wandb_id (str): ID for the WandB run.
+        wandb_project (str): Project name for WandB run.
+    """
 
     epochs: int = 100
     batch_size: int = 256
@@ -61,6 +93,24 @@ class TrainerConfig:
 
 
 class Trainer:
+    """
+    Trainer class.
+
+    Attributes:
+        model (BaseMethod): Model instance used for training.
+        train_dataloader (torch.utils.data.DataLoader): DataLoader for training data.
+        config (Any): Gloabal configuration.
+        evaluate (Callable[..., Dict[str, float]]): Function for evaluating the model.
+        optimizer (torch.optim.Optimizer): Optimizer instance used for training.
+        scaler (torch.cuda.amp.GradScaler): GradScaler instance for mixed precision training.
+        device (torch.device): Device on which tensors will be allocated.
+        best_metric (float): Best metric value achieved during training.
+        nb_epochs_remaining (int): Number of epochs remaining before early stopping.
+        epoch (int): Current epoch number.
+        epoch_start_time (datetime): Start time of the current epoch.
+        tensorboard_writer (SummaryWriter): SummaryWriter instance for Tensorboard logs.
+        wandb_url (str): URL for the current WandB run.
+    """
 
     def __init__(
         self,
@@ -70,6 +120,19 @@ class Trainer:
         evaluate: Callable[..., Dict[str, float]],
         device: torch.device,
     ):
+        """
+        Initialize a Trainer object.
+
+        Args:
+            model (BaseMethod): Model used for training.
+            train_dataloader (torch.utils.data.DataLoader): DataLoader for training data.
+            config (Any): Global configuration.
+            evaluate (Callable[..., Dict[str, float]]): Function for evaluating the model.
+            device (torch.device): Device on which tensors will be allocated.
+
+        Returns:
+            None
+        """
         self.model = model
         self.train_dataloader = train_dataloader
         self.config = config
@@ -83,6 +146,15 @@ class Trainer:
         )
 
     def _train_step_loop(self, logger: EpochLogger):
+        """
+        Perform a training step.
+
+        Args:
+            logger (EpochLogger): EpochLogger object for logging metrics.
+
+        Returns:
+            None
+        """
         nb_steps = self.config.trainer.epochs * len(self.train_dataloader)
 
         for step_rel, (indices, X, info) in enumerate(
@@ -136,13 +208,22 @@ class Trainer:
 
             logger.update(
                 {
-                    **self.model.module.step_metrics[step],
-                    "train/learning_rate": lr,
-                    "train/weight_decay": wd,
+                    **self.model.module.step_metrics,
+                    "train/lr": lr,
+                    "train/wd": wd,
                 }
             )
 
     def _update_training_stats_file(self, metrics: Dict[str, float]):
+        """
+        Update `training.json` file.
+
+        Args:
+            metrics (Dict[str, float]): Dictionary of metrics.
+
+        Returns:
+            None
+        """
         log_file_path = self.config.model_path / "training.json"
         log_file_data = {}
         if log_file_path.exists():
@@ -153,6 +234,15 @@ class Trainer:
             json.dump(log_file_data, f, indent=4)
 
     def _log_end_epoch(self, metrics: Dict[str, float]):
+        """
+        Log time, epoch duration and metrics at the end of an epoch.
+
+        Args:
+            metrics (Dict[str, float]): Dictionary of metric.
+
+        Returns:
+            None
+        """
         time = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
         print(f"Time: {time}")
 
@@ -172,6 +262,15 @@ class Trainer:
         self._update_training_stats_file(metrics)
 
     def _early_stopping(self, metrics: Dict[str, float]) -> bool:
+        """
+        Check for early stopping and save best best model in the event of an improvement.
+
+        Args:
+            metrics (Dict[str, float]): Dictionary of metrics.
+
+        Returns:
+            bool: True if training should continue, False if early stopping criteria is met.
+        """
         improved = False
 
         if self.config.trainer.tracked_metric in metrics.keys():
@@ -204,6 +303,15 @@ class Trainer:
         return True
 
     def _train_epoch_loop(self, start_epoch: int = 0):
+        """
+        Main training loop that performs training epochs.
+
+        Args:
+            start_epoch (int): Epoch to start training from. Defaults to 0.
+
+        Returns:
+            None
+        """
         self.nb_epochs_remaining = 0
 
         max_epochs = self.config.trainer.epochs
@@ -248,6 +356,12 @@ class Trainer:
                     break
 
     def _load_checkpoint(self) -> Any:
+        """
+        Load model checkpoint for resuming or use weights of pre-trained model.
+
+        Returns:
+            Any: Loaded checkpoint, or None if no checkpoint is found.
+        """
         init_weights = self.config.trainer.init_weights
         checkpoint_path = self.config.model_path / "model_latest.pt"
 
@@ -268,6 +382,15 @@ class Trainer:
         return checkpoint
 
     def _save_checkpoint(self, suffix: str):
+        """
+        Save a checkpoint.
+
+        Args:
+            suffix (str): String suffix to differentiate different saved checkpoints.
+
+        Returns:
+            None
+        """
         torch.save(
             {
                 "epoch": self.epoch + 1,
@@ -279,12 +402,21 @@ class Trainer:
         )
 
     def _log_start_training(self, resuming: bool):
-        gitHash = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            text=True,
-            capture_output=True,
-            check=True,
-        ).stdout.strip()
+        """
+        Log information at the beginning of the training.
+
+        Args:
+            resuming (bool): Indicates whether training is resuming from a checkpoint.
+
+        Returns:
+            None
+        """
+        # gitHash = subprocess.run(
+        #     ["git", "rev-parse", "--short", "HEAD"],
+        #     text=True,
+        #     capture_output=True,
+        #     check=True,
+        # ).stdout.strip()
 
         if self.device == torch.device("cpu"):
             training_mode = "CPU"
@@ -306,7 +438,7 @@ class Trainer:
         print()
         print("=" * 3, "Trainer", "=" * (sep_length - 12))
         print(f"Model: {self.config.model_name}")
-        print(f"Commit: {gitHash}")
+        # print(f"Commit: {gitHash}")
         print(f"Mode: {training_mode}")
         print(f"Iterations: {len(self.train_dataloader)}")
         print(f'Resuming: {"yes" if resuming else "no"}')
@@ -315,6 +447,12 @@ class Trainer:
         print("=" * sep_length)
 
     def _init_optimizer(self):
+        """
+        Initialize the optimizer.
+
+        Returns:
+            None
+        """
         if self.config.trainer.optimizer == OptimizerEnum.SGD:
             self.optimizer = SGD(
                 self.model.module.get_learnable_params(),
@@ -332,11 +470,23 @@ class Trainer:
         self.scaler = GradScaler() if self.config.trainer.mixed_precision else None
 
     def _init_tensorboard(self):
+        """
+        Initialize Tensorboard logger.
+
+        Returns:
+            None
+        """
         self.tensorboard_writer = SummaryWriter(
             log_dir=str(self.config.model_path / "tensorboard")
         )
 
     def _init_wandb(self):
+        """
+        Initialize Weights and Biases (WandB).
+
+        Returns:
+            None
+        """
         wandb_name = self.config.model_name.replace("/", "_")
         wandb_id = (
             self.config.trainer.wandb_id if self.config.trainer.wandb_id else wandb_name
@@ -352,6 +502,15 @@ class Trainer:
         ).get_url()
 
     def start(self, resume: bool = True):
+        """
+        Start the training.
+
+        Args:
+            resume (bool): Whether to resume training from a checkpoint. Defaults to True.
+
+        Returns:
+            None
+        """
         if is_dist_initialized() and self.config.trainer.ddp_sync_batchnorm:
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
 

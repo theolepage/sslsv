@@ -4,21 +4,43 @@ import torch.nn.functional as F
 
 
 class Whitening2d(nn.Module):
+    """
+    Computes hard whitening for W-MSE in 2D using the Cholesky decomposition.
+
+    Adapted from https://github.com/htdt/self-supervised/blob/master/methods/whitening.py.
+
+    Attributes:
+        output_dim (int): Number of dimension of projected features.
+        eps (float): Epsilon value for numerical stability.
+    """
 
     def __init__(self, output_dim: int, eps: float = 0.0):
-        """Layer that computes hard whitening for W-MSE using the Cholesky decomposition.
+        """
+        Initialize a Whitening 2D object.
 
         Args:
-            output_dim (int): number of dimension of projected features.
-            eps (float, optional): eps for numerical stability in Cholesky decomposition. Defaults
-                to 0.0.
+            output_dim (int): Number of dimension of projected features.
+            eps (float): Epsilon value for numerical stability. Defaults to 0.0.
+
+        Returns:
+            None
         """
 
         super().__init__()
+
         self.output_dim = output_dim
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Compute whitening.
+
+        Args:
+            x (torch.Tensor): Input tensor. Shape: (N, D, H, W).
+
+        Returns:
+            torch.Tensor: Output tensor. Shape: (N, D, H, W).
+        """
         x = x.unsqueeze(2).unsqueeze(3)
         m = x.mean(0).view(self.output_dim, -1).mean(-1).view(1, -1, 1, 1)
         xn = x - m

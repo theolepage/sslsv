@@ -14,6 +14,13 @@ from .CPCLoss import CPCLoss
 
 
 class AggregatorTypeEnum(Enum):
+    """
+    Enumeration representing types of aggregators for CPC.
+
+    Attributes:
+        GRU (str): Gated Recurrent Unit (GRU).
+        LSTM (str): Long short-term memory (LSTM).
+    """
 
     GRU = "gru"
     LSTM = "lstm"
@@ -21,6 +28,16 @@ class AggregatorTypeEnum(Enum):
 
 @dataclass
 class CPCConfig(BaseMethodConfig):
+    """
+    CPC method configuration.
+
+    Attributes:
+        bidirectional (bool): Whether to predict backward sequence.
+        nb_t_to_predict (int): Number of time-steps to predict.
+        aggregator_type (AggregatorTypeEnum): Type of aggregator.
+        aggregator_nb_layers (int): Number of layers in the aggregator.
+        aggregator_dim (int): Dimension of the aggregator.
+    """
 
     bidirectional: bool = False
     nb_t_to_predict: int = 4
@@ -31,6 +48,15 @@ class CPCConfig(BaseMethodConfig):
 
 
 class CPCAggregator(nn.Module):
+    """
+    Aggregator for CPC.
+
+    Attributes:
+        MODULES_SUPPORTED (Dict[AggregatorTypeEnum, nn.Module]): Dictionary mapping aggregator types
+            to corresponding PyTorch modules.
+
+        aggregator (nn.Module): Aggregator module.
+    """
 
     MODULES_SUPPORTED = {
         AggregatorTypeEnum.GRU: nn.GRU,
@@ -44,6 +70,18 @@ class CPCAggregator(nn.Module):
         encoder_dim: int,
         aggregator_dim: int,
     ):
+        """
+        Initialize a CPC aggregator.
+
+        Args:
+            module_type (AggregatorTypeEnum): Aggregator type.
+            nb_layers (int): Number of layers in the aggregator module.
+            encoder_dim (int): Dimension of the encoder output.
+            aggregator_dim (int): Dimension of the aggregator output.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.aggregator = CPCAggregator.MODULES_SUPPORTED[module_type](
@@ -54,6 +92,15 @@ class CPCAggregator(nn.Module):
         )
 
     def forward(self, X: T) -> T:
+        """
+        Forward pass.
+
+        Args:
+            X (T): Input tensor. Shape: (N, D, L).
+
+        Returns:
+            T: Output tensor. Shape: (N, D).
+        """
         X = X.transpose(1, 2)  # (N, L, C)
         self.aggregator.flatten_parameters()
         Z, _ = self.aggregator(X)
@@ -61,8 +108,25 @@ class CPCAggregator(nn.Module):
 
 
 class CPCPredictor(nn.Module):
+    """
+    Predictor for CPC.
+
+    Attributes:
+        predictors (nn.ModuleList): Predictor modules.
+    """
 
     def __init__(self, aggregator_dim: int, encoder_dim: int, nb_t_to_predict: int):
+        """
+        Initializes a CPC predictor.
+
+        Args:
+            aggregator_dim (int): Dimension of the aggregator output.
+            encoder_dim (int): Dimension of the encoder output.
+            nb_t_to_predict (int): Number of time-steps to predict.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.predictors = nn.ModuleList(
@@ -70,16 +134,53 @@ class CPCPredictor(nn.Module):
         )
 
     def forward(self, X: T) -> T:
+        """
+        Forward pass.
+
+        Args:
+            X (T): Input tensor.
+
+        Returns:
+            T: Output tensor.
+        """
         return torch.stack([predictor(X) for predictor in self.predictors], axis=2)
 
 
 class CPC(BaseMethod):
+    """
+    CPC (Contrastive Predictive Coding) method.
+
+    Paper:
+        Representation Learning with Contrastive Predictive Coding
+        *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
+        arXiv preprint 2019
+        https://arxiv.org/abs/1807.03748
+
+    Attributes:
+        bidirectional (bool): Whether to predict backward sequence.
+        nb_t_to_predict (int): Number of time-steps to predict.
+        aggregator (CPCAggregator): Aggregator module.
+        predictor (CPCPredictor): Predictor module.
+        aggregator_r (CPCAggregator): Aggregator reversed for bidirectional mode.
+        predictor_r (CPCPredictor): Predictor reversed for bidirectional mode.
+        loss_fn (CPCLoss): Loss function.
+    """
 
     def __init__(
         self,
         config: CPCConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize the CPC model.
+
+        Args:
+            config (CPCConfig): Method configuration.
+            create_encoder_fn (Callable): Function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         self.bidirectional = config.bidirectional
@@ -119,6 +220,16 @@ class CPC(BaseMethod):
         X: T,
         training: bool = False,
     ) -> Union[T, Tuple[T, T, Optional[T], Optional[T]]]:
+        """
+        Forward pass.
+
+        Args:
+            X (T): Input tensor
+            training (bool): Whether the forward pass is for training. Defaults to False.
+
+        Returns:
+            Union[T, Tuple[T, T, Optional[T], Optional[T]]]: Encoder output for inference or embeddings for training.
+        """
         if not training:
             Z = self.aggregator(self.encoder(X))
 
@@ -140,6 +251,12 @@ class CPC(BaseMethod):
         return Y_1, Y_2, Y_1_r, Y_2_r
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
+        """
+        Get the learnable parameters.
+
+        Returns:
+            Iterable[Dict[str, Any]]: Collection of parameters.
+        """
         extra_learnable_params = [
             {"params": self.aggregator.parameters()},
             {"params": self.predictor.parameters()},
@@ -158,6 +275,18 @@ class CPC(BaseMethod):
         aggregator: CPCAggregator,
         predictor: CPCPredictor,
     ) -> Tuple[T, float]:
+        """
+        Perform a training step (aux).
+
+        Args:
+            Y_1 (T): Embedding tensor of first view.
+            Y_2 (T): Embedding tensor of second view.
+            aggregator (CPCAggregator): Aggregator module.
+            predictor (CPCPredictor): Predictor module.
+
+        Returns:
+            Tuple[T, float]: Loss tensor and accuracy.
+        """
         # Y: (N, encoded_dim, frame_length)
 
         Y_past = Y_1[:, :, : -self.nb_t_to_predict]
@@ -189,6 +318,19 @@ class CPC(BaseMethod):
         indices: Optional[T] = None,
         labels: Optional[T] = None,
     ) -> T:
+        """
+        Perform a training step.
+
+        Args:
+            Z (Tuple[T, T, Optional[T], Optional[T]]): Embedding tensors.
+            step (int): Current training step.
+            step_rel (Optional[int]): Current training step (relative to the epoch).
+            indices (Optional[T]): Training sample indices.
+            labels (Optional[T]): Training sample labels.
+
+        Returns:
+            T: Loss tensor.
+        """
         Y_1, Y_2, Y_1_r, Y_2_r = Z
 
         loss, accuracy = self.train_step_(Y_1, Y_2, self.aggregator, self.predictor)
@@ -204,7 +346,6 @@ class CPC(BaseMethod):
             accuracy = (accuracy + accuracy_r) / 2
 
         self.log_step_metrics(
-            step,
             {
                 "train/loss": loss,
                 # 'train/accuracy': accuracy

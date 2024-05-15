@@ -7,8 +7,23 @@ from torch import Tensor as T
 
 
 class MoCoLoss(nn.Module):
+    """
+    MoCo loss.
+
+    Attributes:
+        temperature (float): Temperature value.
+    """
 
     def __init__(self, temperature: float = 0.2):
+        """
+        Initialize a MoCo loss.
+
+        Args:
+            temperature (float): Temperature value. Defaults to 0.2.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.temperature = temperature
@@ -21,6 +36,19 @@ class MoCoLoss(nn.Module):
         current_labels: Optional[T] = None,
         queue_labels: Optional[T] = None,
     ) -> T:
+        """
+        Compute loss.
+
+        Args:
+            query (T): Query tensor.
+            key (T): Key tensor.
+            queue (T): Queue tensor.
+            current_labels (Optional[T]): Labels tensor from the query/key.
+            queue_labels (Optional[T]): Labels tensor from the queue.
+
+        Returns:
+            T: Loss tensor.
+        """
         N, _ = query.size()
 
         pos = torch.einsum("nc,nc->n", (query, key)).unsqueeze(-1)

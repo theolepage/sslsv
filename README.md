@@ -64,20 +64,20 @@ Our training framework is depicted by the figure below.
   *Joon Son Chung, Arsha Nagrani, Andrew Zisserman*
 
 - **ECAPA-TDNN** (`sslsv.encoders.ECAPATDNN`)  
-  ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification ([PDF](https://arxiv.org/abs/2005.07143))  
+  ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification ([arXiv](https://arxiv.org/abs/2005.07143))  
   *Brecht Desplanques, Jenthe Thienpondt, Kris Demuynck*
 </details>
 
 <details>
   <summary><b>Methods</b></summary>
 
-- **CPC** (`sslsv.methods.CPC`)  
-  Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
-  *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
-
 - **LIM** (`sslsv.methods.LIM`)  
   Learning Speaker Representations with Mutual Information ([arXiv](https://arxiv.org/abs/1812.00271))  
   *Mirco Ravanelli, Yoshua Bengio*
+
+- **CPC** (`sslsv.methods.CPC`)  
+  Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
+  *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
 
 - **SimCLR** (`sslsv.methods.SimCLR`)  
   A Simple Framework for Contrastive Learning of Visual Representations ([arXiv](https://arxiv.org/abs/2002.05709))  
@@ -131,8 +131,12 @@ Our training framework is depicted by the figure below.
   Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning ([arXiv](https://arxiv.org/abs/2207.05506))  
   *Théo Lepage, Réda Dehak*
 
-- **SimCLR Custom** (`sslsv.methods.SimCLRCustom`)  
+- **SimCLR Margins** (`sslsv.methods.SimCLRMargins`)  
   Experimenting with Additive Margins for Contrastive Self-Supervised Speaker Verification ([arXiv](https://arxiv.org/abs/2306.03664))  
+  *Théo Lepage, Réda Dehak*
+
+- **SimCLR Margins** (`sslsv.methods.SimCLRMargins`)  
+  Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations ([arXiv](https://arxiv.org/abs/2404.14913))  
   *Théo Lepage, Réda Dehak*
 
 </details>

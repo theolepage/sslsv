@@ -11,7 +11,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader, DistributedSampler
 
-from sslsv.bin.train import ModelWrapper
+from sslsv.bin.train import MethodWrapper
 from sslsv.Config import Config
 from sslsv.methods._BaseMethod import BaseMethod
 from sslsv.utils.helpers import load_config, load_model, seed_dataloader_worker
@@ -20,6 +20,15 @@ from sslsv.utils.distributed import get_world_size, is_dist_initialized, is_main
 
 
 def ddp_sync_embeddings(embeddings: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    """
+    Sync embeddings across all distributed processes.
+
+    Args:
+        embeddings (Dict[str, torch.Tensor]): Dictionary containing embeddings of the local process.
+
+    Returns:
+        Dict[str, torch.Tensor]: Dictionary containing synchronized embeddings across all processes.
+    """
     embeddings_all = [None for _ in range(get_world_size())]
     torch.distributed.all_gather_object(embeddings_all, embeddings)
     embeddings = {}
@@ -39,6 +48,26 @@ def inference_(
     num_frames: int,
     verbose: bool = True,
 ) -> torch.Tensor:
+    """
+    Perform model inference on a set of audio files and save the resulting embeddings.
+
+    Args:
+        config (Config): Global configuration.
+        model (BaseMethod): Model used for inference.
+        device (torch.device): Device on which tensors will be allocated.
+        files (List[str]): List of audio file paths to run inference on.
+        output (str): Output file path for saving the embeddings.
+        batch_size (int): Batch size for inference.
+        frame_length (int): Length of the frames to extract from the audio files.
+        num_frames (int): Number of frames to extract from each audio file.
+        verbose (bool): Whether to display status messages and progress bars. Defaults to True.
+
+    Returns:
+        torch.Tensor: Embeddings extracted from the model.
+
+    Raises:
+        AssertionError: If the batch size is not 1 when frame length is None.
+    """
     if frame_length is None and batch_size != 1:
         raise AssertionError("Batch size must be set to 1 when frame length is None.")
 
@@ -94,6 +123,15 @@ def inference_(
 
 
 def inference(args: argparse.Namespace):
+    """
+    Perform model inference from the CLI.
+
+    Args:
+        args (argparse.Namespace): Arguments parsed from the command line.
+
+    Returns:
+        None
+    """
     config = load_config(args.config, verbose=not args.silent)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -107,7 +145,7 @@ def inference(args: argparse.Namespace):
     if device == torch.device("cuda"):
         model = torch.nn.DataParallel(model)
     else:
-        model = ModelWrapper(model)
+        model = MethodWrapper(model)
 
     inference_(
         config,
@@ -123,6 +161,15 @@ def inference(args: argparse.Namespace):
 
 
 def inference_parser():
+    """
+    Create an argument parser for model inference.
+
+    Returns:
+        argparse.ArgumentParser: Argument parser configured with the arguments for model inference.
+
+    Args:
+        None
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("config", type=str, help="Path to model config file.")
     parser.add_argument(

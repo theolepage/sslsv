@@ -9,8 +9,35 @@ import math
 
 
 class AAMSoftmaxLoss(nn.Module):
+    """
+    AAM-Softmax (Additive Angular Margin Softmax) loss.
+
+    Paper:
+        ArcFace: Additive Angular Margin Loss for Deep Face Recognition
+        *Jiankang Deng, Jia Guo, Jing Yang, Niannan Xue, Irene Kotsia, Stefanos Zafeiriou*
+        CVPR 2019
+        https://arxiv.org/abs/1801.07698
+
+    Attributes:
+        m (float): Margin value.
+        s (float): Scale value.
+        cos_m (float): Cosine of the margin value.
+        sin_m (float): Sine of the margin value.
+        th (float): Cosine of pi minus the margin value.
+        mm (float): Sine of pi minus the margin value times the margin value.
+    """
 
     def __init__(self, m: float = 0.2, s: float = 30):
+        """
+        Initialize an AAMSoftmax loss.
+
+        Args:
+            m (float): Margin value. Defaults to 0.2.
+            s (float): Scale value. Defaults to 30.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.m = m
@@ -22,6 +49,16 @@ class AAMSoftmaxLoss(nn.Module):
         self.mm = math.sin(math.pi - self.m) * self.m
 
     def forward(self, Z: T, labels: T) -> Tuple[T, T]:
+        """
+        Compute loss.
+
+        Args:
+            Z (T): Input tensor. Shape: (N, C).
+            labels (T): Target labels tensor. Shape: (N,).
+
+        Returns:
+            Tuple[T, T]: Loss and accuracy tensors.
+        """
         sine = torch.sqrt((1.0 - torch.mul(Z, Z)).clamp(0, 1))
         phi = Z * self.cos_m - sine * self.sin_m
         phi = torch.where((Z - self.th) > 0, phi, Z - self.mm)

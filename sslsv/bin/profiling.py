@@ -20,6 +20,20 @@ def train_with_profiling(
     repeat: int = 1,
     path: str = "./profiling",
 ):
+    """
+    Train a model with profiling enabled from the CLI.
+
+    Args:
+        args (argparse.Namespace): Arguments parsed from the command line.
+        wait (int): Wait time in seconds before starting profiling. Defaults to 1.
+        warmup (int): Warmup time in seconds for profiling. Defaults to 1.
+        active (int): Active time in seconds for profiling. Defaults to 3.
+        repeat (int): Number of profiling repeats. Defaults to 1.
+        path (str): Path to save the profiling results. Defaults to './profiling'.
+
+    Returns:
+        None
+    """
     config = load_config(args.config)
     config.trainer.epochs = 1
 

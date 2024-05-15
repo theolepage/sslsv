@@ -15,6 +15,15 @@ from evaluate import print_metrics
 
 
 def evaluate(args: argparse.Namespace):
+    """
+    Evaluate a model from the CLI (using DistributedDataParallel).
+
+    Args:
+        args (argparse.Namespace): Arguments parsed from the command line.
+
+    Returns:
+        None
+    """
     world_size = int(os.environ["WORLD_SIZE"])  # idr_torch.size
     rank = int(os.environ["LOCAL_RANK"])  # idr_torch.rank
 

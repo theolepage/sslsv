@@ -8,6 +8,17 @@ from sslsv.utils.distributed import is_dist_initialized, get_world_size
 
 
 class DINOLoss(nn.Module):
+    """
+    DINO loss.
+
+    Attributes:
+        epoch (int): Current training epoch.
+        student_temp (float): Student temperature.
+        teacher_temp_warmup (T): Teacher temperature during warmup.
+        teacher_temp (float): Teacher temperature after warmup.
+        center_momentum (float): Momentum coefficient for updating the center.
+        center (T): Tensor for centering.
+    """
 
     def __init__(
         self,
@@ -18,6 +29,20 @@ class DINOLoss(nn.Module):
         teacher_temp_warmup_epochs: int,
         center_momentum: float = 0.9,
     ):
+        """
+        Initialize a DINO loss.
+
+        Args:
+            nb_prototypes (int): Head output dimension.
+            student_temp (float): Temperature value for the student.
+            teacher_temp (float): Temperature value for the teacher.
+            teacher_temperature_warmup (float): Initial temperature value for the teacher.
+            teacher_temperature_warmup_epochs (int): Number of epochs for the teacher temperature warmup.
+            center_momentum (float): Momentum coefficient for updating the center. Defaults to 0.9.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.epoch = 0
@@ -34,11 +59,27 @@ class DINOLoss(nn.Module):
         self.register_buffer("center", torch.zeros(1, nb_prototypes))
 
     def _get_teacher_temp(self) -> float:
+        """
+        Get the teacher temperature for the current epoch.
+
+        Returns:
+            float: Teacher temperature.
+        """
         if self.epoch < len(self.teacher_temp_warmup):
             return self.teacher_temp_warmup[self.epoch]
         return self.teacher_temp
 
     def forward(self, student: T, teacher: T) -> T:
+        """
+        Compute loss.
+
+        Args:
+            student (T): Student embeddings tensor.
+            teacher (T): Teacher embeddings tensor.
+
+        Returns:
+            T: Loss tensor.
+        """
         student = student / self.student_temp
         student = student.chunk(2 + 4)
 
@@ -65,6 +106,15 @@ class DINOLoss(nn.Module):
 
     @torch.no_grad()
     def update_center(self, teacher: T):
+        """
+        Update center.
+
+        Args:
+            teacher (T): Teacher embeddings tensor.
+
+        Returns:
+            None
+        """
         new_center = torch.sum(teacher, dim=0, keepdim=True)
 
         if is_dist_initialized():

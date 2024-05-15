@@ -15,6 +15,15 @@ import idr_torch
 
 
 def train(args: argparse.Namespace):
+    """
+    Train a model on Jean Zay from the CLI (using DistributedDataParallel).
+
+    Args:
+        args (argparse.Namespace): Arguments parsed from the command line.
+
+    Returns:
+        None
+    """
     world_size = idr_torch.size
     rank = idr_torch.rank
 

@@ -5,6 +5,15 @@ import soundfile as sf
 
 
 def read_audio(path: str) -> Tuple[np.ndarray, int]:
+    """
+    Read audio data from a file.
+
+    Args:
+        path (str): Path to the audio file.
+
+    Returns:
+        Tuple[np.ndarray, int]: Audio data and sample rate.
+    """
     return sf.read(path)
 
 
@@ -14,6 +23,19 @@ def load_audio(
     num_frames: int = 1,
     min_length: Optional[int] = None,
 ) -> np.ndarray:
+    """
+    Load audio data from a file and extract frames of specified length.
+
+    Args:
+        path (str): Path to the audio file.
+        frame_length (int): Frame length.
+        num_frames (int): Number of frames to sample. Defaults to 1.
+        min_length (Optional[int]): Minimum length of the audio data.
+            If audio is shorter, it will be padded. Defaults to None.
+
+    Returns:
+        np.ndarray: Audio frames. Shape: (N, L).
+    """
     audio, sr = read_audio(path)
 
     # Convert to mono if audio is stereo

@@ -48,7 +48,7 @@ from sslsv.methods.DINO.DINO import DINO, DINOConfig
 from sslsv.methods.DeepCluster.DeepCluster import DeepCluster, DeepClusterConfig
 from sslsv.methods.SwAV.SwAV import SwAV, SwAVConfig
 from sslsv.methods.Combiner.Combiner import Combiner, CombinerConfig
-from sslsv.methods.SimCLRCustom.SimCLRCustom import SimCLRCustom, SimCLRCustomConfig
+from sslsv.methods.SimCLRMargins.SimCLRMargins import SimCLRMargins, SimCLRMarginsConfig
 
 # Evaluations
 from sslsv.evaluations._BaseEvaluation import EvaluationTaskConfig
@@ -65,6 +65,14 @@ from sslsv.evaluations.ClassificationEvaluation import (
     ClassificationEvaluationTaskConfig,
 )
 
+
+LOGO = """
+         _
+ ___ ___| |_____   __
+/ __/ __| / __\ \ / /
+\__ \__ \ \__ \\\\ V /
+|___/___/_|___/ \_/
+"""
 
 REGISTERED_EVALUATIONS = {
     "sv_cosine": (CosineSVEvaluation, CosineSVEvaluationTaskConfig),
@@ -97,15 +105,41 @@ REGISTERED_METHODS = {
     "deepcluster": (DeepCluster, DeepClusterConfig),
     "swav": (SwAV, SwAVConfig),
     "combiner": (Combiner, CombinerConfig),
-    "simclr_custom": (SimCLRCustom, SimCLRCustomConfig),
+    "simclr_margins": (SimCLRMargins, SimCLRMarginsConfig),
 }
 
 
-def bind_custom_config(
+def show_logo():
+    """
+    Print sslsv logo.
+
+    Returns:
+        None
+    """
+    print(LOGO)
+    print()
+
+
+def _bind_config(
     data: Dict[str, Any],
     key: str,
     registered_dict: Dict[str, Tuple[Any, Any]],
 ) -> Any:
+    """
+    Create a config dataclass, among a set of supported dataclasses (`registered_dict`:
+    REGISTERED_METHODS or REGISTERED_ENCODERS), from the values of a dictionary (`data`).
+
+    Args:
+        data (Dict[str, Any]): Configuration data in dictionary format.
+        key (str): Key to access the dataclass to create.
+        registered_dict (Dict[str, Tuple[Any, Any]]): Dictionary containing supported dataclasses.
+
+    Returns:
+        Any: Configuration dataclass.
+
+    Raises:
+        Exception: If the specified configuration type is not supported.
+    """
     type_ = data[key]["type"]
     if type_ not in registered_dict.keys():
         raise Exception("{} `{}` not supported".format(key.capitalize(), type_))
@@ -115,11 +149,27 @@ def bind_custom_config(
     return res
 
 
-def bind_evaluate_tasks_config(
+def _bind_evaluate_tasks_config(
     data: Dict[str, Any],
     key: str,
     default_config: List[EvaluationTaskConfig],
 ) -> List[EvaluationTaskConfig]:
+    """
+    Create a list of evaluation task config dataclasses, among a set of supported dataclasses
+    (`REGISTERED_EVALUATIONS`), from the values of a dictionary (`data`).
+
+    Args:
+        data (Dict[str, Any]): Configuration data in dictionary format.
+        key (str): Key to access the evaluation task configurations.
+        default_config (List[EvaluationTaskConfig]): Default list of evaluation task configurations.
+
+    Returns:
+        List[EvaluationTaskConfig]: List of evaluation task configurations.
+
+    Raises:
+        Exception: If the evaluation task type is not supported.
+        Exception: If an evaluation task of the same type is already registered.
+    """
     if "evaluation" not in data.keys() or key not in data["evaluation"].keys():
         return default_config
 
@@ -143,17 +193,27 @@ def bind_evaluate_tasks_config(
 
 
 def load_config(path: str, verbose: bool = True) -> Config:
+    """
+    Load a configuration file and create a Config object.
+
+    Args:
+        path (str): Path to the configuration file.
+        verbose (bool): Verbosity flag. Defaults to True.
+
+    Returns:
+        Config: Config object containing the loaded configuration.
+    """
     data = YAML(typ="safe", pure=True).load(open(path, "r"))
     config = from_dict(Config, data, DaciteConfig(cast=[Enum]))
 
-    config.evaluation.validation = bind_evaluate_tasks_config(
+    config.evaluation.validation = _bind_evaluate_tasks_config(
         data, "validation", config.evaluation.validation
     )
-    config.evaluation.test = bind_evaluate_tasks_config(
+    config.evaluation.test = _bind_evaluate_tasks_config(
         data, "test", config.evaluation.test
     )
-    config.encoder = bind_custom_config(data, "encoder", REGISTERED_ENCODERS)
-    config.method = bind_custom_config(data, "method", REGISTERED_METHODS)
+    config.encoder = _bind_config(data, "encoder", REGISTERED_ENCODERS)
+    config.method = _bind_config(data, "method", REGISTERED_METHODS)
 
     path = Path(path)
     config.model_name = str(path.parent.relative_to(path.parts[0]))
@@ -171,8 +231,9 @@ def load_config(path: str, verbose: bool = True) -> Config:
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    # Print config
+    # Print logo and config
     if is_main_process() and verbose:
+        show_logo()
         pp.install_extras(include=["dataclasses"])
         pp.pprint(config)
 
@@ -180,12 +241,30 @@ def load_config(path: str, verbose: bool = True) -> Config:
 
 
 def seed_dataloader_worker(worker_id: int):
+    """
+    Set the seed for a PyTorch DataLoader worker for reproducibility.
+
+    Args:
+        worker_id (int): ID of the DataLoader worker.
+
+    Returns:
+        None
+    """
     worker_seed = torch.initial_seed() % 2**32
     random.seed(worker_seed)
     np.random.seed(worker_seed)
 
 
 def load_train_dataloader(config: Config) -> torch.utils.data.DataLoader:
+    """
+    Create a PyTorch DataLoader for training data.
+
+    Args:
+        config (Config): Global configuration.
+
+    Returns:
+        torch.utils.data.DataLoader: DataLoader for training data.
+    """
     df = pd.read_csv(config.dataset.base_path / config.dataset.train)
     if "Set" in df.columns:
         df = df[df["Set"] == "train"]
@@ -204,7 +283,12 @@ def load_train_dataloader(config: Config) -> torch.utils.data.DataLoader:
 
     if config.dataset.sampler and config.dataset.sampler.enable:
         shuffle = False
-        sampler = Sampler(dataset, config.trainer.batch_size, config.dataset.sampler)
+        sampler = Sampler(
+            dataset.labels,
+            config.trainer.batch_size,
+            config.dataset.sampler,
+            seed=config.seed,
+        )
         if is_dist_initialized():
             sampler = DistributedSamplerWrapper(sampler)
 
@@ -223,6 +307,15 @@ def load_train_dataloader(config: Config) -> torch.utils.data.DataLoader:
 
 
 def load_model(config: Config) -> BaseMethod:
+    """
+    Load a model by instantiating a method and its encoder.
+
+    Args:
+        config (Config): Global configuration.
+
+    Returns:
+        BaseMethod: Instance of the resulting method.
+    """
     encoder_cls = REGISTERED_ENCODERS[config.encoder.__type__][0]
     create_encoder_fn = lambda: encoder_cls(config.encoder)
 
@@ -239,16 +332,51 @@ def evaluate(
     validation: bool = False,
     verbose: bool = True,
 ) -> Dict[str, float]:
+    """
+    Evaluate a model.
+
+    Args:
+        model (BaseMethod): Model to evaluate.
+        config (Config): Global configuration.
+        device (torch.device): Device on which tensors will be allocated.
+        validation (bool): Flag to indicate if validation evaluation is to be performed.
+            Otherwise test evaluation is to be performed. Defaults to False.
+        verbose (bool): Verbosity flag. Defaults to True.
+
+    Returns:
+        Dict[str, float]: Dictionary of evaluation metrics.
+    """
+
     def add_prefix_to_dict_keys(
         old_dict: Dict[str, Any],
         prefix: str,
     ) -> Dict[str, Any]:
+        """
+        Add a prefix to the keys of a dictionary.
+
+        Args:
+            old_dict (Dict[str, Any]): Original dictionary.
+            prefix (str): Prefix to be added to the keys.
+
+        Returns:
+            Dict[str, Any]: Dictionary with keys that have the specified prefix added.
+        """
         new_dict = {}
         for old_key in old_dict.keys():
             new_dict[f"{prefix}{old_key}"] = old_dict[old_key]
         return new_dict
 
     def evaluate_(tasks: List[EvaluationTaskConfig], prefix: str) -> Dict[str, float]:
+        """
+        Evaluate a list of tasks and return a dictionary of metrics.
+
+        Args:
+            tasks (List[EvaluationTaskConfig]): List of evaluation tasks to be performed.
+            prefix (str): String to be added as a prefix to each metric key.
+
+        Returns:
+            Dict[str, float]: Dictionary of evaluation metrics.
+        """
         if not validation and prefix == "val":
             return {}
 

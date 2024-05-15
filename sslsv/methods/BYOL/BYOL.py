@@ -17,6 +17,14 @@ from .BYOLLoss import BYOLLoss
 
 @dataclass
 class BYOLConfig(BaseMomentumMethodConfig):
+    """
+    BYOL (Bootstrap Your Own Latent) method configuration.
+
+    Attributes:
+        projector_hidden_dim (int): Hidden dimension of the projector.
+        projector_output_dim (int): Output dimension of the projector.
+        predictor_hidden_dim (int): Hidden dimension of the predictor.
+    """
 
     projector_hidden_dim: int = 4096
     projector_output_dim: int = 256
@@ -25,12 +33,39 @@ class BYOLConfig(BaseMomentumMethodConfig):
 
 
 class BYOL(BaseMomentumMethod):
+    """
+    BYOL (Bootstrap Your Own Latent) method.
+
+    Paper:
+        Bootstrap Your Own Latent: A New Approach to Self-Supervised Learning
+        *Jean-Bastien Grill, Florian Strub, Florent Altché, Corentin Tallec, Pierre H. Richemond,
+        Elena Buchatskaya, Carl Doersch, Bernardo Avila Pires, Zhaohan Daniel Guo, Mohammad Gheshlaghi Azar,
+        Bilal Piot, Koray Kavukcuoglu, Rémi Munos, Michal Valko*
+        NeurIPS 2020
+        https://arxiv.org/abs/2006.07733
+
+    Attributes:
+        projector (nn.Module): Projector module.
+        projector_momentum (nn.Module): Projector momentum module.
+        predictor (nn.Module): Predictor module.
+        loss_fn (BYOLLoss): Loss function.
+    """
 
     def __init__(
         self,
         config: BYOLConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize a BYOL method.
+
+        Args:
+            config (BYOLConfig): Method configuration.
+            create_encoder_fn (Callable): Function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
@@ -58,6 +93,16 @@ class BYOL(BaseMomentumMethod):
         self.loss_fn = BYOLLoss()
 
     def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
+        """
+        Forward pass.
+
+        Args:
+            X (T): Input tensor.
+            training (bool): Whether the forward pass is for training. Defaults to False.
+
+        Returns:
+            Union[T, Tuple[T, T, T, T]]: Encoder output for inference or embeddings for training.
+        """
         if not training:
             return self.encoder(X)
 
@@ -73,6 +118,12 @@ class BYOL(BaseMomentumMethod):
         return Z_1, Z_2, P_1, P_2
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
+        """
+        Get the learnable parameters.
+
+        Returns:
+            Iterable[Dict[str, Any]]: Collection of parameters.
+        """
         extra_learnable_params = [
             {"params": self.projector.parameters()},
             {"params": self.predictor.parameters()},
@@ -80,6 +131,12 @@ class BYOL(BaseMomentumMethod):
         return super().get_learnable_params() + extra_learnable_params
 
     def get_momentum_pairs(self) -> List[Tuple[nn.Module, nn.Module]]:
+        """
+        Get a list of modules and their associated momentum module.
+
+        Returns:
+            List[Tuple[nn.Module, nn.Module]]: List of (module, module_momentum) pairs.
+        """
         extra_momentum_pairs = [(self.projector, self.projector_momentum)]
         return super().get_momentum_pairs() + extra_momentum_pairs
 
@@ -91,12 +148,24 @@ class BYOL(BaseMomentumMethod):
         indices: Optional[T] = None,
         labels: Optional[T] = None,
     ) -> T:
+        """
+        Perform a training step.
+
+        Args:
+            Z (Tuple[T, T, T, T]): Embedding tensors.
+            step (int): Current training step.
+            step_rel (Optional[int]): Current training step (relative to the epoch).
+            indices (Optional[T]): Training sample indices.
+            labels (Optional[T]): Training sample labels.
+
+        Returns:
+            T: Loss tensor.
+        """
         Z_1, Z_2, P_1, P_2 = Z
 
         loss = self.loss_fn(P_1, Z_2) + self.loss_fn(P_2, Z_1)
 
         self.log_step_metrics(
-            step,
             {
                 "train/loss": loss,
                 "train/tau": self.momentum_updater.tau,

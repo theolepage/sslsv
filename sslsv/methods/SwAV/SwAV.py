@@ -17,6 +17,20 @@ from sslsv.utils.distributed import get_world_size
 
 @dataclass
 class SwAVConfig(BaseMethodConfig):
+    """
+    SwAV method configuration.
+
+    Attributes:
+        temperature (float): Temperature value.
+        nb_prototypes (int): Number of prototypes.
+        sk_nb_iters (int): Number of Sinkhorn-Knopp iterations.
+        sk_epsilon (float): Regularization hyper-parameter for Sinkhorn-Knopp algorithm.
+        queue_size (int): Size of the queue for storing embeddings.
+        queue_start_epoch (int): Epoch at which the queue is used.
+        freeze_prototypes_epochs (int): Number of epochs to freeze prototypes.
+        projector_hidden_dim (int): Hidden dimension of the projector network.
+        projector_output_dim (int): Output dimension of the projector network.
+    """
 
     temperature: float = 0.1
 
@@ -35,12 +49,38 @@ class SwAVConfig(BaseMethodConfig):
 
 
 class SwAV(BaseMethod):
+    """
+    SwAV (SWapping Assignments between multiple Views) method.
+
+    Paper:
+        Unsupervised Learning of Visual Features by Contrasting Cluster Assignments
+        *Mathilde Caron, Ishan Misra, Julien Mairal, Priya Goyal, Piotr Bojanowski, Armand Joulin*
+        NeurIPS 2020
+        https://arxiv.org/abs/2006.09882
+
+    Attributes:
+        epoch (int): Current training epoch.
+        projector (nn.Sequential): Projector module.
+        prototypes (nn.utils.weight_norm): Weight normalized linear layer for prototypes.
+        sk (SinkhornKnopp): Sinkhorn-Knopp algorithm object.
+        loss_fn (SwAVLoss): Loss function.
+    """
 
     def __init__(
         self,
         config: SwAVConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize a SwAV method.
+
+        Args:
+            config (SwAVConfig): Method configuration.
+            create_encoder_fn (Callable): Function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         self.epoch = 0
@@ -70,6 +110,12 @@ class SwAV(BaseMethod):
         self.loss_fn = SwAVLoss(config.temperature)
 
     def on_train_start(self):
+        """
+        Create queue to store training embeddings.
+
+        Returns:
+            None
+        """
         if self.config.queue_size > 0:
             self.register_buffer(
                 "queue",
@@ -82,6 +128,16 @@ class SwAV(BaseMethod):
             )
 
     def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
+        """
+        Forward pass.
+
+        Args:
+            X (T): Input tensor.
+            training (bool): Whether the forward pass is for training. Defaults to False.
+
+        Returns:
+            Union[T, Tuple[T, T, T, T]]: Encoder output for inference or embeddings for training.
+        """
         if not training:
             return self.encoder(X)
 
@@ -97,6 +153,12 @@ class SwAV(BaseMethod):
         return Z_1, Z_2, P_1, P_2
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
+        """
+        Get the learnable parameters.
+
+        Returns:
+            Iterable[Dict[str, Any]]: Collection of parameters.
+        """
         extra_learnable_params = [
             {"params": self.projector.parameters()},
             {"params": self.prototypes.parameters()},
@@ -104,9 +166,28 @@ class SwAV(BaseMethod):
         return super().get_learnable_params() + extra_learnable_params
 
     def on_train_epoch_start(self, epoch: int, max_epochs: int):
+        """
+        Update training epoch value.
+
+        Args:
+            epoch (int): Current epoch.
+            max_epochs (int): Total number of epochs.
+
+        Returns:
+            None
+        """
         self.epoch = epoch
 
     def _get_sk_assignments(self, preds: List[T]) -> List[T]:
+        """
+        Get the assigned labels for a list of predictions using Sinkhorn-Knopp.
+
+        Args:
+            preds (List[T]): List of embeddings tensors.
+
+        Returns:
+            List[T]: List of assignments tensors.
+        """
         N = preds[0].size(0)
 
         assignments = []
@@ -131,6 +212,19 @@ class SwAV(BaseMethod):
         indices: Optional[T] = None,
         labels: Optional[T] = None,
     ) -> T:
+        """
+        Perform a training step.
+
+        Args:
+            Z (Tuple[T, T, T, T]): Embedding tensors.
+            step (int): Current training step.
+            step_rel (Optional[int]): Current training step (relative to the epoch).
+            indices (Optional[T]): Training sample indices.
+            labels (Optional[T]): Training sample labels.
+
+        Returns:
+            T: Loss tensor.
+        """
         Z_1, Z_2, P_1, P_2 = Z
 
         N, _ = Z_1.size()
@@ -147,7 +241,6 @@ class SwAV(BaseMethod):
             self.queue[1, :N] = Z_2.detach()
 
         self.log_step_metrics(
-            step,
             {
                 "train/loss": loss,
             },
@@ -156,6 +249,12 @@ class SwAV(BaseMethod):
         return loss
 
     def on_after_backward(self):
+        """
+        Freeze prototypes.
+
+        Returns:
+            None
+        """
         if self.epoch < self.config.freeze_prototypes_epochs:
             for p in self.prototypes.parameters():
                 p.grad = None

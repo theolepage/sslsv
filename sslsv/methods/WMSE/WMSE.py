@@ -17,6 +17,16 @@ from .Whitening2d import Whitening2d
 
 @dataclass
 class WMSEConfig(BaseSiameseMethodConfig):
+    """
+    W-MSE method configuration.
+
+    Attributes:
+        projector_hidden_dim (int): Projector hidden dimension.
+        projector_output_dim (int): Projector output dimension.
+        whitening_iters (int): Number of iterations for whitening.
+        whitening_size (int): Size of the whitening matrix.
+        whitening_eps (float): Epsilon value for numerical stability.
+    """
 
     projector_hidden_dim: int = 1024
     projector_output_dim: int = 64
@@ -27,12 +37,36 @@ class WMSEConfig(BaseSiameseMethodConfig):
 
 
 class WMSE(BaseSiameseMethod):
+    """
+    W-MSE (Whitening MSE) method.
+
+    Paper:
+        Whitening for Self-Supervised Representation Learning
+        *Aleksandr Ermolov, Aliaksandr Siarohin, Enver Sangineto, Nicu Sebe*
+        ICML 2021
+        https://arxiv.org/abs/2007.06346
+
+    Attributes:
+        projector (nn.Sequential): Projector module.
+        whitening (Whitening2d): Whitening module.
+        loss_fn (WMSELoss): Loss function.
+    """
 
     def __init__(
         self,
         config: WMSEConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize a W-MSE method.
+
+        Args:
+            config (WMSEConfig): Method configuration.
+            create_encoder_fn (Callable[[], BaseEncoder]): Function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         self.projector = nn.Sequential(
@@ -57,6 +91,19 @@ class WMSE(BaseSiameseMethod):
         indices: Optional[T] = None,
         labels: Optional[T] = None,
     ) -> T:
+        """
+        Perform a training step.
+
+        Args:
+            Z (Tuple[T, T]): Embedding tensors.
+            step (int): Current training step.
+            step_rel (Optional[int]): Current training step (relative to the epoch).
+            indices (Optional[T]): Training sample indices.
+            labels (Optional[T]): Training sample labels.
+
+        Returns:
+            T: Loss tensor.
+        """
         Z_A = gather(Z[0])
         Z_B = gather(Z[1])
 
@@ -79,7 +126,6 @@ class WMSE(BaseSiameseMethod):
         z_std = (z1_std + z2_std) / 2
 
         self.log_step_metrics(
-            step,
             {
                 "train/loss": loss,
                 "train/z_std": z_std.detach(),

@@ -1,7 +1,4 @@
-"""
-Reference:  Iterative Normalization: Beyond Standardization towards Efficient Whitening, CVPR 2019
-https://github.com/huangleiBuaa/IterNorm-pytorch
-"""
+# Adapted from https://github.com/huangleiBuaa/IterNorm-pytorch/blob/master/extension/normailzation/iterative_normalization.py.
 
 import torch
 import torch.nn as nn

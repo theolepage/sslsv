@@ -12,6 +12,19 @@ def sample_frames(
     audio: np.ndarray,
     frame_length: int,
 ) -> List[np.ndarray]:
+    """
+    Sample two frames from an audio signal (default siamese sampling).
+
+    Args:
+        audio (np.ndarray): Input audio signal. Shape: (C, L).
+        frame_length (int): Length of the frames to sample.
+
+    Returns:
+        List[np.ndarray]: List of audio frames.
+
+    Raises:
+        AssertionError: If the length of the input audio signal is less than 2 * frame_length.
+    """
     audio_length = audio.shape[1]
     assert audio_length >= 2 * frame_length, "audio_length should >= 2 * frame_length"
 
@@ -41,6 +54,20 @@ def sample_frames_dino(
     small_frames_count: int = 4,
     small_frames_length: int = 2 * 16000,
 ) -> List[np.ndarray]:
+    """
+    Sample frames from an audio signal (DINO multi-crops sampling).
+
+    Args:
+        audio (np.ndarray): Input audio signal. Shape: (C, L).
+        frame_length (int): Unused.
+        large_frames_count (int): Number of large frames. Defaults to 2.
+        large_frames_length (int): Length of large frames. Defaults to 4*16000.
+        small_frames_count (int): Number of small frames. Defaults to 4.
+        small_frames_length (int): Length of small frames. Defaults to 2*16000.
+
+    Returns:
+        List[np.ndarray]: List of audio frames.
+    """
     audio_length = audio.shape[1]
 
     frames = []
@@ -59,6 +86,14 @@ def sample_frames_dino(
 
 
 class SSLDataset(Dataset):
+    """
+    PyTorch dataset generating audio frames for self-supervised training.
+
+    Attributes:
+        MIN_LOAD_AUDIO_LENGTH (int): Minimum length when loading audio data.
+        FRAME_SAMPLING_METHODS (Dict[FrameSamplingEnum, Callable[..., List[np.ndarray]]]): Dictionary
+            mapping frame sampling options to corresponding methods.
+    """
 
     MIN_LOAD_AUDIO_LENGTH = 64000
 
@@ -74,9 +109,27 @@ class SSLDataset(Dataset):
         labels: Optional[List[int]] = None,
         num_frames: int = 1,
     ):
+        """
+        Initialize an SSLDataset object.
+
+        Args:
+            config (DatasetConfig): Dataset configuration.
+            files (List[str]): List of audio file paths.
+            labels (Optional[List[int]]): List of labels. Defaults to None.
+            num_frames (int): Number of frames to sample. Defaults to 1.
+        """
         super().__init__(config, files, labels, num_frames)
 
     def _pad_smaller_frames(self, frames: List[np.ndarray]) -> List[np.ndarray]:
+        """
+        Pad smaller frames in a list of audio frames to match the maximum frame length.
+
+        Args:
+            frames (List[np.ndarray]): List of audio frames.
+
+        Returns:
+            List[np.ndarray]: List of audio frames with equal lengths.
+        """
         max_frame_length = max([f.shape[1] for f in frames])
         res = []
         for frame in frames:
@@ -92,8 +145,19 @@ class SSLDataset(Dataset):
         return res
 
     def __getitem__(
-        self, i: int
+        self,
+        i: int,
     ) -> Tuple[int, torch.Tensor, Dict[str, Union[str, int]]]:
+        """
+        Get multiple audio frames from the dataset.
+
+        Args:
+            i (int): Index of the sample.
+
+        Returns:
+            Tuple[int, torch.Tensor, Dict[str, Union[str, int]]]: Index, audio data,
+                and additional information (file and label).
+        """
         if isinstance(i, int):
             file, label = self.files[i], self.labels[i]
             data = load_audio(

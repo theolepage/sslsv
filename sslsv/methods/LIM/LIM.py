@@ -14,22 +14,60 @@ from .LIMLoss import LIMLoss, LIMLossEnum
 
 @dataclass
 class LIMConfig(BaseMethodConfig):
+    """
+    LIM method configuration.
+
+    Attributes:
+        loss (LIMLossEnum): Loss function option. Defaults to LIMLossEnum.BCE.
+    """
 
     loss: LIMLossEnum = LIMLossEnum.BCE
 
 
 class LIM(BaseMethod):
+    """
+    LIM (Local Info Max) method.
+
+    Paper:
+        Learning Speaker Representations with Mutual Information
+        *Mirco Ravanelli, Yoshua Bengio*
+        INTERSPEECH 2019
+        https://arxiv.org/abs/1812.00271
+
+    Attributes:
+        loss_fn (LIMLoss): Loss function.
+    """
 
     def __init__(
         self,
         config: LIMConfig,
         create_encoder_fn: Callable[[], BaseEncoder],
     ):
+        """
+        Initialize a LIM method.
+
+        Args:
+            config (LIMConfig): Method configuration.
+            create_encoder_fn (Callable[[], BaseEncoder]): Function that creates an encoder object.
+
+        Returns:
+            None
+        """
         super().__init__(config, create_encoder_fn)
 
         self.loss_fn = LIMLoss(config.loss)
 
     def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T]]:
+        """
+        Forward pass.
+
+        Args:
+            X (T): Input tensor.
+            training (bool): Whether the forward pass is for training. Defaults to False.
+
+        Returns:
+            Union[T, Tuple[T, T]]: Encoder output for inference or embeddings for training.
+        """
         if not training:
             return self.encoder(X)
 
@@ -49,6 +87,19 @@ class LIM(BaseMethod):
         indices: Optional[T] = None,
         labels: Optional[T] = None,
     ) -> T:
+        """
+        Perform a training step.
+
+        Args:
+            Z (Tuple[T, T]): Embedding tensors.
+            step (int): Current training step.
+            step_rel (Optional[int]): Current training step (relative to the epoch).
+            indices (Optional[T]): Training sample indices.
+            labels (Optional[T]): Training sample labels.
+
+        Returns:
+            T: Loss tensor.
+        """
         Y_1, Y_2 = Z
 
         N, _ = Y_1.size()
@@ -64,7 +115,6 @@ class LIM(BaseMethod):
         loss = self.loss_fn(pos, neg)
 
         self.log_step_metrics(
-            step,
             {
                 "train/loss": loss,
             },

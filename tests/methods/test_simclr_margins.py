@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
-from sslsv.methods.SimCLRCustom.SimCLRCustom import SimCLRCustom, SimCLRCustomConfig
+from sslsv.methods.SimCLRMargins.SimCLRMargins import SimCLRMargins, SimCLRMarginsConfig
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -10,8 +10,8 @@ def count_parameters(model: nn.Module) -> int:
 
 
 def test_default():
-    config = SimCLRCustomConfig()
-    method = SimCLRCustom(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
+    config = SimCLRMarginsConfig()
+    method = SimCLRMargins(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
 
     assert count_parameters(method) == 3012246
 
@@ -29,7 +29,7 @@ def test_default():
 
     # Train step
     loss = method.train_step(Z, step=0)
-    metrics = method.step_metrics[0]
+    metrics = method.step_metrics
     assert isinstance(loss, torch.Tensor)
     assert loss.dtype == torch.float32
     assert "train/loss" in metrics

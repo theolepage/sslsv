@@ -13,6 +13,15 @@ from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, 
 
 
 def train(args: argparse.Namespace):
+    """
+    Train a model from the CLI (using DistributedDataParallel).
+
+    Args:
+        args (argparse.Namespace): Arguments parsed from the command line.
+
+    Returns:
+        None
+    """
     world_size = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["LOCAL_RANK"])
 

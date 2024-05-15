@@ -24,6 +24,17 @@ def create_stat_object(
     segset: Optional[np.ndarray],
     embeddings: np.ndarray,
 ) -> StatObject_SB:
+    """
+    Create a StatObject_SB object for SpeechBrain.
+
+    Args:
+        modelset (np.ndarray): An array of model data.
+        segset (Optional[np.ndarray]): An optional array of segmentation data.
+        embeddings (np.ndarray): An array of embeddings data.
+
+    Returns:
+        StatObject_SB: StatObject_SB object.
+    """
     return StatObject_SB(
         modelset=modelset,
         segset=segset,
@@ -36,16 +47,42 @@ def create_stat_object(
 
 @dataclass
 class PLDASVEvaluationTaskConfig(SpeakerVerificationEvaluationTaskConfig):
+    """
+    PLDA-based Speaker Verification (SV) evaluation configuration.
+    """
 
     pass
 
 
 class PLDASVEvaluation(SpeakerVerificationEvaluation):
+    """
+    PLDA-based (PLDA back-end) Speaker Verification (SV) evaluation.
+    """
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize a PLDA-based SV evaluation.
+
+        Args:
+            *args: Positional arguments for base class.
+            **kwargs: Keyword arguments for base class.
+
+        Returns:
+            None
+        """
         super().__init__(*args, **kwargs)
 
     def _prepare_evaluation_aux(self, trials: List[Path], key: str) -> StatObject_SB:
+        """
+        Prepare evaluation by extracting embeddings and create a StatObject_SB object.
+
+        Args:
+            trials (List[Path]): List of trials file paths.
+            key (str): Whether to prepare evaluation data for training, enrollment or test.
+
+        Returns:
+            StatObject_SB: StatObject_SB object.
+        """
         stat_path = self.config.model_path / f"plda_{key}_stat.pkl"
 
         if stat_path.exists():
@@ -91,6 +128,12 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
         return stat
 
     def _prepare_evaluation(self):
+        """
+        Prepare evaluation by training the PLDA backend and scoring trials.
+
+        Returns:
+            None
+        """
         trials = self.task_config.trials
 
         train_stat = self._prepare_evaluation_aux(trials, "train")
@@ -113,6 +156,16 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
         )
 
     def _get_sv_score(self, enrol: str, test: str) -> float:
+        """
+        Get the score for a given enrollment and test trial.
+
+        Args:
+            enrol (str): Enrollment ID.
+            test (str): Test ID.
+
+        Returns:
+            float: Score value.
+        """
         score = self.scores.scoremat[
             self.scores.modelset == enrol, self.scores.segset == test
         ]
