@@ -3,10 +3,12 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from typing import List, Dict
+from typing import Dict
 
 import argparse
 from tqdm import tqdm
+from pathlib import Path
+from glob import glob
 
 import torch
 from torch.utils.data import DataLoader, DistributedSampler
@@ -41,7 +43,7 @@ def inference_(
     config: Config,
     model: BaseMethod,
     device: torch.device,
-    files: List[str],
+    input: str,
     output: str,
     batch_size: int,
     frame_length: int,
@@ -55,7 +57,7 @@ def inference_(
         config (Config): Global configuration.
         model (BaseMethod): Model used for inference.
         device (torch.device): Device on which tensors will be allocated.
-        files (List[str]): List of audio file paths to run inference on.
+        input (str): Path to input audio files with glob format (e.g. folder/*.wav).
         output (str): Output file path for saving the embeddings.
         batch_size (int): Batch size for inference.
         frame_length (int): Length of the frames to extract from the audio files.
@@ -73,11 +75,12 @@ def inference_(
 
     dataset_config = DatasetConfig(
         frame_length=frame_length,
-        base_path=config.dataset.base_path,
+        base_path=Path(""),
         num_workers=config.dataset.num_workers,
         pin_memory=config.dataset.pin_memory,
     )
 
+    files = glob(input)
     dataset = Dataset(dataset_config, files, num_frames=num_frames)
 
     sampler = None
@@ -175,8 +178,8 @@ def inference_parser():
     parser.add_argument(
         "--input",
         required=True,
-        nargs="+",
-        help="List of input audio file paths.",
+        type=str,
+        help="Path to input audio files with glob format (e.g. folder/*.wav).",
     )
     parser.add_argument(
         "--output",
