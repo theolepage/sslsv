@@ -33,6 +33,8 @@ class DatasetConfig:
 
     Attributes:
         ssl (bool): Whether to use SSLDataset for self-supervised learning (siamese).
+        ssps (bool): Whether to use Self-Supervised Positive Sampling (SSPS).
+        ssps_frame_length (int): Frame length for SSPS.
         augmentation (DataAugmentationConfig): Data-augmentation configuration.
         sampler (SamplerConfig): Sampler configuration.
         frame_length (int): Frame length (e.g. 32000 for 2s at 16kHz).
@@ -46,6 +48,8 @@ class DatasetConfig:
     """
 
     ssl: bool = False
+    ssps: bool = False
+    ssps_frame_length: int = 64000
     augmentation: DataAugmentationConfig = None
     sampler: SamplerConfig = None
     frame_length: int = 32000

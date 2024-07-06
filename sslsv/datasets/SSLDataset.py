@@ -8,6 +8,18 @@ from sslsv.datasets.Dataset import Dataset, DatasetConfig, FrameSamplingEnum
 from sslsv.datasets.utils import load_audio
 
 
+def sample_ssps_frame(
+    audio: np.ndarray,
+    frame_length: int,
+) -> np.ndarray:
+    audio_length = audio.shape[1]
+
+    pos = np.random.randint(0, audio_length - frame_length + 1)
+    frame = audio[:, pos : pos + frame_length]
+
+    return frame
+
+
 def sample_frames(
     audio: np.ndarray,
     frame_length: int,
@@ -95,8 +107,6 @@ class SSLDataset(Dataset):
             mapping frame sampling options to corresponding methods.
     """
 
-    MIN_LOAD_AUDIO_LENGTH = 64000
-
     FRAME_SAMPLING_METHODS = {
         FrameSamplingEnum.DEFAULT: sample_frames,
         FrameSamplingEnum.DINO: sample_frames_dino,
@@ -120,6 +130,13 @@ class SSLDataset(Dataset):
         """
         super().__init__(config, files, labels, num_frames)
 
+        self.MIN_LOAD_AUDIO_LENGTH = 64000
+
+        if self.config.ssps:
+            self.MIN_LOAD_AUDIO_LENGTH = max(
+                self.MIN_LOAD_AUDIO_LENGTH, self.config.ssps_frame_length
+            )
+
     def _pad_smaller_frames(self, frames: List[np.ndarray]) -> List[np.ndarray]:
         """
         Pad smaller frames in a list of audio frames to match the maximum frame length.
@@ -137,7 +154,7 @@ class SSLDataset(Dataset):
                 np.concatenate(
                     (
                         frame,
-                        np.zeros((1, max_frame_length - frame.shape[1])),
+                        np.full((1, max_frame_length - frame.shape[1]), -100),
                     ),
                     axis=-1,
                 )
@@ -146,13 +163,13 @@ class SSLDataset(Dataset):
 
     def __getitem__(
         self,
-        i: int,
+        i: Union[int, Tuple[int]],
     ) -> Tuple[int, torch.Tensor, Dict[str, Union[str, int]]]:
         """
         Get multiple audio frames from the dataset.
 
         Args:
-            i (int): Index of the sample.
+            i (Union[int, Tuple[int]]): Index of the sample.
 
         Returns:
             Tuple[int, torch.Tensor, Dict[str, Union[str, int]]]: Index, audio data,
@@ -181,6 +198,9 @@ class SSLDataset(Dataset):
             frames = [frame1, frame2]
 
         frames = [self.preprocess_data(f) for f in frames]
+
+        if self.config.ssps:
+            frames.append(sample_ssps_frame(data, self.config.ssps_frame_length))
 
         frames = self._pad_smaller_frames(frames)
 

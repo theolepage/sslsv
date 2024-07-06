@@ -33,7 +33,7 @@ def evaluate(args: argparse.Namespace):
     config = load_config(args.config, verbose=not args.silent)
 
     model = load_model(config).to(rank)
-    checkpoint = torch.load(config.model_path / "model_latest.pt")
+    checkpoint = torch.load(config.model_path / "model_latest.pt", map_location="cpu")
     model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
     model = DistributedDataParallel(model, device_ids=[rank])

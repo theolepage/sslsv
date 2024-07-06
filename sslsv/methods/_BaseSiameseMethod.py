@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 
+import torch.nn.functional as F
 from torch import nn
 from torch import Tensor as T
 
@@ -75,8 +76,9 @@ class BaseSiameseMethod(BaseMethod):
         if not training:
             return self.encoder(X)
 
-        X_1 = X[:, 0, :]
-        X_2 = X[:, 1, :]
+        frame_length = self.trainer.config.dataset.frame_length
+        X_1 = X[:, 0, :frame_length]
+        X_2 = X[:, 1, :frame_length]
 
         Y_1 = self.encoder(X_1)
         Y_2 = self.encoder(X_2)
@@ -84,7 +86,10 @@ class BaseSiameseMethod(BaseMethod):
         Z_1 = self.projector(Y_1) if self.config.enable_projector else Y_1
         Z_2 = self.projector(Y_2) if self.config.enable_projector else Y_2
 
-        return Z_1, Z_2
+        if self.ssps:
+            Z_ssps = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
+
+        return Z_1, Z_2, Z_ssps
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         """
@@ -119,9 +124,15 @@ class BaseSiameseMethod(BaseMethod):
         Returns:
             T: Loss tensor.
         """
-        Z_1, Z_2 = Z
+        Z_1, Z_2, Z_ssps = Z
 
-        loss = self.loss_fn(Z_1, Z_2)
+        if self.ssps:
+            self.ssps.sample(indices=indices, embeddings=Z_ssps)
+            Z_1_pp = self.ssps.apply(1, Z_1)
+            Z_2_pp = self.ssps.apply(2, Z_2)
+            self.ssps.update_queues(step_rel, indices, Z_ssps, Z_1, Z_2)
+
+        loss = self.loss_fn(Z_1, Z_2_pp) / 2 + self.loss_fn(Z_1_pp, Z_2) / 2
 
         self.log_step_metrics(
             {

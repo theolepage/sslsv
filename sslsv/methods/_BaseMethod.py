@@ -8,14 +8,19 @@ from dataclasses import dataclass
 
 from sslsv.encoders._BaseEncoder import BaseEncoder
 
+from sslsv.methods._SSPS.SSPS import SSPS, SSPSConfig
+
 
 @dataclass
 class BaseMethodConfig:
     """
     Base configuration for methods.
+
+    Attributes:
+        ssps (SSPSConfig): Self-Supervised Positive Sampling (SSPS) configuration.
     """
 
-    pass
+    ssps: SSPSConfig = None
 
 
 class BaseMethod(nn.Module):
@@ -54,6 +59,12 @@ class BaseMethod(nn.Module):
 
         self.encoder = create_encoder_fn()
 
+        self.ssps = SSPS(config.ssps) if config.ssps else None
+        self._ddp_params_and_buffers_to_ignore = [
+            "ssps.queue_embeddings",
+            "ssps.queue_indices",
+        ]
+
     def log_step_metrics(
         self,
         metrics: Dict[str, Union[T, int, float]],
@@ -68,6 +79,9 @@ class BaseMethod(nn.Module):
             None
         """
         self.step_metrics = metrics
+
+        if self.ssps:
+            self.step_metrics.update(self.ssps.step_metrics)
 
     def forward(self, X: T, training: bool = False) -> T:
         """
@@ -157,11 +171,18 @@ class BaseMethod(nn.Module):
     def on_train_start(self):
         """
         Perform actions at the start of the training.
+        Initialize SSPS if enabled.
 
         Returns:
             None
         """
-        pass
+        if self.ssps:
+            self.ssps.initialize(
+                dataset_size=len(self.trainer.train_dataloader.dataset),
+                batch_size=self.trainer.config.trainer.batch_size,
+                embeddings_dim=self.encoder.encoder_dim,
+                device=self.trainer.device,
+            )
 
     def on_train_end(self):
         """
@@ -175,6 +196,7 @@ class BaseMethod(nn.Module):
     def on_train_epoch_start(self, epoch: int, max_epochs: int):
         """
         Perform actions at the start of a training epoch.
+        Prepare sampling for SSPS if enabled.
 
         Args:
             epoch (int): Current epoch.
@@ -183,7 +205,9 @@ class BaseMethod(nn.Module):
         Returns:
             None
         """
-        pass
+        if self.ssps:
+            self.ssps.set_epoch(epoch)
+            self.ssps.prepare_sampling()
 
     def on_train_epoch_end(self, epoch: int, max_epochs: int):
         """

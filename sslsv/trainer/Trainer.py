@@ -175,6 +175,7 @@ class Trainer:
 
             X = X.to(self.device, non_blocking=True)
             labels = info["labels"].to(self.device, non_blocking=True)
+            indices = indices.to(self.device, non_blocking=True)
 
             # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):
@@ -269,7 +270,7 @@ class Trainer:
             metrics (Dict[str, float]): Dictionary of metrics.
 
         Returns:
-            bool: True if training should continue, False if early stopping criteria is met.
+            bool: True if early stopping criteria is met, False if training should continue.
         """
         improved = False
 
@@ -298,9 +299,9 @@ class Trainer:
             self.nb_epochs_remaining += 1
 
         if self.nb_epochs_remaining >= self.config.trainer.patience:
-            return False
+            return True
 
-        return True
+        return False
 
     def _train_epoch_loop(self, start_epoch: int = 0):
         """
@@ -351,8 +352,9 @@ class Trainer:
                 metrics = {**train_metrics, **val_metrics}
 
                 self._log_end_epoch(metrics)
+                early_stopping = self._early_stopping(metrics)
                 self._save_checkpoint("latest")
-                if not self._early_stopping(metrics):
+                if early_stopping:
                     break
 
     def _load_checkpoint(self) -> Any:
