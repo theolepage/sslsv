@@ -42,7 +42,7 @@ class SinkhornKnopp(nn.Module):
             Q (T): Input tensor. Shape: (N, K).
 
         Returns:
-            T: Output tensor. Shape: (K, N).
+            T: Output tensor. Shape: (N, K).
         """
         B, K = Q.size()
         B *= get_world_size()

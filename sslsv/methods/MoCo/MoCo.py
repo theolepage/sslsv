@@ -66,7 +66,6 @@ class MoCo(BaseMomentumMethod):
         https://arxiv.org/abs/2003.04297
 
     Attributes:
-        epoch (int): Current epoch.
         queue_size (int): Size of the queue.
         queue (T): Buffer to store embeddings to use as negatives.
         queue_ptr (T): Pointer for the queue buffer.
@@ -93,8 +92,6 @@ class MoCo(BaseMomentumMethod):
             None
         """
         super().__init__(config, create_encoder_fn)
-
-        self.epoch = 0
 
         self.queue_size = config.queue_size
 
@@ -237,19 +234,6 @@ class MoCo(BaseMomentumMethod):
         if self.config.enable_projector:
             extra_momentum_pairs = [(self.projector, self.projector_momentum)]
         return super().get_momentum_pairs() + extra_momentum_pairs
-
-    def on_train_epoch_start(self, epoch: int, max_epochs: int):
-        """
-        Update training epoch value.
-
-        Args:
-            epoch (int): Current epoch.
-            max_epochs (int): Total number of epochs.
-
-        Returns:
-            None
-        """
-        self.epoch = epoch
 
     @torch.no_grad()
     def _enqueue(self, keys: T):

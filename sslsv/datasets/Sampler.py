@@ -14,6 +14,7 @@ class SamplerConfig:
 
     Attributes:
         enable (bool): Whether the sampler is enabled.
+        nb_speakers (Optional[int]): Number of speakers.
         nb_samples_per_spk (Optional[int]): Number of samples per speaker.
         create_contrastive_pairs (bool): Whether to create contrastive pairs.
         prevent_class_collisions (bool): Whether to prevent class collisions.
@@ -21,6 +22,7 @@ class SamplerConfig:
     """
 
     enable: bool = True
+    nb_speakers: Optional[int] = None
     nb_samples_per_spk: Optional[int] = None
     create_contrastive_pairs: bool = False
     prevent_class_collisions: bool = False
@@ -110,6 +112,9 @@ class Sampler(TorchSampler):
         x = []
         y = []
         for i, speaker in enumerate(speakers):
+            if self.config.nb_speakers and i >= self.config.nb_speakers:
+                break
+
             utterances = spk_to_utterances[speaker]
 
             nb_utt = len(utterances)

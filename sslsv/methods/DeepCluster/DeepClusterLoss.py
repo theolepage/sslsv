@@ -30,8 +30,8 @@ class DeepClusterLoss(nn.Module):
         Compute loss.
 
         Args:
-            preds (T): Predictions tensor. Shape: (P, V, N, D).
-            assignments (T): Assignment tensor. Shape: (P, V, N).
+            preds (T): Predictions tensor. Shape: (P, V, N, K).
+            assignments (T): Assignment tensor. Shape: (P, N).
 
         Returns:
             T: Loss tensor.
@@ -40,7 +40,7 @@ class DeepClusterLoss(nn.Module):
 
         loss = 0
         for p in range(P):
-            logits = preds[p].view(-1, C) / self.temperature  # (V*N, C)
+            logits = preds[p].view(-1, C) / self.temperature  # (V*N, K)
 
             targets = assignments[p].repeat(V)  # (V*N)
             targets = targets.to(preds.device, non_blocking=True)

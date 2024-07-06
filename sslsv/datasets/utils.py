@@ -1,15 +1,17 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
+
+from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 
 
-def read_audio(path: str) -> Tuple[np.ndarray, int]:
+def read_audio(path: Union[Path, str]) -> Tuple[np.ndarray, int]:
     """
     Read audio data from a file.
 
     Args:
-        path (str): Path to the audio file.
+        path (Union[Path, str]): Path to the audio file.
 
     Returns:
         Tuple[np.ndarray, int]: Audio data and sample rate.
@@ -18,7 +20,7 @@ def read_audio(path: str) -> Tuple[np.ndarray, int]:
 
 
 def load_audio(
-    path: str,
+    path: Union[Path, str],
     frame_length: int,
     num_frames: int = 1,
     min_length: Optional[int] = None,
@@ -27,7 +29,7 @@ def load_audio(
     Load audio data from a file and extract frames of specified length.
 
     Args:
-        path (str): Path to the audio file.
+        path (Union[Path, str]): Path to the audio file.
         frame_length (int): Frame length.
         num_frames (int): Number of frames to sample. Defaults to 1.
         min_length (Optional[int]): Minimum length of the audio data.
