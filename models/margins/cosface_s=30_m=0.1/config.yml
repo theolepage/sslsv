@@ -1,23 +1,20 @@
 encoder:
   type: 'resnet34'
 method:
-  type: 'simclr_custom'
-  enable_projector: false
+  type: 'simclr_margins'
   loss: 'nt-xent-cosface'
-  loss_scale: 30
-  loss_margin: 0.1
+  scale: 30
+  margin: 0.1
+  enable_projector: false
 trainer:
-  epochs: 1
   batch_size: 200
 evaluation:
-  num_frames: 10
-  frame_length: 56240
   validation:
     - type: 'sv_cosine'
   test:
     - type: 'sv_cosine'
 dataset:
   ssl: true
-  train: 'voxceleb1_train.csv'
+  train: 'voxceleb2_train.csv'
   augmentation:
     enable: true

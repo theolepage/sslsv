@@ -21,13 +21,20 @@ class SimCLRMarginsConfig(BaseMethodConfig):
     Attributes:
         enable_multi_views (bool): Whether to enable multi views training.
         loss (SimCLRMarginsLossEnum): Type of loss function.
-        loss_scale (float): Scale factor for the loss function.
-        loss_margin (float): Margin value for the loss function.
-        loss_margin_simo (bool): Whether to use SIMO as the margin.
-        loss_margin_simo_K (int): K value for the SIMO margin.
-        loss_margin_simo_alpha (int): Alpha value for the SIMO margin.
-        loss_margin_learnable (bool): Whether the margin value is learnable.
-        loss_margin_scheduler (bool): Whether to use a scheduler for the margin value.
+        loss_symmetric (bool): Whether to use symmetric formulation of NT-Xent.
+        scale (float): Scale factor for the loss function.
+        margin (float): Margin value for the loss function.
+        margin_learnable (bool): Whether the margin value is learnable.
+        margin_scheduler (bool): Whether to use a scheduler for the margin value.
+        margin_simo (bool): Whether to use SIMO as the margin.
+        margin_simo_K (int): K value for the SIMO margin.
+        margin_simo_alpha (int): Alpha value for the SIMO margin.
+        magface_l_margin (float): MagFace lower margin.
+        magface_u_margin (float): MagFace lpper margin.
+        magface_l_a (int): MagFace lower norm.
+        magface_u_a (int): MagFace upper norm.
+        magface_lambda_g (float): MagFace weight for regularization.
+        adaface_h (float): AdaFace hyper-parameter h.
         loss_reg_weight (float): Weight of the MHE regularization term in the loss function.
         enable_projector (bool): Whether to enable use a projector.
         projector_hidden_dim (int): Hidden dimension of the projector.
@@ -36,19 +43,29 @@ class SimCLRMarginsConfig(BaseMethodConfig):
 
     enable_multi_views: bool = False
 
-    loss: SimCLRMarginsLossEnum = SimCLRMarginsLossEnum.SNTXENT
+    loss: SimCLRMarginsLossEnum = SimCLRMarginsLossEnum.NTXENT
+    loss_symmetric: bool = True
 
-    loss_scale: float = 5
+    scale: float = 5
 
-    loss_margin: float = 0.2
+    margin: float = 0.2
+    margin_learnable: bool = False
+    margin_scheduler: bool = False
 
-    loss_margin_simo: bool = False
-    loss_margin_simo_K: int = 2 * 255
-    loss_margin_simo_alpha: int = 65536
+    # SIMO
+    margin_simo: bool = False
+    margin_simo_K: int = 2 * 255
+    margin_simo_alpha: int = 65536
 
-    loss_margin_learnable: bool = False
+    # MagFace
+    magface_l_margin: float = 0.01
+    magface_u_margin: float = 0.05
+    magface_l_a: int = 10
+    magface_u_a: int = 110
+    magface_lambda_g: float = 0
 
-    loss_margin_scheduler: bool = False
+    # AdaFace
+    adaface_h: float = 0.333
 
     loss_reg_weight: float = 0.0
 
@@ -107,12 +124,19 @@ class SimCLRMargins(BaseMethod):
         self.loss_fn = SimCLRMarginsLoss(
             enable_multi_views=config.enable_multi_views,
             loss=config.loss,
-            loss_scale=config.loss_scale,
-            loss_margin=config.loss_margin,
-            loss_margin_simo=config.loss_margin_simo,
-            loss_margin_simo_K=config.loss_margin_simo_K,
-            loss_margin_simo_alpha=config.loss_margin_simo_alpha,
-            loss_margin_learnable=config.loss_margin_learnable,
+            symmetric=config.loss_symmetric,
+            scale=config.scale,
+            margin=config.margin,
+            margin_simo=config.margin_simo,
+            margin_simo_K=config.margin_simo_K,
+            margin_simo_alpha=config.margin_simo_alpha,
+            magface_l_margin=config.magface_l_margin,
+            magface_u_margin=config.magface_u_margin,
+            magface_l_a=config.magface_l_a,
+            magface_u_a=config.magface_u_a,
+            magface_lambda_g=config.magface_lambda_g,
+            adaface_h=config.adaface_h,
+            margin_learnable=config.margin_learnable,
             loss_reg_weight=config.loss_reg_weight,
         )
 
@@ -198,7 +222,7 @@ class SimCLRMargins(BaseMethod):
         self.epoch = epoch
         self.max_epochs = max_epochs
 
-    def _loss_margin_scheduler(self):
+    def _margin_scheduler(self):
         """
         Loss margin cosine scheduler based on epoch.
 
@@ -206,11 +230,11 @@ class SimCLRMargins(BaseMethod):
             float: Margin value.
         """
         if self.epoch > (self.max_epochs // 2):
-            return self.config.loss_margin
+            return self.config.margin
 
         return (
-            self.config.loss_margin
-            - self.config.loss_margin
+            self.config.margin
+            - self.config.margin
             * (math.cos(math.pi * self.epoch / (self.max_epochs // 2)) + 1)
             / 2
         )
@@ -236,18 +260,18 @@ class SimCLRMargins(BaseMethod):
         Returns:
             T: Loss tensor.
         """
-        loss_margin = self.config.loss_margin
+        margin = self.config.margin
 
-        if self.config.loss_margin_scheduler:
-            loss_margin = self._loss_margin_scheduler()
-            self.loss_fn.loss_fn.margin = loss_margin
+        if self.config.margin_scheduler:
+            margin = self._margin_scheduler()
+            self.loss_fn.loss_fn.margin = margin
 
         loss = self.loss_fn(Z)
 
         self.log_step_metrics(
             {
                 "train/loss": loss,
-                "train/margin": loss_margin,
+                "train/margin": margin,
             },
         )
 

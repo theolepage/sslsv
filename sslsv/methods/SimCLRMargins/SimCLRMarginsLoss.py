@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Union
 from enum import Enum
 
 import torch
@@ -138,27 +138,32 @@ class MHERegularization(BaseContrastiveLoss):
         return loss
 
 
-class SNTXent(BaseContrastiveLoss):
+class NTXent(BaseContrastiveLoss):
     """
-    Symmetric NT-Xent (Normalized Temperature-scaled Cross Entropy) loss.
+    NT-Xent (Normalized Temperature-Scaled Cross Entropy) loss.
 
     Attributes:
+        symmetric (bool): Whether to use symmetric formulation of NT-Xent.
         scale (float): Scale factor (1 / temperature).
     """
 
-    def __init__(self, loss_scale: float):
+    def __init__(self, symmetric: bool, scale: float):
         """
-        Initialize a Symmetric NT-Xent loss.
+        Initialize an NT-Xent loss.
 
         Args:
-            loss_scale (float): Scale factor (1 / temperature).
+            symmetric (bool): Whether to use symmetric formulation of NT-Xent.
+            scale (float): Scale factor (1 / temperature).
 
         Returns:
             None
         """
         super().__init__()
 
-        self.scale = loss_scale
+        self.symmetric = symmetric
+        self.scale = scale
+
+        self.additional_loss = 0
 
     def _determine_labels(self, logits: T, nb_positives: int) -> T:
         """
@@ -176,12 +181,13 @@ class SNTXent(BaseContrastiveLoss):
             labels[:, i] = 1.0
         return labels
 
-    def _process_pos(self, pos: T) -> T:
+    def _process_pos(self, pos: T, norms: T = None) -> T:
         """
         Processes positives.
 
         Args:
             pos (T): Positives tensor.
+            norms (Optional[T]): Norms tensor.
 
         Returns:
             T: Positives tensor.
@@ -212,46 +218,41 @@ class SNTXent(BaseContrastiveLoss):
         """
         return self.scale * logits
 
-    def forward(self, A: T, B: T, discard_identity: bool = True) -> T:
+    def _compute_loss(self, A: T, B: T, discard_identity: bool):
         """
-        Compute loss.
+        Determine and process logits to compute loss.
 
         Args:
             A (T): First embeddings tensor.
             B (T): Second embeddings tensor.
-            discard_identity (bool): Whether to discard identity comparisons. Defaults to True.
+            discard_identity (bool): Whether to discard identity comparisons.
 
         Returns:
             T: Loss tensor.
         """
         pos, neg = self._determine_logits(A, B, discard_identity)
 
-        logits = torch.cat((self._process_pos(pos), self._process_neg(neg)), dim=1)
+        # Compute norms of A
+        N, V_A, D = A.size()
+        A = A.transpose(0, 1).reshape(V_A * N, D)
+        A_norms = torch.norm(A, p=2, dim=1, keepdim=True)  # (V_A * N, 1)
+        A_norms = A_norms.repeat(1, pos.size(-1))
+
+        logits = torch.cat(
+            (
+                self._process_pos(pos, norms=A_norms),
+                self._process_neg(neg),
+            ),
+            dim=1,
+        )
         logits = self._process_logits(logits)
 
         labels = self._determine_labels(logits, nb_positives=pos.size(-1))
 
         loss = F.cross_entropy(logits, labels)
+        loss += self.additional_loss
 
         return loss
-
-
-class NTXent(SNTXent):
-    """
-    NT-Xent (Normalized Temperature-Scaled Cross Entropy) loss.
-    """
-
-    def __init__(self, loss_scale: float):
-        """
-        Initialize an NT-Xent loss.
-
-        Args:
-            loss_scale (float): Scale factor (1 / temperature).
-
-        Returns:
-            None
-        """
-        super().__init__(loss_scale)
 
     def forward(self, A: T, B: T, discard_identity: bool) -> T:
         """
@@ -260,64 +261,127 @@ class NTXent(SNTXent):
         Args:
             A (T): First embeddings tensor.
             B (T): Second embeddings tensor.
-            discard_identity (bool): Whether to discard identity comparisons. Defaults to True.
+            discard_identity (bool): Whether to discard identity comparisons.
 
         Returns:
             T: Loss tensor.
         """
-        return super().forward(A[:, 0:1], B[:, 1:2], discard_identity=False)
+        if self.symmetric:
+            return self._compute_loss(A, B, discard_identity)
+
+        return self._compute_loss(A[:, 0:1], B[:, 1:2], discard_identity=False)
 
 
-class SNTXentAM(SNTXent):
+class NTXentSphereFace(NTXent):
     """
-    SNT-Xent-AM (Additive Margins) loss.
+    NT-Xent-SphereFace loss.
+
+    Paper:
+        SphereFace: Deep Hypersphere Embedding for Face Recognition
+        *Weiyang Liu, Yandong Wen, Zhiding Yu, Ming Li, Bhiksha Raj, Le Song*
+        CVPR 2017
+        https://arxiv.org/abs/1704.08063
 
     Attributes:
+        symmetric (bool): Whether to use symmetric formulation of NT-Xent.
+        margin (Union[float, nn.Parameter]): Margin value or parameter.
+    """
+
+    def __init__(self, symmetric: bool, scale: float, margin: float):
+        """
+        Initialize an NT-Xent-SphereFace loss.
+
+        Args:
+            scale (float): Scale factor (1 / temperature).
+            margin (float): Margin value.
+
+        Returns:
+            None
+        """
+        super().__init__(symmetric, scale)
+
+        self.margin = margin
+
+    def _process_logits(self, logits: T) -> T:
+        """
+        Process logits.
+
+        Args:
+            logits (T): Logits tensor.
+
+        Returns:
+            T: Logits tensor.
+        """
+        with torch.no_grad():
+            m_theta = torch.acos(logits.clamp(-1.0 + 1e-5, 1.0 - 1e-5))
+            m_theta[:, 0] = m_theta[:, 0] * self.margin
+            k = (m_theta / math.pi).floor()
+            sign = -2 * torch.remainder(k, 2) + 1  # (-1)**k
+            phi_theta = sign * torch.cos(m_theta) - 2.0 * k
+            d_theta = phi_theta - logits
+
+        return self.scale * (logits + d_theta)
+
+
+class NTXentCosFace(NTXent):
+    """
+    NT-Xent-CosFace (Additive Margin) loss.
+
+    Paper:
+        CosFace: Large Margin Cosine Loss for Deep Face Recognition
+        *Hao Wang, Yitong Wang, Zheng Zhou, Xing Ji, Dihong Gong, Jingchao Zhou, Zhifeng Li, Wei Liu*
+        CVPR 2018
+        https://arxiv.org/abs/1801.09414
+
+    Attributes:
+        symmetric (bool): Whether to use symmetric formulation of NT-Xent.
         margin (Union[float, nn.Parameter]): Margin value or parameter.
     """
 
     def __init__(
         self,
-        loss_scale: float,
-        loss_margin: float,
-        loss_margin_simo: bool,
-        loss_margin_simo_K: int,
-        loss_margin_simo_alpha: int,
-        loss_margin_learnable: bool,
+        symmetric: bool,
+        scale: float,
+        margin: float,
+        margin_simo: bool,
+        margin_simo_K: int,
+        margin_simo_alpha: int,
+        margin_learnable: bool,
     ):
         """
-        Initialize an SNT-Xent-AM loss.
+        Initialize an NT-Xent-CosFace loss.
 
         Args:
-            loss_scale (float): Scale factor (1 / temperature).
-            loss_margin (float): Margin value.
-            loss_margin_simo (bool): Whether to use SIMO as the margin.
-            loss_margin_simo_K (int): K value for the SIMO margin.
-            loss_margin_simo_alpha (int): Alpha value for the SIMO margin.
-            loss_margin_learnable (bool): Whether the margin value is learnable.
+            scale (float): Scale factor (1 / temperature).
+            margin (float): Margin value.
+            margin_simo (bool): Whether to use SIMO as the margin.
+            margin_simo_K (int): K value for the SIMO margin.
+            margin_simo_alpha (int): Alpha value for the SIMO margin.
+            margin_learnable (bool): Whether the margin value is learnable.
 
         Returns:
             None
         """
-        super().__init__(loss_scale)
+        super().__init__(symmetric, scale)
 
-        self.margin = loss_margin
+        self.margin = margin
 
-        if loss_margin_simo:
+        if margin_simo:
             tau = 1 / self.scale
-            alpha = loss_margin_simo_alpha
-            K = loss_margin_simo_K
+            alpha = margin_simo_alpha
+            K = margin_simo_K
             self.margin = tau * math.log(alpha / K)
 
-        if loss_margin_learnable:
+        if margin_learnable:
             self.margin = nn.Parameter(torch.tensor(self.margin))
 
-    def _process_pos(self, pos: T) -> T:
+    def _process_pos(self, pos: T, norms: T = None) -> T:
         """
-        Process positives (apply Additive Margins).
+        Process positives (apply Additive Margin).
 
         Args:
             pos (T): Positives tensor.
+            norms (Optional[T]): Norms tensor.
 
         Returns:
             T: Positives tensor.
@@ -325,60 +389,327 @@ class SNTXentAM(SNTXent):
         return pos - self.margin
 
 
-class SNTXentAAM(SNTXentAM):
+class NTXentArcFace(NTXentCosFace):
     """
-    SNT-Xent-AAM (Additive Angular Margins) loss.
+    NT-Xent-ArcFace (Additive Angular Margin) loss.
+
+    Paper:
+        ArcFace: Additive Angular Margin Loss for Deep Face Recognition
+        *Jiankang Deng, Jia Guo, Jing Yang, Niannan Xue, Irene Kotsia, Stefanos Zafeiriou*
+        CVPR 2019
+        https://arxiv.org/abs/1801.09414
     """
 
     def __init__(
         self,
-        loss_scale: float,
-        loss_margin: float,
-        loss_margin_simo: bool,
-        loss_margin_simo_K: int,
-        loss_margin_simo_alpha: int,
-        loss_margin_learnable: bool,
+        symmetric: bool,
+        scale: float,
+        margin: float,
+        margin_simo: bool,
+        margin_simo_K: int,
+        margin_simo_alpha: int,
+        margin_learnable: bool,
     ):
         """
-        Initialize an SNT-Xent-AAM loss.
+        Initialize an NT-Xent-ArcFace loss.
 
         Args:
-            loss_scale (float): Scale factor (1 / temperature).
-            loss_margin (float): Margin value.
-            loss_margin_simo (bool): Whether to use SIMO as the margin.
-            loss_margin_simo_K (int): K value for the SIMO margin.
-            loss_margin_simo_alpha (int): Alpha value for the SIMO margin.
-            loss_margin_learnable (bool): Whether the margin value is learnable.
+            symmetric (bool): Whether to use symmetric formulation of NT-Xent.
+            scale (float): Scale factor (1 / temperature).
+            margin (float): Margin value.
+            margin_simo (bool): Whether to use SIMO as the margin.
+            margin_simo_K (int): K value for the SIMO margin.
+            margin_simo_alpha (int): Alpha value for the SIMO margin.
+            margin_learnable (bool): Whether the margin value is learnable.
 
         Returns:
             None
         """
         super().__init__(
-            loss_scale,
-            loss_margin,
-            loss_margin_simo,
-            loss_margin_simo_alpha,
-            loss_margin_simo_K,
-            loss_margin_learnable,
+            symmetric,
+            scale,
+            margin,
+            margin_simo,
+            margin_simo_alpha,
+            margin_simo_K,
+            margin_learnable,
         )
 
-    def _process_pos(self, pos: T) -> T:
+    @staticmethod
+    def _add_aam(x: T, margin: Union[float, T]) -> T:
         """
-        Process positives (apply Additive Angular Margins).
+        Apply Additive Angular Margin.
+
+        Args:
+            x (T): Input tensor.
+            margin (float): Margin value or margin tensor.
+
+        Returns:
+            T: Output tensor.
+        """
+        if isinstance(margin, float):
+            margin = torch.tensor([margin]).to(x.device)
+
+        sine = torch.sqrt((1.0 - torch.mul(x, x)).clamp(0, 1))
+
+        phi = x * torch.cos(margin) - sine * torch.sin(margin)
+
+        th = torch.cos(math.pi - margin)
+        mm = torch.sin(math.pi - margin) * margin
+        x = torch.where((x - th) > 0, phi, x - mm)
+
+        return x
+
+    def _process_pos(self, pos: T, norms: T = None) -> T:
+        """
+        Process positives (apply Additive Angular Margin).
 
         Args:
             pos (T): Positives tensor.
+            norms (Optional[T]): Norms tensor.
 
         Returns:
             T: Positives tensor.
         """
-        sine = torch.sqrt((1.0 - torch.mul(pos, pos)).clamp(0, 1))
+        return NTXentArcFace._add_aam(pos, self.margin)
 
-        phi = pos * math.cos(self.margin) - sine * math.sin(self.margin)
 
-        th = math.cos(math.pi - self.margin)
-        mm = math.sin(math.pi - self.margin) * self.margin
-        pos = torch.where((pos - th) > 0, phi, pos - mm)
+class NTXentCurricularFace(NTXent):
+    """
+    NT-Xent-CurricularFace loss.
+
+    Paper:
+        CurricularFace: Adaptive Curriculum Learning Loss for Deep Face Recognition
+        *Yuge Huang, Yuhan Wang, Ying Tai, Xiaoming Liu, Pengcheng Shen, Shaoxin Li, Jilin Li, Feiyue Huang*
+        CVPR 2020
+        https://arxiv.org/abs/2004.00288
+
+    Attributes:
+        margin (float): Margin value.
+    """
+
+    def __init__(self, symmetric: bool, scale: float, margin: float):
+        """
+        Initialize an NT-Xent-CurricularFace loss.
+
+        Args:
+            symmetric (bool): Whether to use symmetric formulation of NT-Xent.
+            scale (float): Scale factor (1 / temperature).
+            margin (float): Margin value.
+
+        Returns:
+            None
+        """
+        super().__init__(symmetric, scale)
+
+        self.margin = margin
+
+        self.register_buffer("t", torch.zeros(1))
+
+    def _process_logits(self, logits: T) -> T:
+        """
+        Process logits.
+
+        Args:
+            logits (T): Logits tensor.
+
+        Returns:
+            T: Logits tensor.
+        """
+        m = self.margin
+        pos = logits[:, 0].unsqueeze(-1).clone()
+        neg = logits[:, 1:]
+
+        # Update t
+        with torch.no_grad():
+            self.t = pos.mean() * 0.01 + (1 - 0.01) * self.t
+
+        # T (positives)
+        sin_theta = torch.sqrt((1.0 - torch.mul(pos, pos)).clamp(0, 1))
+        cos_theta_m = pos * math.cos(m) - sin_theta * math.sin(m)
+        threshold = math.cos(math.pi - m)
+        mm = math.sin(math.pi - m) * m
+        pos = torch.where(pos > threshold, cos_theta_m, pos - mm)
+
+        # N (negatives)
+        mask = neg > cos_theta_m
+        neg[mask] = neg[mask] * (self.t + neg[mask])
+
+        logits = torch.cat((pos, neg), dim=1)
+
+        return self.scale * logits
+
+
+class NTXentMagFace(NTXent):
+    """
+    NT-Xent-MagFace loss.
+
+    Paper:
+        MagFace: A Universal Representation for Face Recognition and Quality Assessment
+        *Qiang Meng, Shichao Zhao, Zhida Huang, Feng Zhou*
+        CVPR 2021
+        https://arxiv.org/abs/2103.06627
+
+    Attributes:
+        l_margin (float): Lower margin.
+        u_margin (float): Upper margin.
+        l_a (int): Lower norm.
+        u_a (int): Upper norm.
+        lambda_g (float): Weight for regularization.
+    """
+
+    def __init__(
+        self,
+        symmetric: bool,
+        scale: float,
+        l_margin: float,
+        u_margin: float,
+        l_a: int,
+        u_a: int,
+        lambda_g: float,
+    ):
+        """
+        Initialize an NT-Xent-MagFace loss.
+
+        Args:
+            symmetric (bool): Whether to use symmetric formulation of NT-Xent.
+            scale (float): Scale factor (1 / temperature).
+            l_margin (float): Lower margin.
+            u_margin (float): Upper margin.
+            l_a (int): Lower norm.
+            u_a (int): Upper norm.
+            lambda_g (float): Weight for regularization.
+
+        Returns:
+            None
+        """
+        super().__init__(symmetric, scale)
+
+        self.l_margin = l_margin
+        self.u_margin = u_margin
+        self.l_a = l_a
+        self.u_a = u_a
+        self.lambda_g = lambda_g
+
+    def _m(self, x_norm: T) -> T:
+        """
+        Compute margin values.
+
+        Args:
+            x_norm (T): Input tensor.
+
+        Returns:
+            T: Output tensor.
+        """
+        return (self.u_margin - self.l_margin) / (self.u_a - self.l_a) * (
+            x_norm - self.l_a
+        ) + self.l_margin
+
+    def _g(self, x_norm: T) -> T:
+        """
+        Compute regularization loss term.
+
+        Args:
+            x_norm (T): Input tensor.
+
+        Returns:
+            T: Output tensor.
+        """
+        g = 1 / (self.u_a**2) * x_norm + 1 / x_norm
+        return torch.mean(g)
+
+    def _process_pos(self, pos: T, norms: T = None) -> T:
+        """
+        Process positives.
+
+        Args:
+            pos (T): Positives tensor.
+            norms (Optional[T]): Norms tensor.
+
+        Returns:
+            T: Positives tensor.
+        """
+        norms = torch.clip(norms, min=self.l_a, max=self.u_a)
+
+        ada_margins = self._m(norms)
+
+        self.additional_loss = self.lambda_g * self._g(norms)
+
+        return NTXentArcFace._add_aam(pos, ada_margins)
+
+
+class NTXentAdaFace(NTXent):
+    """
+    NT-Xent-AdaFace loss.
+
+    Paper:
+        AdaFace: Quality Adaptive Margin for Face Recognition
+        *Minchul Kim, Anil K. Jain, Xiaoming Liu*
+        CVPR 2022
+        https://arxiv.org/abs/2204.00964
+
+    Attributes:
+        margin (float): Margin value.
+        h (float): Hyper-parameter h.
+    """
+
+    def __init__(self, symmetric: bool, scale: float, margin: float, h: float):
+        """
+        Initialize an NT-Xent-AdaFace loss.
+
+        Args:
+            symmetric (bool): Whether to use symmetric formulation of NT-Xent.
+            scale (float): Scale factor (1 / temperature).
+            margin (float): Margin value.
+            h (float): Hyper-parameter h.
+
+        Returns:
+            None
+        """
+        super().__init__(symmetric, scale)
+
+        self.margin = margin
+        self.h = h
+
+        self.t_alpha = 0.01
+        self.eps = 1e-3
+
+        self.register_buffer("batch_mean", torch.ones(1) * 20)
+        self.register_buffer("batch_std", torch.ones(1) * 100)
+
+    def _process_pos(self, pos: T, norms: T = None) -> T:
+        """
+        Process positives.
+
+        Args:
+            pos (T): Positives tensor.
+            norms (Optional[T]): Norms tensor.
+
+        Returns:
+            T: Positives tensor.
+        """
+        norms = torch.clip(norms, min=0.001, max=100).clone().detach()
+
+        with torch.no_grad():
+            self.batch_mean = (
+                norms.mean() * self.t_alpha + (1 - self.t_alpha) * self.batch_mean
+            )
+            self.batch_std = (
+                norms.std() * self.t_alpha + (1 - self.t_alpha) * self.batch_std
+            )
+
+        margin_scaler = (norms - self.batch_mean) / (self.batch_std + self.eps) * self.h
+        margin_scaler = torch.clip(margin_scaler, -1, 1)
+
+        # g_angular
+        g_angular = self.margin * margin_scaler * -1
+        theta = pos.acos()
+        theta_m = torch.clip(theta + g_angular, min=self.eps, max=math.pi - self.eps)
+        pos = theta_m.cos()
+
+        # g_additive
+        g_add = self.margin + (self.margin * margin_scaler)
+        pos = pos - g_add
 
         return pos
 
@@ -389,15 +720,21 @@ class SimCLRMarginsLossEnum(Enum):
 
     Options:
         NTXENT (str): NT-Xent loss.
-        SNTXENT (str): SNT-Xent loss.
-        SNTXENTAM (str): SNT-Xent loss with angular margin.
-        SNTXENTAAM (str): SNT-Xent loss with additive angular margin.
+        NTXENT_SPHEREFACE (str): NT-Xent loss with SphereFace.
+        NTXENT_COSFACE (str): NT-Xent loss with CosFace (Additive Margin).
+        NTXENT_ARCFACE (str): NT-Xent loss with ArcFace (Additive Angular Margin).
+        NTXENT_CURRICULARFACE (str): NT-Xent loss with CurricularFace.
+        NTXENT_MAGFACE (str): NT-Xent loss with MagFace.
+        NTXENT_ADAFACE (str): NT-Xent loss with AdaFace.
     """
 
     NTXENT = "nt-xent"
-    SNTXENT = "snt-xent"
-    SNTXENTAM = "snt-xent-am"
-    SNTXENTAAM = "snt-xent-aam"
+    NTXENT_SPHEREFACE = "nt-xent-sphereface"
+    NTXENT_COSFACE = "nt-xent-cosface"
+    NTXENT_ARCFACE = "nt-xent-arcface"
+    NTXENT_CURRICULARFACE = "nt-xent-curricularface"
+    NTXENT_MAGFACE = "nt-xent-magface"
+    NTXENT_ADAFACE = "nt-xent-adaface"
 
 
 class SimCLRMarginsLoss(nn.Module):
@@ -414,12 +751,19 @@ class SimCLRMarginsLoss(nn.Module):
         self,
         enable_multi_views: bool,
         loss: SimCLRMarginsLossEnum,
-        loss_scale: float,
-        loss_margin: float,
-        loss_margin_simo: bool,
-        loss_margin_simo_K: int,
-        loss_margin_simo_alpha: int,
-        loss_margin_learnable: bool,
+        symmetric: bool,
+        scale: float,
+        margin: float,
+        margin_simo: bool,
+        margin_simo_K: int,
+        margin_simo_alpha: int,
+        magface_l_margin: float,
+        magface_u_margin: float,
+        magface_l_a: int,
+        magface_u_a: int,
+        magface_lambda_g: float,
+        adaface_h: float,
+        margin_learnable: bool,
         loss_reg_weight: float,
     ):
         """
@@ -428,12 +772,19 @@ class SimCLRMarginsLoss(nn.Module):
         Args:
             enable_multi_views (bool): Whether to enable multiple views training.
             loss (SimCLRMarginsLossEnum): Type of loss function.
-            loss_scale (float): Scale factor.
-            loss_margin (float): Margin value.
-            loss_margin_simo (bool): Whether to use SIMO as the margin.
-            loss_margin_simo_K (int): K value for the SIMO margin.
-            loss_margin_simo_alpha (int): Alpha value for the SIMO margin.
-            loss_margin_learnable (bool): Whether the margin value is learnable.
+            symmetric (bool): Whether to use symmetric formulation of NT-Xent.
+            scale (float): Scale factor.
+            margin (float): Margin value.
+            margin_simo (bool): Whether to use SIMO as the margin.
+            margin_simo_K (int): K value for the SIMO margin.
+            margin_simo_alpha (int): Alpha value for the SIMO margin.
+            magface_l_margin (float): MagFace lower margin.
+            magface_u_margin (float): MagFace lpper margin.
+            magface_l_a (int): MagFace lower norm.
+            magface_u_a (int): MagFace upper norm.
+            magface_lambda_g (float): MagFace weight for regularization.
+            adaface_h (float): AdaFace hyper-parameter h.
+            margin_learnable (bool): Whether the margin value is learnable.
             loss_reg_weight (float): Weight of the MHE regularization term.
 
         Returns:
@@ -449,26 +800,47 @@ class SimCLRMarginsLoss(nn.Module):
         self.reg = MHERegularization(loss_reg_weight) if loss_reg_weight > 0 else None
 
         if loss == SimCLRMarginsLossEnum.NTXENT:
-            self.loss_fn = NTXent(loss_scale)
-        elif loss == SimCLRMarginsLossEnum.SNTXENT:
-            self.loss_fn = SNTXent(loss_scale)
-        elif loss == SimCLRMarginsLossEnum.SNTXENTAM:
-            self.loss_fn = SNTXentAM(
-                loss_scale,
-                loss_margin,
-                loss_margin_simo,
-                loss_margin_simo_K,
-                loss_margin_simo_alpha,
-                loss_margin_learnable,
+            self.loss_fn = NTXent(symmetric, scale)
+        elif loss == SimCLRMarginsLossEnum.NTXENT_SPHEREFACE:
+            self.loss_fn = NTXentSphereFace(symmetric, scale, margin)
+        elif loss == SimCLRMarginsLossEnum.NTXENT_COSFACE:
+            self.loss_fn = NTXentCosFace(
+                symmetric,
+                scale,
+                margin,
+                margin_simo,
+                margin_simo_K,
+                margin_simo_alpha,
+                margin_learnable,
             )
-        elif loss == SimCLRMarginsLossEnum.SNTXENTAAM:
-            self.loss_fn = SNTXentAAM(
-                loss_scale,
-                loss_margin,
-                loss_margin_simo,
-                loss_margin_simo_K,
-                loss_margin_simo_alpha,
-                loss_margin_learnable,
+        elif loss == SimCLRMarginsLossEnum.NTXENT_ARCFACE:
+            self.loss_fn = NTXentArcFace(
+                symmetric,
+                scale,
+                margin,
+                margin_simo,
+                margin_simo_K,
+                margin_simo_alpha,
+                margin_learnable,
+            )
+        elif loss == SimCLRMarginsLossEnum.NTXENT_CURRICULARFACE:
+            self.loss_fn = NTXentCurricularFace(symmetric, scale, margin)
+        elif loss == SimCLRMarginsLossEnum.NTXENT_MAGFACE:
+            self.loss_fn = NTXentMagFace(
+                symmetric,
+                scale,
+                magface_l_margin,
+                magface_u_margin,
+                magface_l_a,
+                magface_u_a,
+                magface_lambda_g,
+            )
+        elif loss == SimCLRMarginsLossEnum.NTXENT_ADAFACE:
+            self.loss_fn = NTXentAdaFace(
+                symmetric,
+                scale,
+                margin,
+                adaface_h,
             )
         else:
             raise NotImplementedError
