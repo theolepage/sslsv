@@ -354,6 +354,7 @@ class Trainer:
                 self._log_end_epoch(metrics)
                 early_stopping = self._early_stopping(metrics)
                 self._save_checkpoint("latest")
+                self._save_checkpoint(f"epoch-{self.epoch}")
                 if early_stopping:
                     break
 
@@ -365,7 +366,7 @@ class Trainer:
             Any: Loaded checkpoint, or None if no checkpoint is found.
         """
         init_weights = self.config.trainer.init_weights
-        checkpoint_path = self.config.model_path / "model_latest.pt"
+        checkpoint_path = self.config.model_ckpt_path / "model_latest.pt"
 
         if not checkpoint_path.exists():
             if init_weights:
@@ -393,6 +394,8 @@ class Trainer:
         Returns:
             None
         """
+        Path(self.config.model_ckpt_path).mkdir(exist_ok=True, parents=True)
+
         torch.save(
             {
                 "epoch": self.epoch + 1,
@@ -400,7 +403,7 @@ class Trainer:
                 "model": self.model.module.state_dict(),
                 "optimizer": self.optimizer.state_dict(),
             },
-            self.config.model_path / f"model_{suffix}.pt",
+            self.config.model_ckpt_path / f"model_{suffix}.pt",
         )
 
     def _log_start_training(self, resuming: bool):

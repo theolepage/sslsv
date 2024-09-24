@@ -9,8 +9,8 @@ from sslsv.utils.helpers import load_config, load_train_dataloader, load_model, 
 def test_basic():
     config = load_config("tests/resources/simple/config.yml")
 
-    (Path(config.model_path) / "model_latest.pt").unlink(missing_ok=True)
-    (Path(config.model_path) / "model_best.pt").unlink(missing_ok=True)
+    (config.model_ckpt_path / "model_latest.pt").unlink(missing_ok=True)
+    (config.model_ckpt_path / "model_best.pt").unlink(missing_ok=True)
 
     train_dataloader = load_train_dataloader(config)
 

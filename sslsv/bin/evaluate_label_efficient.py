@@ -103,7 +103,7 @@ def train(
     # Load model (to use as an encoder)
     model = load_model(config)
     if not supervised:
-        checkpoint = torch.load(config.experiment_path / "model_latest.pt")
+        checkpoint = torch.load(config.model_ckpt_path / "model_latest.pt")
         model.load_state_dict(checkpoint["model"])
         for p in model.parameters():
             p.requires_grad = fine_tune
@@ -114,11 +114,11 @@ def train(
     classifier = torch.nn.DataParallel(classifier)
 
     model_name_suffix = get_model_name_suffix(nb_samples_per_spk, fine_tune, supervised)
-    config.experiment_name = config.experiment_name + model_name_suffix
-    config.experiment_path = config.experiment_path.parent / (
-        config.experiment_path.name + model_name_suffix
+    config.model_name = config.model_name + model_name_suffix
+    config.model_path = config.model_path.parent / (
+        config.model_path.name + model_name_suffix
     )
-    config.experiment_path.mkdir(parents=True, exist_ok=True)
+    config.model_path.mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(
         model=classifier,

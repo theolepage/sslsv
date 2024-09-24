@@ -141,7 +141,7 @@ def inference(args: argparse.Namespace):
 
     model = load_model(config).to(device)
 
-    checkpoint = torch.load(config.model_path / "model_latest.pt")
+    checkpoint = torch.load(config.model_ckpt_path / "model_latest.pt")
     model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
 

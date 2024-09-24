@@ -218,6 +218,7 @@ def load_config(path: str, verbose: bool = True) -> Config:
     path = Path(path)
     config.model_name = str(path.parent.relative_to(path.parts[0]))
     config.model_path = path.parent
+    config.model_ckpt_path = config.model_path / "checkpoints"
 
     # Reproducibility / performance
     torch.backends.cudnn.benchmark = not config.reproducibility

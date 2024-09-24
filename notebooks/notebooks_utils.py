@@ -31,7 +31,7 @@ def load_models(
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = load_model(config).to(device)
 
-        checkpoint = torch.load(config.model_path / checkpoint_name)
+        checkpoint = torch.load(config.model_ckpt_path / checkpoint_name)
         model.load_state_dict(checkpoint["model"], strict=False)
         model.eval()
 
