@@ -26,6 +26,8 @@ class BYOLConfig(BaseMomentumMethodConfig):
         predictor_hidden_dim (int): Hidden dimension of the predictor.
     """
 
+    start_tau: float = 0.996
+
     projector_hidden_dim: int = 4096
     projector_output_dim: int = 256
 

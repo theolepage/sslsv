@@ -50,7 +50,7 @@ class MoCoConfig(BaseMomentumMethodConfig):
 
     enable_projector: bool = True
     projector_hidden_dim: int = 2048
-    projector_output_dim: int = 256
+    projector_output_dim: int = 128
 
     prevent_class_collisions: bool = False
 

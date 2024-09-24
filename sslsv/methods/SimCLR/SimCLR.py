@@ -20,10 +20,10 @@ class SimCLRConfig(BaseSiameseMethodConfig):
         projector_output_dim (int): Output dimension of the projector network.
     """
 
-    temperature: float = 0.2
+    temperature: float = 0.5
 
     projector_hidden_dim: int = 2048
-    projector_output_dim: int = 256
+    projector_output_dim: int = 128
 
 
 class SimCLR(BaseSiameseMethod):

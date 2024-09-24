@@ -173,6 +173,8 @@ class DataAugmentation:
         Returns:
             np.ndarray: Output audio.
         """
+        if self.config.rir:
+            audio = self.reverberate(audio)
         if self.config.musan:
             for _ in range(self.config.musan_nb_iters):
                 musan_category = random.randint(0, 2)
@@ -182,6 +184,4 @@ class DataAugmentation:
                     audio = self.add_noise(audio, "speech")
                 elif musan_category == 2:
                     audio = self.add_noise(audio, "noise")
-        if self.config.rir:
-            audio = self.reverberate(audio)
         return audio

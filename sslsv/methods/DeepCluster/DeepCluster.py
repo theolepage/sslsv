@@ -97,6 +97,12 @@ class DeepCluster(BaseMethod):
 
         self.loss_fn = DeepClusterLoss(config.temperature)
 
+        # Fix: local buffers should not be synchronized by DDP
+        _ddp_params_and_buffers_to_ignore = [
+            "local_memory_indexes",
+            "local_memory_embeddings",
+        ]
+
     def on_train_start(self):
         """
         Initialize K-Means and create buffers to store indexes and embeddings.

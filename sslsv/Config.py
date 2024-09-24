@@ -34,6 +34,6 @@ class Config:
 
     encoder: BaseEncoderConfig = None
     method: BaseMethodConfig = None
-    trainer: TrainerConfig = None
-    dataset: DatasetConfig = None
-    evaluation: BaseEvaluationConfig = None
+    trainer: TrainerConfig = TrainerConfig()
+    dataset: DatasetConfig = DatasetConfig()
+    evaluation: BaseEvaluationConfig = BaseEvaluationConfig()

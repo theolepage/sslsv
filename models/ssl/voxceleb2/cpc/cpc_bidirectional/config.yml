@@ -1,14 +1,17 @@
 encoder:
   type: 'resnet34'
+  pooling: false
 method:
-  type: 'supervised'
-  nb_classes: 5994
+  type: 'cpc'
+  aggregator_dim: 512
+  bidirectional: true
 evaluation:
   validation:
     - type: 'sv_cosine'
   test:
     - type: 'sv_cosine'
 dataset:
+  ssl: true
   train: 'voxceleb2_train.csv'
   augmentation:
     enable: true

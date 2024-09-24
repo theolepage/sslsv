@@ -33,27 +33,14 @@ def sample_frames(
 
     Returns:
         List[np.ndarray]: List of audio frames.
-
-    Raises:
-        AssertionError: If the length of the input audio signal is less than 2 * frame_length.
     """
     audio_length = audio.shape[1]
-    assert audio_length >= 2 * frame_length, "audio_length should >= 2 * frame_length"
 
-    dist = audio_length - 2 * frame_length
-    dist = np.random.randint(0, dist + 1)
+    pos = np.random.randint(0, audio_length - frame_length + 1)
+    frame1 = audio[:, pos : pos + frame_length]
 
-    lower = frame_length + dist // 2
-    upper = audio_length - (frame_length + dist // 2)
-    pivot = np.random.randint(lower, upper + 1)
-
-    frame1_from = pivot - dist // 2 - frame_length
-    frame1_to = pivot - dist // 2
-    frame1 = audio[:, frame1_from:frame1_to]
-
-    frame2_from = pivot + dist // 2
-    frame2_to = pivot + dist // 2 + frame_length
-    frame2 = audio[:, frame2_from:frame2_to]
+    pos = np.random.randint(0, audio_length - frame_length + 1)
+    frame2 = audio[:, pos : pos + frame_length]
 
     return [frame1, frame2]
 
