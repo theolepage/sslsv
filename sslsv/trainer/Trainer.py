@@ -380,7 +380,7 @@ class Trainer:
         # Resume training
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
         self.best_metric = checkpoint["best_metric"]
-        self.model.module.load_state_dict(checkpoint["model"])
+        self.model.module.load_state_dict(checkpoint["model"], strict=False)
         self.optimizer.load_state_dict(checkpoint["optimizer"])
         return checkpoint
 

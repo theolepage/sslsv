@@ -36,10 +36,9 @@ class _SSPS_BaseSampling:
         array = array[: self.config.sampling_window]
 
         if self.config.sampling_prob == "exp_decay":
-            probabilities = (
-                self.config.sampling_prob_exp_decay ** torch.arange(len(array)).float()
+            probabilities = self.config.sampling_prob_exp_decay * torch.exp(
+                -self.config.sampling_prob_exp_decay * torch.arange(len(array)).float()
             )
-            probabilities = probabilities / probabilities.sum()
         else:  # self.config.sampling_prob == 'uniform':
             probabilities = torch.ones(len(array)) / len(array)
 
@@ -405,6 +404,8 @@ class SSPS_TwoKMeansReprSampling(SSPS_KMeansSampling):
             nearby_samples = self.cluster_to_nearby_samples[cluster_selected]
             if len(nearby_samples) == 0:
                 continue
+
+            # nearby_samples = nearby_samples[:1]
 
             intra_sampling_pool += len(nearby_samples)
             sample_selected = self._sample(nearby_samples)

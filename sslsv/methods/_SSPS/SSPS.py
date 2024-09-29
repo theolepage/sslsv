@@ -48,7 +48,7 @@ class SSPSConfig:
 
     sampling_window: int = 10
     sampling_prob: str = "exp_decay"  # or "uniform"
-    sampling_prob_exp_decay: float = 0.5
+    sampling_prob_exp_decay: float = 0.7
 
     verbose: bool = False
 

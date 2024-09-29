@@ -34,7 +34,7 @@ def evaluate(args: argparse.Namespace):
 
     model = load_model(config).to(rank)
     checkpoint = torch.load(
-        config.model_ckpt_path / "model_latest.pt", map_location="cpu"
+        config.model_ckpt_path / f"model_{args.model_suffix}.pt", map_location="cpu"
     )
     model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
@@ -49,7 +49,7 @@ def evaluate(args: argparse.Namespace):
 
     if is_main_process():
         if args.silent:
-            print(metrics)
+            print(json.dumps(metrics))
         else:
             print_metrics(metrics)
 
@@ -62,6 +62,12 @@ def evaluate(args: argparse.Namespace):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config", type=str, help="Path to model config file.")
+    parser.add_argument(
+        "--model_suffix",
+        type=str,
+        default="latest",
+        help="Model suffix (e.g. latest, avg, ...).",
+    )
     parser.add_argument(
         "--silent",
         action="store_true",
