@@ -5,7 +5,7 @@ method:
   nb_classes: 107
   speaker_classification: false
 trainer:
-  init_weights: 'models/supervised/voxceleb2/sv'
+  init_weights: 'models/supervised/voxceleb2/sv/checkpoints/model_latest.pt'
   epochs: 100
   tracked_metric: 'val/classification/voxlingua107_train/accuracy'
   tracked_mode: 'max'

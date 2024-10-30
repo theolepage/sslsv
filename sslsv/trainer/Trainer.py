@@ -70,6 +70,7 @@ class TrainerConfig:
         ddp_sync_batchnorm (bool): Whether to synchronize BatchNorm statistics when using DDP.
         mixed_precision (bool): Whether to use mixed precision training.
         init_weights (str): Path to initial weights for the model.
+        last_checkpoint (str): Path to latest checkpoint to resume training.
         wandb_id (str): ID for the WandB run.
         wandb_project (str): Project name for WandB run.
     """
@@ -87,6 +88,7 @@ class TrainerConfig:
     ddp_sync_batchnorm: bool = True
     mixed_precision: bool = False
     init_weights: str = None
+    last_checkpoint: str = None
 
     wandb_id: str = None
     wandb_project: str = "sslsv"
@@ -175,7 +177,8 @@ class Trainer:
 
             X = X.to(self.device, non_blocking=True)
             labels = info["labels"].to(self.device, non_blocking=True)
-            indices = indices.to(self.device, non_blocking=True)
+            if torch.is_tensor(indices):
+                indices = indices.to(self.device, non_blocking=True)
 
             # Forward and compute loss
             with autocast(enabled=(self.scaler is not None)):
@@ -365,17 +368,17 @@ class Trainer:
         Returns:
             Any: Loaded checkpoint, or None if no checkpoint is found.
         """
-        init_weights = self.config.trainer.init_weights
         checkpoint_path = self.config.model_ckpt_path / "model_latest.pt"
 
         if not checkpoint_path.exists():
-            if init_weights:
+            if self.config.trainer.last_checkpoint:
+                checkpoint_path = self.config.trainer.last_checkpoint
+            elif self.config.trainer.init_weights:
                 checkpoint = torch.load(
-                    Path(init_weights) / "model_latest.pt", map_location="cpu"
+                    self.config.trainer.init_weights, map_location="cpu"
                 )
                 self.model.module.load_state_dict(checkpoint["model"], strict=False)
-
-            return None
+                return None
 
         # Resume training
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
@@ -396,11 +399,18 @@ class Trainer:
         """
         Path(self.config.model_ckpt_path).mkdir(exist_ok=True, parents=True)
 
+        model = self.model.module.state_dict()
+
+        # Remove SSPS queue from model_epoch-* checkpoints
+        if suffix != "latest" and "ssps.queue_indices" in model:
+            model.pop("ssps.queue_indices", None)
+            model.pop("ssps.queue_embeddings", None)
+
         torch.save(
             {
                 "epoch": self.epoch + 1,
                 "best_metric": self.best_metric,
-                "model": self.model.module.state_dict(),
+                "model": model,
                 "optimizer": self.optimizer.state_dict(),
             },
             self.config.model_ckpt_path / f"model_{suffix}.pt",

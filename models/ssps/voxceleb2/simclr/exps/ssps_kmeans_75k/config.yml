@@ -5,12 +5,14 @@ method:
   temperature: 0.03333333333
   enable_projector: false
   ssps:
-    start_epoch: 101
+    start_epoch: 100
     verbose: true
-    sampling: '2-kmeans'
+    sampling: 'kmeans-repr'
+    kmeans_nb_prototypes: 75000
+    inter_sampling_size: 0
 trainer:
   batch_size: 200
-  epochs: 111
+  epochs: 110
 evaluation:
   validation:
     - type: 'sv_cosine'

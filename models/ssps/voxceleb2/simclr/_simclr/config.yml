@@ -5,13 +5,10 @@ method:
   temperature: 0.03333333333
   enable_projector: false
   ssps:
-    start_epoch: 101
-    verbose: true
-    sampling: 'kmeans-repr'
-    kmeans_nb_prototypes: 7500
+    start_epoch: 100
 trainer:
   batch_size: 200
-  epochs: 111
+  epochs: 100
 evaluation:
   validation:
     - type: 'sv_cosine'
@@ -19,7 +16,6 @@ evaluation:
     - type: 'sv_cosine'
 dataset:
   ssl: true
-  ssps: true
   train: 'voxceleb2_train.csv'
   augmentation:
     enable: true

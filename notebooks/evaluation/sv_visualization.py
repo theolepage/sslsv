@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import math
 import torch
@@ -156,7 +156,7 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot:
         + ylab("False Negative Rate (%)")
         + ggtitle("Detection Error Tradeoff (DET) Curve")
         + theme_bw()
-        + theme(figure_size=(6, 6), text=element_text(size=10))
+        + theme(figure_size=(8, 8), text=element_text(size=10))
         + scale_x_continuous(
             breaks=scale_breaks,
             labels=scale_labels,
@@ -236,7 +236,7 @@ def scores_distribution(
         + ylab("Count")
         + ggtitle(f"Scores distribution")
         + theme_bw()
-        + theme(figure_size=(10, 4), text=element_text(size=10))
+        + theme(figure_size=(12, 6), text=element_text(size=10))
         + geom_histogram(
             df,
             aes(x="Score", fill="Target", color="Target"),
@@ -271,7 +271,7 @@ def _filter_embeddings(
     speakers: Optional[List[str]] = None,
 ) -> Tuple[np.ndarray, List[int]]:
     if speakers is None:
-        speakers = [key.split("/")[1] for key in embeddings.keys()]
+        speakers = [key.split("/")[-3] for key in embeddings.keys()]
         speakers = [s for s in list(set(speakers)) if speakers.count(s) >= nb_samples]
         speakers = speakers[:nb_speakers]
 
@@ -279,9 +279,9 @@ def _filter_embeddings(
     for speaker in speakers:
         i = 0
         for key in embeddings.keys():
-            if i < nb_samples and speaker == key.split("/")[1]:
+            if i < nb_samples and speaker == key.split("/")[-3]:
                 Z.append(embeddings[key].numpy()[0])
-                y.append(int(speaker[2:]))
+                y.append(speaker)
                 i += 1
 
     return np.array(Z), y
@@ -330,27 +330,43 @@ def tsne_2D(
     model: Model,
     nb_speakers: int = 10,
     nb_samples: int = 150,
+    init: Union[str, np.ndarray] = "random",
+    speakers: List[str] = None,
 ) -> matplotlib.figure.Figure:
-    Z, y = _filter_embeddings(model.embeddings, nb_speakers, nb_samples)
+    Z, y = _filter_embeddings(model.embeddings, nb_speakers, nb_samples, speakers)
 
-    Z_2d = TSNE(n_components=2, init="random").fit_transform(Z)
+    Z_2d = TSNE(n_components=2, init=init).fit_transform(Z)
 
-    df = pd.DataFrame(Z)
+    df = pd.DataFrame()
     df["Speaker"] = y
     df["t-SNE_1"] = Z_2d[:, 0]
     df["t-SNE_2"] = Z_2d[:, 1]
 
-    plt.figure(figsize=(16, 10))
-    sns.scatterplot(
-        x="t-SNE_1",
-        y="t-SNE_2",
-        hue="Speaker",
-        palette=sns.color_palette("hls", len(np.unique(y))),
-        data=df,
-        legend="full",
-        alpha=0.5,
+    p = (
+        ggplot(df, aes(x="t-SNE_1", y="t-SNE_2", color="Speaker"))
+        + geom_point(alpha=0.5, show_legend=False)
+        + geom_point(
+            data=df.drop_duplicates(subset=["Speaker"]),
+            mapping=aes(x="t-SNE_1", y="t-SNE_2", color="Speaker"),
+            alpha=1,
+            size=2,
+        )
+        + scale_color_hue()
+        + labs(x=None, y=None)
+        + theme_bw()
+        + theme(
+            figure_size=(8, 6),
+            legend_title=element_text(size=10),
+            legend_text=element_text(size=8),
+            axis_title=element_blank(),
+            axis_text=element_blank(),
+            axis_ticks=element_blank(),
+            panel_grid=element_blank(),
+            panel_border=element_blank(),
+        )
     )
-    plt.show()
+
+    return p, Z_2d
 
 
 def pca_2D(
@@ -371,14 +387,26 @@ def pca_2D(
     df["PCA_1"] = Z_2d[:, components[0]]
     df["PCA_2"] = Z_2d[:, components[1]]
 
-    plt.figure(figsize=(16, 10))
-    sns.scatterplot(
-        x="PCA_1",
-        y="PCA_2",
-        hue="Speaker",
-        palette=sns.color_palette("hls", len(np.unique(y))),
-        data=df,
-        legend="full",
-        alpha=0.5,
+    p = (
+        ggplot(df, aes(x="PCA_1", y="PCA_2", color="Speaker"))
+        + geom_point(alpha=0.5, show_legend=False)
+        + geom_point(
+            data=df.drop_duplicates(subset=["Speaker"]),
+            mapping=aes(x="PCA_1", y="PCA_2", color="Speaker"),
+            alpha=1,
+            size=2,
+        )
+        + scale_color_hue()
+        + theme_bw()
+        + theme(
+            figure_size=(14, 8),
+            legend_title=element_text(size=10),
+            legend_text=element_text(size=8),
+            axis_title=element_blank(),
+            axis_text=element_blank(),
+            axis_ticks=element_blank(),
+            panel_grid=element_blank(),
+            panel_border=element_blank(),
+        )
     )
-    plt.show()
+    print(p)

@@ -1,0 +1,26 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'simclr'
+  temperature: 0.03333333333
+  enable_projector: false
+  ssps:
+    start_epoch: 100
+    verbose: true
+    sampling: 'kmeans-repr'
+    kmeans_nb_prototypes: 150000
+    inter_sampling_size: 0
+trainer:
+  batch_size: 200
+  epochs: 110
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+dataset:
+  ssl: true
+  ssps: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

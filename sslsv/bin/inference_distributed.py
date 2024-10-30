@@ -31,7 +31,7 @@ def inference(args: argparse.Namespace):
     config = load_config(args.config, verbose=not args.silent)
 
     model = load_model(config).to(rank)
-    checkpoint = torch.load(config.model_ckpt_path / "model_latest.pt")
+    checkpoint = torch.load(config.model_ckpt_path / f"model_{args.model_suffix}.pt")
     model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
     model = DistributedDataParallel(model, device_ids=[rank])

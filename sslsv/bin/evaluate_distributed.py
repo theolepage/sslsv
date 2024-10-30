@@ -66,7 +66,7 @@ if __name__ == "__main__":
         "--model_suffix",
         type=str,
         default="latest",
-        help="Model suffix (e.g. latest, avg, ...).",
+        help="Model checkpoint suffix (e.g. latest, avg, ...).",
     )
     parser.add_argument(
         "--silent",

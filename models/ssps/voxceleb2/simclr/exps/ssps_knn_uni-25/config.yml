@@ -1,0 +1,28 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'simclr'
+  temperature: 0.03333333333
+  enable_projector: false
+  ssps:
+    start_epoch: 100
+    verbose: true
+    sampling: 'knn'
+    intra_sampling_prob_fn: 'uniform'
+    intra_sampling_size: 25
+    queue_size: 1000000
+trainer:
+  last_checkpoint: 'models/ssps/voxceleb2/simclr/_simclr/checkpoints/model_latest_knn.pt'
+  batch_size: 200
+  epochs: 110
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+dataset:
+  ssl: true
+  ssps: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

@@ -32,15 +32,17 @@ class _SSPS_BaseSampling:
     def apply(self):
         raise NotImplementedError
 
-    def _sample(self, array):
-        array = array[: self.config.sampling_window]
+    def _sample(self, array, fn, exp_lambda):
+        N = len(array)
 
-        if self.config.sampling_prob == "exp_decay":
-            probabilities = self.config.sampling_prob_exp_decay * torch.exp(
-                -self.config.sampling_prob_exp_decay * torch.arange(len(array)).float()
+        if fn == "exp_decay":
+            probabilities = exp_lambda * torch.exp(
+                -exp_lambda * torch.arange(N).float()
             )
-        else:  # self.config.sampling_prob == 'uniform':
-            probabilities = torch.ones(len(array)) / len(array)
+        else:  # fn == 'uniform':
+            probabilities = torch.ones(N) / N
+
+        probabilities = probabilities / probabilities.sum()
 
         res = array[torch.multinomial(probabilities, 1)]
         return res
@@ -131,27 +133,27 @@ class SSPS_KNNSampling(_SSPS_BaseSampling):
         for i in range(len(indices)):
             samples_sim = sim[i]
 
-            nearby_samples = torch.nonzero(samples_sim > self.config.speaker_threshold)
-            nearby_samples = nearby_samples.view(-1)
-            nearby_samples = nearby_samples[
-                torch.sort(samples_sim[nearby_samples], descending=True).indices
-            ]
+            train_indices_ = torch.nonzero(train_indices != indices[i]).view(-1)
 
-            nearby_samples = train_indices[nearby_samples]
+            nearby_samples = torch.topk(
+                samples_sim[train_indices_],
+                self.config.intra_sampling_size,
+            )[1]
 
-            nearby_samples = [idx for idx in nearby_samples if indices[i] != idx]
-
-            if len(nearby_samples) == 0:
-                continue
+            nearby_samples = train_indices[train_indices_[nearby_samples]]
 
             sampling_pool += len(nearby_samples)
 
-            self.ssps_indices[i] = self._sample(nearby_samples)
+            self.ssps_indices[i] = self._sample(
+                nearby_samples,
+                self.config.intra_sampling_prob_fn,
+                self.config.intra_sampling_prob_exp_lambda,
+            )
 
         metrics = self._determine_metrics(
             indices,
             self.ssps_indices,
-            {"ssps_sampling_pool": sampling_pool},
+            # {"ssps_sampling_pool": sampling_pool},
             repr_sampling=True,
         )
 
@@ -183,55 +185,7 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
             verbose=self.verbose,
         )
 
-    def _create_cluster_to_nearby_samples(self):
-        # self.cluster_to_nearby_samples = torch.load("cluster_to_nearby_samples.pt")
-        # return
-
-        where_helper = KMeans.get_indices_sparse(self.assignments.cpu().numpy())
-
-        self.cluster_to_nearby_samples = {}
-        for c in tqdm(
-            range(len(self.centroids)),
-            disable=not self.verbose or not is_main_process(),
-            desc="Create cluster_to_nearby_samples",
-        ):
-            samples_idx = torch.from_numpy(where_helper[c][0])
-
-            samples_sim = self.similarities[samples_idx]
-
-            nearby_samples = torch.nonzero(samples_sim > self.config.speaker_threshold)
-            nearby_samples = nearby_samples.view(-1)
-            nearby_samples = nearby_samples[
-                torch.sort(samples_sim[nearby_samples], descending=True).indices
-            ]
-
-            self.cluster_to_nearby_samples[c] = samples_idx[nearby_samples].tolist()
-
-        # torch.save(self.cluster_to_nearby_samples, "cluster_to_nearby_samples.pt")
-
-    def _create_cluster_to_nearby_clusters(self):
-        # self.cluster_to_nearby_clusters = torch.load("cluster_to_nearby_clusters.pt")
-        # return
-
-        self.cluster_to_nearby_clusters = {}
-        for c in tqdm(
-            range(len(self.centroids)),
-            disable=not self.verbose or not is_main_process(),
-            desc="Create cluster_to_nearby_clusters",
-        ):
-            clusters_sim = (self.centroids[c].unsqueeze(0) @ self.centroids.T).view(-1)
-
-            nearby_clusters = torch.nonzero(clusters_sim > self.config.video_threshold)
-            nearby_clusters = nearby_clusters.view(-1)
-            nearby_clusters = nearby_clusters[
-                torch.sort(clusters_sim[nearby_clusters], descending=True).indices
-            ]
-
-            self.cluster_to_nearby_clusters[c] = nearby_clusters[1:].tolist()
-
-        # torch.save(self.cluster_to_nearby_clusters, "cluster_to_nearby_clusters.pt")
-
-    def prepare(self, train_indices, train_embeddings):
+    def _run_kmeans(self, train_indices, train_embeddings):
         local_train_indices = train_indices[get_rank() :: get_world_size()]
         local_train_embeddings = train_embeddings[0, get_rank() :: get_world_size()]
 
@@ -248,90 +202,47 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
         # self.similarities = torch.load("similarities.pt", map_location=self.device)
 
         # Determine clustering metrics
-        labels = pd.factorize(self.df_train["Speaker"])[0].tolist()
-        nmi = normalized_mutual_info_score(labels, self.assignments.cpu().numpy())
-        ari = adjusted_rand_score(labels, self.assignments.cpu().numpy())
+        labels_video = pd.factorize(self.df_train["Video"])[0].tolist()
+        labels_speaker = pd.factorize(self.df_train["Speaker"])[0].tolist()
+        nmi_video = normalized_mutual_info_score(
+            labels_video, self.assignments.cpu().numpy()
+        )
+        nmi_speaker = normalized_mutual_info_score(
+            labels_speaker, self.assignments.cpu().numpy()
+        )
+        # ari = adjusted_rand_score(labels_video, self.assignments.cpu().numpy())
         self.global_metrics = {
-            "ssps_kmeans_nmi": nmi,
-            "ssps_kmeans_ari": ari,
+            "ssps_kmeans_nmi_video": nmi_video,
+            "ssps_kmeans_nmi_speaker": nmi_speaker,
+            # "ssps_kmeans_ari": ari,
         }
 
-    def sample(self, indices, embeddings, train_indices, train_embeddings):
-        self.ssps_indices = torch.full_like(indices, -1)
+    def _create_cluster_to_nearby_clusters(self):
+        # self.cluster_to_nearby_clusters = torch.load("cluster_to_nearby_clusters.pt")
+        # return
 
-        for i, idx in enumerate(indices):
-            self.ssps_indices[i] = self.assignments[idx].item()
+        self.cluster_to_nearby_clusters = {}
+        for c in tqdm(
+            range(len(self.centroids)),
+            disable=not self.verbose or not is_main_process(),
+            desc="Create cluster_to_nearby_clusters",
+        ):
+            clusters_sim = (self.centroids[c].unsqueeze(0) @ self.centroids.T).view(-1)
 
-        # FIXME: self.ssps_indices = self.assignments[indices]
+            nearby_clusters = torch.topk(
+                clusters_sim,
+                self.config.inter_sampling_size + 1,
+            )[1]
 
-        metrics = self._determine_metrics(indices, self.ssps_indices)
+            if self.config.inter_sampling_size == 0:
+                self.cluster_to_nearby_clusters[c] = nearby_clusters.tolist()
+            else:
+                self.cluster_to_nearby_clusters[c] = nearby_clusters[1:].tolist()
 
-        return metrics
-
-    def apply(self, Z, train_embeddings):
-        ssps_mask = self.ssps_indices != -1
-        Z[ssps_mask] = self.centroids[self.ssps_indices[ssps_mask]]
-        return Z
-
-
-class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
-
-    def __init__(self, config):
-        super().__init__(config)
-
-    def prepare(self, train_indices, train_embeddings):
-        super().prepare(train_indices, train_embeddings)
-
-        self._create_cluster_to_nearby_samples()
-
-    def sample(self, indices, embeddings, train_indices, train_embeddings):
-        self.ssps_indices = torch.full_like(indices, -1)
-
-        sampling_pool = 0
-
-        for i, idx in enumerate(indices):
-            cluster = self.assignments[idx].item()
-            if cluster == -1:
-                continue
-
-            # Sample one sample nearby cluster
-            nearby_samples = self.cluster_to_nearby_samples[cluster]
-
-            if len(nearby_samples) == 0:
-                continue
-
-            sampling_pool += len(nearby_samples)
-
-            self.ssps_indices[i] = self._sample(nearby_samples)
-
-        metrics = self._determine_metrics(
-            indices,
-            self.ssps_indices,
-            {"ssps_sampling_pool": sampling_pool},
-            repr_sampling=True,
-        )
-
-        self.ssps_indices, coverage = self._find_train_indices_in_queue(
-            self.ssps_indices, train_indices
-        )
-        metrics["ssps_coverage"] = metrics["ssps_coverage"] * coverage
-
-        return metrics
-
-    def apply(self, Z, train_embeddings):
-        ssps_mask = self.ssps_indices != -1
-        Z[ssps_mask] = train_embeddings[self.ssps_indices[ssps_mask]]
-        return Z
-
-
-class SSPS_TwoKMeansSampling(SSPS_KMeansSampling):
-
-    def __init__(self, config):
-        super().__init__(config)
+        # torch.save(self.cluster_to_nearby_clusters, "cluster_to_nearby_clusters.pt")
 
     def prepare(self, train_indices, train_embeddings):
-        super().prepare(train_indices, train_embeddings)
-
+        self._run_kmeans(train_indices, train_embeddings)
         self._create_cluster_to_nearby_clusters()
 
     def sample(self, indices, embeddings, train_indices, train_embeddings):
@@ -350,16 +261,18 @@ class SSPS_TwoKMeansSampling(SSPS_KMeansSampling):
                 continue
 
             inter_sampling_pool += len(nearby_clusters)
-            cluster_selected = self._sample(nearby_clusters)
+            cluster_selected = self._sample(
+                nearby_clusters,
+                self.config.inter_sampling_prob_fn,
+                self.config.inter_sampling_prob_exp_lambda,
+            )
 
             self.ssps_indices[i] = cluster_selected
 
         metrics = self._determine_metrics(
             indices,
             self.ssps_indices,
-            {
-                "ssps_inter_sampling_pool": inter_sampling_pool,
-            },
+            # {"ssps_inter_sampling_pool": inter_sampling_pool},
         )
 
         return metrics
@@ -370,16 +283,40 @@ class SSPS_TwoKMeansSampling(SSPS_KMeansSampling):
         return Z
 
 
-class SSPS_TwoKMeansReprSampling(SSPS_KMeansSampling):
+class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
 
     def __init__(self, config):
         super().__init__(config)
+
+    def _create_cluster_to_nearby_samples(self):
+        # self.cluster_to_nearby_samples = torch.load("cluster_to_nearby_samples.pt")
+        # return
+
+        where_helper = KMeans.get_indices_sparse(self.assignments.cpu().numpy())
+
+        self.cluster_to_nearby_samples = {}
+        for c in tqdm(
+            range(len(self.centroids)),
+            disable=not self.verbose or not is_main_process(),
+            desc="Create cluster_to_nearby_samples",
+        ):
+            samples_idx = torch.from_numpy(where_helper[c][0])
+
+            samples_sim = self.similarities[samples_idx]
+
+            nearby_samples = torch.topk(
+                samples_sim,
+                min(len(samples_sim), self.config.intra_sampling_size),
+            )[1]
+
+            self.cluster_to_nearby_samples[c] = samples_idx[nearby_samples].tolist()
+
+        # torch.save(self.cluster_to_nearby_samples, "cluster_to_nearby_samples.pt")
 
     def prepare(self, train_indices, train_embeddings):
         super().prepare(train_indices, train_embeddings)
 
         self._create_cluster_to_nearby_samples()
-        self._create_cluster_to_nearby_clusters()
 
     def sample(self, indices, embeddings, train_indices, train_embeddings):
         self.ssps_indices = torch.full_like(indices, -1)
@@ -398,27 +335,33 @@ class SSPS_TwoKMeansReprSampling(SSPS_KMeansSampling):
                 continue
 
             inter_sampling_pool += len(nearby_clusters)
-            cluster_selected = self._sample(nearby_clusters)
+            cluster_selected = self._sample(
+                nearby_clusters,
+                self.config.inter_sampling_prob_fn,
+                self.config.inter_sampling_prob_exp_lambda,
+            )
 
             # Sample one sample nearby selected cluster
             nearby_samples = self.cluster_to_nearby_samples[cluster_selected]
             if len(nearby_samples) == 0:
                 continue
 
-            # nearby_samples = nearby_samples[:1]
-
             intra_sampling_pool += len(nearby_samples)
-            sample_selected = self._sample(nearby_samples)
+            sample_selected = self._sample(
+                nearby_samples,
+                self.config.intra_sampling_prob_fn,
+                self.config.intra_sampling_prob_exp_lambda,
+            )
 
             self.ssps_indices[i] = sample_selected
 
         metrics = self._determine_metrics(
             indices,
             self.ssps_indices,
-            {
-                "ssps_inter_sampling_pool": inter_sampling_pool,
-                "ssps_intra_sampling_pool": intra_sampling_pool,
-            },
+            # {
+            # "ssps_inter_sampling_pool": inter_sampling_pool,
+            # "ssps_intra_sampling_pool": intra_sampling_pool,
+            # },
             repr_sampling=True,
         )
 

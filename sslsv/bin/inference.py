@@ -11,6 +11,7 @@ from pathlib import Path
 from glob import glob
 
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, DistributedSampler
 
 from sslsv.bin.train import MethodWrapper
@@ -116,6 +117,8 @@ def inference_(
 
         Y = Y.reshape((B, N, -1))
 
+        Y = F.normalize(Y, p=2, dim=-1)
+
         embeddings.update({info["files"][i]: Y[i].cpu() for i in range(B)})
 
     if is_dist_initialized():
@@ -141,7 +144,7 @@ def inference(args: argparse.Namespace):
 
     model = load_model(config).to(device)
 
-    checkpoint = torch.load(config.model_ckpt_path / "model_latest.pt")
+    checkpoint = torch.load(config.model_ckpt_path / f"model_{args.model_suffix}.pt")
     model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
 
@@ -186,6 +189,12 @@ def inference_parser():
         required=True,
         type=str,
         help="Path to output .pt file containing a dict of all embeddings.",
+    )
+    parser.add_argument(
+        "--model_suffix",
+        type=str,
+        default="latest",
+        help="Model checkpoint suffix (e.g. latest, avg, ...).",
     )
     parser.add_argument(
         "--batch_size",

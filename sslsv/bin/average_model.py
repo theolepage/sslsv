@@ -26,7 +26,12 @@ def average_model(args: argparse.Namespace):
     checkpoints = glob(str(config.model_ckpt_path / "model_epoch-*.pt"))
     checkpoints = sorted(
         checkpoints, key=lambda p: int(p.split("/")[-1].split("_epoch-")[-1][:-3])
-    )[-args.count :]
+    )
+
+    if args.limit_nb_epochs:
+        checkpoints = checkpoints[: args.limit_nb_epochs]
+
+    checkpoints = checkpoints[-args.count :]
 
     average_model = None
     for ckpt_path in checkpoints:
@@ -39,7 +44,7 @@ def average_model(args: argparse.Namespace):
 
     for k in average_model.keys():
         if average_model[k] is not None:
-            average_model[k] = torch.true_divide(average_model[k], args.count)
+            average_model[k] = torch.true_divide(average_model[k], len(checkpoints))
 
     torch.save(
         {"model": average_model},
@@ -54,7 +59,13 @@ if __name__ == "__main__":
         "--count",
         type=int,
         default=10,
-        help="Number of last checkpoints to average.",
+        help="Number of epochs to average.",
+    )
+    parser.add_argument(
+        "--limit_nb_epochs",
+        type=int,
+        default=None,
+        help="Maximum number of epochs used for model averaging.",
     )
     parser.add_argument(
         "--silent",

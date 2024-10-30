@@ -12,8 +12,6 @@ from sslsv.methods._SSPS.SSPSSamplingMethods import (
     SSPS_KNNSampling,
     SSPS_KMeansSampling,
     SSPS_KMeansReprSampling,
-    SSPS_TwoKMeansSampling,
-    SSPS_TwoKMeansReprSampling,
 )
 
 
@@ -22,8 +20,6 @@ class SSPSSamplingMethodEnum(Enum):
     KNN = "knn"
     KMEANS = "kmeans"
     KMEANS_REPR = "kmeans-repr"
-    TWO_KMEANS = "2-kmeans"
-    TWO_KMEANS_REPR = "2-kmeans-repr"
 
 
 @dataclass
@@ -34,21 +30,22 @@ class SSPSConfig:
     Attributes:
     """
 
-    start_epoch: int = 0
+    start_epoch: int = 100
 
-    sampling: SSPSSamplingMethodEnum = SSPSSamplingMethodEnum.TWO_KMEANS_REPR
+    sampling: SSPSSamplingMethodEnum = SSPSSamplingMethodEnum.KMEANS_REPR
 
     queue_size: Optional[int] = None
 
     kmeans_nb_prototypes: int = 50000
     kmeans_nb_iters: int = 10
 
-    video_threshold: float = 0.835
-    speaker_threshold: float = 0.9
+    inter_sampling_size: int = 0
+    inter_sampling_prob_fn: str = "uniform"  # or "exp_decay"
+    inter_sampling_prob_exp_lambda: float = 0.7
 
-    sampling_window: int = 10
-    sampling_prob: str = "exp_decay"  # or "uniform"
-    sampling_prob_exp_decay: float = 0.7
+    intra_sampling_size: int = 10000000
+    intra_sampling_prob_fn: str = "uniform"  # or "exp_decay"
+    intra_sampling_prob_exp_lambda: float = 0.7
 
     verbose: bool = False
 
@@ -59,8 +56,6 @@ class SSPS(nn.Module):
         SSPSSamplingMethodEnum.KNN: SSPS_KNNSampling,
         SSPSSamplingMethodEnum.KMEANS: SSPS_KMeansSampling,
         SSPSSamplingMethodEnum.KMEANS_REPR: SSPS_KMeansReprSampling,
-        SSPSSamplingMethodEnum.TWO_KMEANS: SSPS_TwoKMeansSampling,
-        SSPSSamplingMethodEnum.TWO_KMEANS_REPR: SSPS_TwoKMeansReprSampling,
     }
 
     def __init__(self, config):
