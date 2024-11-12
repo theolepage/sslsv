@@ -845,28 +845,30 @@ class SimCLRMarginsLoss(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, Z: T) -> T:
+    def forward(self, Z_1: T, Z_2: T) -> T:
         """
         Compute loss.
 
         Args:
-            Z (T): Embeddings tensor.
+            Z_1 (T): First embeddings tensor.
+            Z_2 (T): Second embeddings tensor.
 
         Returns:
             T: Loss tensor.
         """
+        Z = torch.stack((Z_1, Z_2), dim=1)
         # Z shape: (N, V, C)
 
         GLOBAL_VIEWS = Z[:, :2]
         LOCAL_VIEWS = Z[:, 2:]
 
-        if self.enable_multi_views:
-            loss = self.loss_fn(LOCAL_VIEWS, GLOBAL_VIEWS, discard_identity=False)
-            if self.reg:
-                loss += self.reg(LOCAL_VIEWS, GLOBAL_VIEWS, discard_identity=False)
-        else:
-            loss = self.loss_fn(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_identity=True)
-            if self.reg:
-                loss += self.reg(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_identity=True)
+        # if self.enable_multi_views:
+        #     loss = self.loss_fn(LOCAL_VIEWS, GLOBAL_VIEWS, discard_identity=False)
+        #     if self.reg:
+        #         loss += self.reg(LOCAL_VIEWS, GLOBAL_VIEWS, discard_identity=False)
+        # else:
+        loss = self.loss_fn(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_identity=True)
+        if self.reg:
+            loss += self.reg(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_identity=True)
 
         return loss

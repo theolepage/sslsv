@@ -129,10 +129,9 @@ class BaseSiameseMethod(BaseMethod):
 
         if self.ssps:
             self.ssps.sample(indices=indices, embeddings=Z_ssps)
-            Z_1_pp = self.ssps.apply(1, Z_1)
             Z_2_pp = self.ssps.apply(2, Z_2)
             self.ssps.update_queues(step_rel, indices, Z_ssps, Z_1, Z_2)
-            loss = self.loss_fn(Z_1, Z_2_pp) / 2 + self.loss_fn(Z_1_pp, Z_2) / 2
+            loss = self.loss_fn(Z_1, Z_2_pp)
         else:
             loss = self.loss_fn(Z_1, Z_2)
 

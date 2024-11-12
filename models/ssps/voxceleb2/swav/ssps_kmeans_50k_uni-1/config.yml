@@ -1,0 +1,26 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'swav'
+  projector_hidden_dim: 2048
+  projector_output_dim: 512
+  ssps:
+    start_epoch: 100
+    verbose: true
+    sampling: 'kmeans-repr'
+    kmeans_nb_prototypes: 50000
+    inter_sampling_size: 1
+trainer:
+  last_checkpoint: 'models/ssps/voxceleb2/swav/_swav/checkpoints/model_latest.pt'
+  epochs: 110
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+dataset:
+  ssl: true
+  ssps: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

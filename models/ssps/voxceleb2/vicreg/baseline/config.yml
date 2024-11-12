@@ -1,14 +1,12 @@
 encoder:
   type: 'resnet34'
 method:
-  type: 'simclr'
-  temperature: 0.03333333333
-  enable_projector: false
-  ssps:
-    start_epoch: 100
+  type: 'vicreg'
+  projector_hidden_dim: 2048
+  projector_output_dim: 512
 trainer:
-  batch_size: 200
-  epochs: 100
+  last_checkpoint: 'models/ssps/voxceleb2/vicreg/_vicreg/checkpoints/model_latest.pt'
+  epochs: 110
 evaluation:
   validation:
     - type: 'sv_cosine'
@@ -16,7 +14,6 @@ evaluation:
     - type: 'sv_cosine'
 dataset:
   ssl: true
-  ssps: true
   train: 'voxceleb2_train.csv'
   augmentation:
     enable: true

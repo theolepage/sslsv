@@ -5,6 +5,7 @@ import math
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch import Tensor as T
 
 from sslsv.encoders._BaseEncoder import BaseEncoder
@@ -171,28 +172,39 @@ class SimCLRMargins(BaseMethod):
         if not training:
             return self.encoder(X)
 
-        if self.config.enable_multi_views:
-            N, V, L = X.shape
-            X = X.transpose(0, 1)
-            global_frames = X[:2, :, :].reshape(-1, L)
-            local_frames = X[2:, :, : L // 2].reshape(-1, L // 2)
+        # if self.config.enable_multi_views:
+        #     N, V, L = X.shape
+        #     X = X.transpose(0, 1)
+        #     global_frames = X[:2, :, :].reshape(-1, L)
+        #     local_frames = X[2:, :, : L // 2].reshape(-1, L // 2)
 
-            Z_global = self._compute_embeddings(global_frames)
-            Z_local = self._compute_embeddings(local_frames)
+        #     Z_global = self._compute_embeddings(global_frames)
+        #     Z_local = self._compute_embeddings(local_frames)
 
-            D = Z_global.size(-1)
+        #     D = Z_global.size(-1)
 
-            Z_global = Z_global.reshape(-1, N, D)
-            Z_local = Z_local.reshape(-1, N, D)
+        #     Z_global = Z_global.reshape(-1, N, D)
+        #     Z_local = Z_local.reshape(-1, N, D)
 
-            Z = torch.cat((Z_global, Z_local), dim=0).transpose(0, 1)
-        else:
-            X_1 = X[:, 0, :]
-            X_2 = X[:, 1, :]
-            views = [X_1, X_2]
-            Z = torch.stack([self._compute_embeddings(V) for V in views], dim=1)
+        #     Z = torch.cat((Z_global, Z_local), dim=0).transpose(0, 1)
+        # else:
+        #   X_1 = X[:, 0, :]
+        #   X_2 = X[:, 1, :]
+        #   views = [X_1, X_2]
+        #   Z = torch.stack([self._compute_embeddings(V) for V in views], dim=1)
 
-        return Z
+        frame_length = self.trainer.config.dataset.frame_length
+        X_1 = X[:, 0, :frame_length]
+        X_2 = X[:, 1, :frame_length]
+
+        Z_1 = self._compute_embeddings(X_1)
+        Z_2 = self._compute_embeddings(X_2)
+
+        Z_ssps = None
+        if self.ssps:
+            Z_ssps = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
+
+        return Z_1, Z_2, Z_ssps
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         """
@@ -201,7 +213,9 @@ class SimCLRMargins(BaseMethod):
         Returns:
             Iterable[Dict[str, Any]]: Collection of parameters.
         """
-        extra_learnable_params = [{"params": self.loss_fn.parameters()}]
+        extra_learnable_params = []
+        if self.config.margin_learnable:
+            extra_learnable_params += [{"params": self.loss_fn.parameters()}]
         if self.config.enable_projector:
             extra_learnable_params += [
                 {"params": self.projector.parameters()},
@@ -219,6 +233,8 @@ class SimCLRMargins(BaseMethod):
         Returns:
             None
         """
+        super().on_train_epoch_start(epoch, max_epochs)
+
         self.epoch = epoch
         self.max_epochs = max_epochs
 
@@ -260,13 +276,20 @@ class SimCLRMargins(BaseMethod):
         Returns:
             T: Loss tensor.
         """
-        margin = self.config.margin
+        Z_1, Z_2, Z_ssps = Z
 
+        margin = self.config.margin
         if self.config.margin_scheduler:
             margin = self._margin_scheduler()
             self.loss_fn.loss_fn.margin = margin
 
-        loss = self.loss_fn(Z)
+        if self.ssps:
+            self.ssps.sample(indices=indices, embeddings=Z_ssps)
+            Z_2_pp = self.ssps.apply(2, Z_2)
+            self.ssps.update_queues(step_rel, indices, Z_ssps, Z_1, Z_2)
+            loss = self.loss_fn(Z_1, Z_2_pp)
+        else:
+            loss = self.loss_fn(Z_1, Z_2)
 
         self.log_step_metrics(
             {

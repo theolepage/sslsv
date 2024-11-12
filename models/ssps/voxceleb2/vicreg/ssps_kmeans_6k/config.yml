@@ -1,0 +1,26 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'vicreg'
+  projector_hidden_dim: 2048
+  projector_output_dim: 512
+  ssps:
+    start_epoch: 100
+    verbose: true
+    sampling: 'kmeans-repr'
+    kmeans_nb_prototypes: 6000
+    inter_sampling_size: 0
+trainer:
+  last_checkpoint: 'models/ssps/voxceleb2/vicreg/_vicreg/checkpoints/model_latest.pt'
+  epochs: 110
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+dataset:
+  ssl: true
+  ssps: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

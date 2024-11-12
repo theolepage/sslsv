@@ -1,13 +1,12 @@
 encoder:
   type: 'resnet34'
 method:
-  type: 'simclr'
-  temperature: 0.03333333333
-  enable_projector: false
+  type: 'vicreg'
+  projector_hidden_dim: 2048
+  projector_output_dim: 512
   ssps:
     start_epoch: 100
 trainer:
-  batch_size: 200
   epochs: 100
 evaluation:
   validation:

@@ -183,6 +183,7 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
             nb_prototypes=self.config.kmeans_nb_prototypes,
             nb_iters=self.config.kmeans_nb_iters,
             verbose=self.verbose,
+            batch_size=128,
         )
 
     def _run_kmeans(self, train_indices, train_embeddings):

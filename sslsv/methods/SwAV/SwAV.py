@@ -132,6 +132,8 @@ class SwAV(BaseMethod):
         Returns:
             None
         """
+        super().on_train_start()
+
         if self.config.queue_size > 0:
             self.register_buffer(
                 "queue",
@@ -157,19 +159,25 @@ class SwAV(BaseMethod):
         if not training:
             return self.encoder(X)
 
-        X_1 = X[:, 0, :]
-        X_2 = X[:, 1, :]
+        frame_length = self.trainer.config.dataset.frame_length
+        X_1 = X[:, 0, :frame_length]
+        X_2 = X[:, 1, :frame_length]
 
         Y_1 = self.encoder(X_1)
         Y_2 = self.encoder(X_2)
 
-        Z_1 = F.normalize(self.projector(Y_1) if self.config.enable_projector else Y_1, dim=-1)
-        Z_2 = F.normalize(self.projector(Y_2) if self.config.enable_projector else Y_2, dim=-1)
+        Z_1 = F.normalize(
+            self.projector(Y_1) if self.config.enable_projector else Y_1, dim=-1
+        )
+        Z_2 = F.normalize(
+            self.projector(Y_2) if self.config.enable_projector else Y_2, dim=-1
+        )
 
-        P_1 = self.prototypes(Z_1)
-        P_2 = self.prototypes(Z_2)
+        Z_ssps = None
+        if self.ssps:
+            Z_ssps = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
 
-        return Z_1, Z_2, P_1, P_2
+        return Z_1, Z_2, Z_ssps
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         """
@@ -196,6 +204,8 @@ class SwAV(BaseMethod):
         Returns:
             None
         """
+        super().on_train_epoch_start(epoch, max_epochs)
+
         self.epoch = epoch
 
     def _get_sk_assignments(self, preds: List[T]) -> List[T]:
@@ -224,6 +234,27 @@ class SwAV(BaseMethod):
 
         return assignments
 
+    def _compute_loss(self, Z_1: T, Z_2: T) -> T:
+        """
+        Compute SwAV loss.
+
+        Args:
+            Z_1 (T): First embedding tensor.
+            Z_2 (T): Second embedding tensor.
+
+        Returns:
+            T: Loss tensor.
+        """
+        P_1 = self.prototypes(Z_1)
+        P_2 = self.prototypes(Z_2)
+
+        preds = [P_1, P_2]
+        assignments = self._get_sk_assignments(preds)
+
+        loss = self.loss_fn(preds, assignments)
+
+        return loss
+
     def train_step(
         self,
         Z: Tuple[T, T, T, T],
@@ -245,16 +276,18 @@ class SwAV(BaseMethod):
         Returns:
             T: Loss tensor.
         """
-        Z_1, Z_2, P_1, P_2 = Z
+        Z_1, Z_2, Z_ssps = Z
 
-        N, _ = Z_1.size()
-
-        preds = [P_1, P_2]
-        assignments = self._get_sk_assignments(preds)
-
-        loss = self.loss_fn(preds, assignments)
+        if self.ssps:
+            self.ssps.sample(indices=indices, embeddings=Z_ssps)
+            Z_2_pp = self.ssps.apply(2, Z_2)
+            self.ssps.update_queues(step_rel, indices, Z_ssps, Z_1, Z_2)
+            loss = self._compute_loss(Z_1, Z_2_pp)
+        else:
+            loss = self._compute_loss(Z_1, Z_2)
 
         # Update queue
+        N = Z_1.size()[0]
         if self.config.queue_size > 0:
             self.queue[:, N:] = self.queue[:, :-N].clone()
             self.queue[0, :N] = Z_1.detach()
