@@ -1,14 +1,14 @@
 encoder:
   type: 'resnet34'
 method:
-  type: 'simclr'
-  projector_output_dim: 512
-  temperature: 0.07
+  type: 'swav'
+  enable_projector: false
 evaluation:
   validation:
     - type: 'sv_cosine'
   test:
     - type: 'sv_cosine'
+      frame_length: null
 dataset:
   ssl: true
   train: 'voxceleb2_train.csv'

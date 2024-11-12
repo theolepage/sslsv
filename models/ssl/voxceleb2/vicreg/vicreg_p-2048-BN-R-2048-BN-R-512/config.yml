@@ -1,7 +1,9 @@
 encoder:
   type: 'resnet34'
 method:
-  type: 'simclr'
+  type: 'vicreg'
+  projector_hidden_dim: 2048
+  projector_output_dim: 512
 evaluation:
   validation:
     - type: 'sv_cosine'

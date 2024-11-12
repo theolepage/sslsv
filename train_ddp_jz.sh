@@ -20,4 +20,6 @@ module purge
 module load pytorch-gpu/py3/1.12.1
 
 srun python -u sslsv/bin/train_distributed_jz.py $1/config.yml
+python sslsv/bin/average_model.py $1/config.yml --silent
+srun python -u sslsv/bin/evaluate_distributed_jz.py $1/config.yml --model_suffix avg --silent
 EOT

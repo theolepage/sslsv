@@ -10,6 +10,7 @@ evaluation:
     - type: 'sv_cosine'
   test:
     - type: 'sv_cosine'
+      frame_length: null
 dataset:
   num_workers: 6
   ssl: true

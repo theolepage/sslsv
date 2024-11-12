@@ -1,7 +1,8 @@
 encoder:
   type: 'resnet34'
 method:
-  type: 'simclr'
+  type: 'vicreg'
+  enable_projector: false
 evaluation:
   validation:
     - type: 'sv_cosine'

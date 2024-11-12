@@ -21,6 +21,7 @@ class SwAVConfig(BaseMethodConfig):
     SwAV method configuration.
 
     Attributes:
+        enable_projector (bool): Whether to enable the projector.
         temperature (float): Temperature value.
         nb_prototypes (int): Number of prototypes.
         sk_nb_iters (int): Number of Sinkhorn-Knopp iterations.
@@ -31,6 +32,8 @@ class SwAVConfig(BaseMethodConfig):
         projector_hidden_dim (int): Hidden dimension of the projector network.
         projector_output_dim (int): Output dimension of the projector network.
     """
+
+    enable_projector: bool = True
 
     temperature: float = 0.1
 
@@ -85,16 +88,29 @@ class SwAV(BaseMethod):
 
         self.epoch = 0
 
-        self.projector = nn.Sequential(
-            nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
-            nn.BatchNorm1d(config.projector_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
-        )
+        self.proj_dim = self.encoder.encoder_dim
+
+        if config.enable_projector:
+            # self.projector = nn.Sequential(
+            #     nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+            #     nn.BatchNorm1d(config.projector_hidden_dim),
+            #     nn.ReLU(),
+            #     nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
+            # )
+            self.projector = nn.Sequential(
+                nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+                nn.BatchNorm1d(config.projector_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(config.projector_hidden_dim, config.projector_hidden_dim),
+                nn.BatchNorm1d(config.projector_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
+            )
+            self.proj_dim = config.projector_output_dim
 
         self.prototypes = nn.utils.weight_norm(
             nn.Linear(
-                config.projector_output_dim,
+                self.proj_dim,
                 config.nb_prototypes,
                 bias=False,
             )
@@ -122,7 +138,7 @@ class SwAV(BaseMethod):
                 torch.zeros(
                     2,
                     self.config.queue_size // get_world_size(),
-                    self.config.projector_output_dim,
+                    self.proj_dim,
                     device=self.trainer.device,
                 ),
             )
@@ -144,8 +160,11 @@ class SwAV(BaseMethod):
         X_1 = X[:, 0, :]
         X_2 = X[:, 1, :]
 
-        Z_1 = F.normalize(self.projector(self.encoder(X_1)), dim=-1)
-        Z_2 = F.normalize(self.projector(self.encoder(X_2)), dim=-1)
+        Y_1 = self.encoder(X_1)
+        Y_2 = self.encoder(X_2)
+
+        Z_1 = F.normalize(self.projector(Y_1) if self.config.enable_projector else Y_1, dim=-1)
+        Z_2 = F.normalize(self.projector(Y_2) if self.config.enable_projector else Y_2, dim=-1)
 
         P_1 = self.prototypes(Z_1)
         P_2 = self.prototypes(Z_2)
@@ -160,9 +179,10 @@ class SwAV(BaseMethod):
             Iterable[Dict[str, Any]]: Collection of parameters.
         """
         extra_learnable_params = [
-            {"params": self.projector.parameters()},
             {"params": self.prototypes.parameters()},
         ]
+        if self.config.enable_projector:
+            extra_learnable_params += [{"params": self.projector.parameters()}]
         return super().get_learnable_params() + extra_learnable_params
 
     def on_train_epoch_start(self, epoch: int, max_epochs: int):

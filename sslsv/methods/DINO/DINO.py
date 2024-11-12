@@ -108,6 +108,7 @@ class DINOConfig(BaseMomentumMethodConfig):
         head_bottleneck_dim (int): Head bottleneck dimension.
         head_output_dim (int): Head output dimension.
         freeze_last_layer (int): Whether to freeze the last layer of the head.
+        clip_grad (int): Clip gradients of student model.
         student_temperature (float): Temperature value for the student.
         teacher_temperature (float): Temperature value for the teacher.
         teacher_temperature_warmup (float): Initial temperature value for the teacher.
@@ -121,6 +122,8 @@ class DINOConfig(BaseMomentumMethodConfig):
     head_output_dim: int = 65536
 
     freeze_last_layer: int = 1
+
+    clip_grad: float = 3.0
 
     student_temperature: float = 0.1
     teacher_temperature: float = 0.04
@@ -166,6 +169,7 @@ class DINO(BaseMomentumMethod):
         self.current_epoch = 0
 
         self.freeze_last_layer = config.freeze_last_layer
+        self.clip_grad = config.clip_grad
 
         self.head = DINOHead(
             input_dim=self.encoder.encoder_dim,
@@ -351,6 +355,14 @@ class DINO(BaseMomentumMethod):
         Returns:
             None
         """
+        for model in (self.encoder, self.head):
+            for p in model.parameters():
+                if p.grad is not None:
+                    param_norm = p.grad.data.norm(2)
+                    clip_coef = self.clip_grad / (param_norm + 1e-6)
+                    if clip_coef < 1:
+                        p.grad.data.mul_(clip_coef)
+
         if self.current_epoch < self.freeze_last_layer:
             for p in self.head.last_layer.parameters():
                 p.grad = None

@@ -2,6 +2,8 @@ encoder:
   type: 'resnet34'
 method:
   type: 'simclr'
+  enable_projector: false
+  temperature: 0.03
 evaluation:
   validation:
     - type: 'sv_cosine'

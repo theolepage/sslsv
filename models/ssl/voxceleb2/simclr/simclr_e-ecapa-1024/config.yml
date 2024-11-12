@@ -1,7 +1,10 @@
 encoder:
-  type: 'resnet34'
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
 method:
   type: 'simclr'
+  enable_projector: false
+  temperature: 0.03
 evaluation:
   validation:
     - type: 'sv_cosine'

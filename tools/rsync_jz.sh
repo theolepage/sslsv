@@ -10,6 +10,7 @@ rsync -azh $source_path $target_path \
     --exclude="wandb" \
     --exclude="tensorboard" \
     --exclude="*.pt" \
+    --exclude="checkpoints" \
     --exclude="*.json" \
     --keep-dirlinks
 
@@ -24,6 +25,7 @@ do
           --exclude="wandb" \
           --exclude="tensorboard" \
           --exclude="*.pt" \
+          --exclude="checkpoints" \
           --exclude="*.json" \
           --keep-dirlinks
 done

@@ -379,6 +379,8 @@ class Trainer:
                 )
                 self.model.module.load_state_dict(checkpoint["model"], strict=False)
                 return None
+            else:
+                return None
 
         # Resume training
         checkpoint = torch.load(checkpoint_path, map_location="cpu")

@@ -106,6 +106,10 @@ class BaseEvaluation:
         self.verbose = verbose
         self.validation = validation
 
+        if self.task_config.frame_length is None:
+            self.task_config.batch_size = 1
+            self.task_config.num_frames = 1
+
     def _ddp_sync_embeddings(
         self,
         embeddings: Dict[str, Union[torch.Tensor, np.ndarray]],
@@ -184,9 +188,6 @@ class BaseEvaluation:
         Raises:
             Exception: If batch size is not set to 1 when frame length is None.
         """
-        if self.task_config.frame_length is None and self.task_config.batch_size != 1:
-            raise Exception("Batch size must be set to 1 when frame length is None.")
-
         dataset_config = DatasetConfig(
             frame_length=self.task_config.frame_length,
             base_path=self.config.dataset.base_path,
