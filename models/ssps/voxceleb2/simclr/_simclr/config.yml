@@ -14,6 +14,7 @@ evaluation:
     - type: 'sv_cosine'
   test:
     - type: 'sv_cosine'
+      frame_length: null
 dataset:
   ssl: true
   ssps: true

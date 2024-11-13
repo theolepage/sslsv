@@ -12,6 +12,7 @@ evaluation:
     - type: 'sv_cosine'
   test:
     - type: 'sv_cosine'
+      frame_length: null
 dataset:
   train: 'voxceleb2_train.csv'
   augmentation:
