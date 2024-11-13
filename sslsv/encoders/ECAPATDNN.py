@@ -10,57 +10,47 @@ import torch.nn.functional as F
 from sslsv.encoders._BaseEncoder import BaseEncoder, BaseEncoderConfig
 
 
-def length_to_mask(length, max_len=None, dtype=None, device=None):
-    assert len(length.shape) == 1
+class Conv1dSamePaddingReflect(nn.Module):
+    """
+    1D Convolution module with 'same' padding (reflect mode).
 
-    if max_len is None:
-        max_len = length.max().long().item()
-    mask = torch.arange(
-        max_len, device=length.device, dtype=length.dtype).expand(
-            len(length), max_len) < length.unsqueeze(1)
-
-    if dtype is None:
-        dtype = length.dtype
-
-    if device is None:
-        device = length.device
-
-    mask = torch.as_tensor(mask, dtype=dtype, device=device)
-    return mask
-
-def get_padding_elem(L_in: int, stride: int, kernel_size: int, dilation: int):
-    if stride > 1:
-        n_steps = math.ceil(((L_in - kernel_size * dilation) / stride) + 1)
-        L_out = stride * (n_steps - 1) + kernel_size * dilation
-        padding = [kernel_size // 2, kernel_size // 2]
-
-    else:
-        L_out = (L_in - dilation * (kernel_size - 1) - 1) // stride + 1
-
-        padding = [(L_in - L_out) // 2, (L_in - L_out) // 2]
-    return padding
-
-
-class Conv1d(nn.Module):
+    Attributes:
+        kernel_size (int): Size of the convolutional kernel.
+        stride (int): Stride of the convolution.
+        dilation (int): Dilation rate of the convolution.
+        conv (nn.Conv1d): Convolution module.
+    """
 
     def __init__(
         self,
-        out_channels,
-        kernel_size,
-        in_channels,
-        stride=1,
-        dilation=1,
-        padding='same',
-        groups=1,
-        bias=True,
-        padding_mode='reflect',
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int = 1,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
     ):
+        """
+        Initialize a Conv1dSamePaddingReflect module.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+            kernel_size (int): Size of the convolution kernel.
+            stride (int): Stride of the convolution. Defaults to 1.
+            dilation (int): Dilation rate of the convolution. Defaults to 1.
+            groups (int): Number of groups for grouped convolution. Defaults to 1.
+            bias (bool): Whether to include a bias. Defaults to True.
+
+        Returns:
+            None
+        """
         super().__init__()
+
         self.kernel_size = kernel_size
         self.stride = stride
         self.dilation = dilation
-        self.padding = padding
-        self.padding_mode = padding_mode
 
         self.conv = nn.Conv1d(
             in_channels,
@@ -68,98 +58,123 @@ class Conv1d(nn.Module):
             self.kernel_size,
             stride=self.stride,
             dilation=self.dilation,
-            padding=0,
             groups=groups,
             bias=bias,
         )
 
-    def forward(self, x):
-        if self.padding == 'same':
-            x = self._manage_padding(x, self.kernel_size, self.dilation,
-                                     self.stride)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
 
-        elif self.padding == 'causal':
-            num_pad = (self.kernel_size - 1) * self.dilation
-            x = F.pad(x, (num_pad, 0))
+        Args:
+            x (torch.Tensor): Input tensor.
 
-        elif self.padding == 'valid':
-            pass
-
-        else:
-            raise ValueError(
-                "Padding must be 'same', 'valid' or 'causal'. Got "
-                + self.padding)
-
-        wx = self.conv(x)
-
-        return wx
-
-    def _manage_padding(
-        self,
-        x,
-        kernel_size: int,
-        dilation: int,
-        stride: int,
-    ):
-        L_in = x.shape[-1]
-        padding = get_padding_elem(L_in, stride, kernel_size, dilation)
-        x = F.pad(x, padding, mode=self.padding_mode)
-
-        return x
-
-
-class BatchNorm1d(nn.Module):
-    def __init__(
-        self,
-        input_size,
-        eps=1e-05,
-        momentum=0.1,
-    ):
-        super().__init__()
-        self.norm = nn.BatchNorm1d(
-            input_size,
-            eps=eps,
-            momentum=momentum,
+        Returns:
+            torch.Tensor: Output tensor.
+        """
+        # Determine padding
+        L_in = x.size(-1)
+        L_out = (
+            math.floor(
+                (L_in - self.dilation * (self.kernel_size - 1) - 1) / self.stride
+            )
+            + 1
         )
+        padding = (L_in - L_out) // 2
 
-    def forward(self, x):
-        return self.norm(x)
+        x = F.pad(x, (padding, padding), mode="reflect")
+
+        return self.conv(x)
 
 
 class TDNNBlock(nn.Module):
-    """An implementation of TDNN.
     """
+    Time-Delay Neural Network (TDNN) module.
+
+    Attributes:
+        conv (Conv1dSamePaddingReflect): Convolution module.
+        activation (nn.ReLU): Activation module.
+        norm (nn.BatchNorm1d): Normalization module.
+    """
+
     def __init__(
         self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        dilation,
-        activation=nn.ReLU,
-        groups=1,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        dilation: int,
+        groups: int = 1,
     ):
-        super(TDNNBlock, self).__init__()
-        self.conv = Conv1d(
+        """
+        Initialize a TDNNBlock module.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+            kernel_size (int): Size of the convolutional kernel.
+            dilation (int): Dilation rate for the convolution.
+            groups (int): Groups for the convolution. Defaults to 1.
+
+        Returns:
+            None
+        """
+        super().__init__()
+
+        self.conv = Conv1dSamePaddingReflect(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
             dilation=dilation,
             groups=groups,
         )
-        self.activation = activation()
-        self.norm = BatchNorm1d(input_size=out_channels)
+        self.activation = nn.ReLU()
+        self.norm = nn.BatchNorm1d(out_channels)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         return self.norm(self.activation(self.conv(x)))
 
 
-class Res2NetBlock(torch.nn.Module):
-    """An implementation of Res2NetBlock w/ dilation.
+class Res2NetBlock(nn.Module):
     """
+    Res2Net module.
+
+    Attributes:
+        blocks (nn.ModuleList): List of TDNNBlock modules.
+        scale (int): Scale factor for the number of channels.
+    """
+
     def __init__(
-        self, in_channels, out_channels, scale=8, kernel_size=3, dilation=1
+        self,
+        in_channels: int,
+        out_channels: int,
+        scale: int = 8,
+        kernel_size: int = 3,
+        dilation: int = 1,
     ):
-        super(Res2NetBlock, self).__init__()
+        """
+        Initialize a Res2NetBlock module.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+            scale (int): Scale factor for the number of channels. Defaults to 8.
+            kernel_size (int): Size of the kernel for the TDNN blocks. Defaults to 3.
+            dilation (int): Dilation factor for the TDNN blocks. Defaults to 1.
+
+        Raises:
+            AssertionError: If input or output channels are not divisible by the scale factor.
+        """
+        super().__init__()
+
         assert in_channels % scale == 0
         assert out_channels % scale == 0
 
@@ -179,7 +194,16 @@ class Res2NetBlock(torch.nn.Module):
         )
         self.scale = scale
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         y = []
         for i, x_i in enumerate(torch.chunk(x, self.scale, dim=1)):
             if i == 0:
@@ -194,125 +218,100 @@ class Res2NetBlock(torch.nn.Module):
 
 
 class SEBlock(nn.Module):
-    """An implementation of squeeze-and-excitation block.
     """
-    def __init__(self, in_channels, se_channels, out_channels):
-        super(SEBlock, self).__init__()
+    Squeeze-and-Excitation (SE) module.
 
-        self.conv1 = Conv1d(
+    Attributes:
+        conv1 (Conv1dSamePaddingReflect): First convolution module.
+        conv2 (Conv1dSamePaddingReflect): Second convolution module.
+        relu (nn.ReLU): First activation module.
+        sigmoid (nn.Sigmoid): Second activation module.
+    """
+
+    def __init__(self, in_channels: int, se_channels: int, out_channels: int):
+        """
+        Initialize a SEBlock module.
+
+        Args:
+            in_channels (int): Number of input channels.
+            se_channels (int): Number of SE channels.
+            out_channels (int): Number of output channels.
+
+        Returns:
+            None
+        """
+        super().__init__()
+
+        self.conv1 = Conv1dSamePaddingReflect(
             in_channels=in_channels, out_channels=se_channels, kernel_size=1
         )
-        self.relu = torch.nn.ReLU(inplace=True)
-        self.conv2 = Conv1d(
+        self.relu = nn.ReLU(inplace=True)
+
+        self.conv2 = Conv1dSamePaddingReflect(
             in_channels=se_channels, out_channels=out_channels, kernel_size=1
         )
-        self.sigmoid = torch.nn.Sigmoid()
+        self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x, lengths=None):
-        L = x.shape[-1]
-        if lengths is not None:
-            mask = length_to_mask(lengths * L, max_len=L, device=x.device)
-            mask = mask.unsqueeze(1)
-            total = mask.sum(dim=2, keepdim=True)
-            s = (x * mask).sum(dim=2, keepdim=True) / total
-        else:
-            s = x.mean(dim=2, keepdim=True)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
 
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
+        s = x.mean(dim=2, keepdim=True)
         s = self.relu(self.conv1(s))
         s = self.sigmoid(self.conv2(s))
-
         return s * x
 
 
-class AttentiveStatisticsPooling(nn.Module):
-    """This class implements an attentive statistic pooling layer for each channel.
-    It returns the concatenated mean and std of the input tensor.
-    """
-    def __init__(self, channels, attention_channels=128, global_context=True):
-        super().__init__()
-
-        self.eps = 1e-12
-        self.global_context = global_context
-        if global_context:
-            self.tdnn = TDNNBlock(channels * 3, attention_channels, 1, 1)
-        else:
-            self.tdnn = TDNNBlock(channels, attention_channels, 1, 1)
-        self.tanh = nn.Tanh()
-        self.conv = Conv1d(
-            in_channels=attention_channels, out_channels=channels, kernel_size=1
-        )
-
-    def forward(self, x, lengths=None):
-        """Calculates mean and std for a batch (input tensor).
-        """
-        L = x.shape[-1]
-
-        def _compute_statistics(x, m, dim=2, eps=self.eps):
-            mean = (m * x).sum(dim)
-            std = torch.sqrt(
-                (m * (x - mean.unsqueeze(dim)).pow(2)).sum(dim).clamp(eps)
-            )
-            return mean, std
-
-        if lengths is None:
-            lengths = torch.ones(x.shape[0], device=x.device)
-
-        # Make binary mask of shape [N, 1, L]
-        mask = length_to_mask(lengths * L, max_len=L, device=x.device)
-        mask = mask.unsqueeze(1)
-
-        # Expand the temporal context of the pooling layer by allowing the
-        # self-attention to look at global properties of the utterance.
-        if self.global_context:
-            # torch.std is unstable for backward computation
-            # https://github.com/pytorch/pytorch/issues/4320
-            total = mask.sum(dim=2, keepdim=True).float()
-            mean, std = _compute_statistics(x, mask / total)
-            mean = mean.unsqueeze(2).repeat(1, 1, L)
-            std = std.unsqueeze(2).repeat(1, 1, L)
-            attn = torch.cat([x, mean, std], dim=1)
-        else:
-            attn = x
-
-        # Apply layers
-        attn = self.conv(self.tanh(self.tdnn(attn)))
-
-        # Filter out zero-paddings
-        attn = attn.masked_fill(mask == 0, float("-inf"))
-
-        attn = F.softmax(attn, dim=2)
-        mean, std = _compute_statistics(x, attn)
-        # Append mean and std of the batch
-        pooled_stats = torch.cat((mean, std), dim=1)
-        pooled_stats = pooled_stats.unsqueeze(2)
-
-        return pooled_stats
-
-
 class SERes2NetBlock(nn.Module):
-    """An implementation of building block in ECAPA-TDNN, i.e.,
-    TDNN-Res2Net-TDNN-SEBlock.
+    """
+    Squeeze-and-Excitation (SE) Res2Net module.
+
+    Attributes:
+        tdnn1 (TDNNBlock): First TDNN module.
+        res2net_block (Res2NetBlock): Res2NetBlock module.
+        tdnn2 (TDNNBlock): Second TDNN module
+        se_block (SEBlock): SEBlock module.
+        shortcut (Optional[Conv1dSamePaddingReflect]): Residual connection module.
     """
 
     def __init__(
         self,
-        in_channels,
-        out_channels,
-        res2net_scale=8,
-        se_channels=128,
-        kernel_size=1,
-        dilation=1,
-        activation=torch.nn.ReLU,
-        groups=1,
+        in_channels: int,
+        out_channels: int,
+        res2net_scale: int = 8,
+        se_channels: int = 128,
+        kernel_size: int = 1,
+        dilation: int = 1,
+        groups: int = 1,
     ):
+        """
+        Initialize a SERes2NetBlock module.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+            res2net_scale (int): Scale factor for the number of channels in Res2Net. Defaults to 8.
+            se_channels (int): Number of channels for Squeeze-and-Excitation. Defaults to 128.
+            kernel_size (int): Size of the kernel for Res2Net convolution. Defaults to 1.
+            dilation (int): Dilation rate for the Res2Net module convolution. Defaults to 1.
+            groups (int): Groups for the Res2Net module convolution. Defaults to 1.
+
+        Returns:
+            None
+        """
         super().__init__()
-        self.out_channels = out_channels
+
         self.tdnn1 = TDNNBlock(
             in_channels,
             out_channels,
             kernel_size=1,
             dilation=1,
-            activation=activation,
             groups=groups,
         )
         self.res2net_block = Res2NetBlock(
@@ -323,20 +322,28 @@ class SERes2NetBlock(nn.Module):
             out_channels,
             kernel_size=1,
             dilation=1,
-            activation=activation,
             groups=groups,
         )
         self.se_block = SEBlock(out_channels, se_channels, out_channels)
 
         self.shortcut = None
         if in_channels != out_channels:
-            self.shortcut = Conv1d(
+            self.shortcut = Conv1dSamePaddingReflect(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=1,
             )
 
-    def forward(self, x, lengths=None):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         residual = x
         if self.shortcut:
             residual = self.shortcut(x)
@@ -344,9 +351,100 @@ class SERes2NetBlock(nn.Module):
         x = self.tdnn1(x)
         x = self.res2net_block(x)
         x = self.tdnn2(x)
-        x = self.se_block(x, lengths)
+        x = self.se_block(x)
 
         return x + residual
+
+
+class AttentiveStatisticsPooling(nn.Module):
+    """
+    Attentive Statistics Pooling (ASP) module.
+
+    Attributes:
+        global_context (bool): Whether to use global context.
+        tdnn (TDNNBlock): TDNN module.
+        tanh (nn.Tanh): Activation module.
+        conv (Conv1dSamePaddingReflect): Convolution module.
+    """
+
+    def __init__(
+        self,
+        channels: int,
+        attention_channels: int = 128,
+        global_context: bool = True,
+    ):
+        """
+        Initialize an AttentiveStatisticsPooling module.
+
+        Args:
+            channels (int): Number of input channels.
+            attention_channels (int): Number of attention channels. Defaults to 128.
+            global_context (bool): Whether to use global context. Defaults to True.
+
+        Returns:
+            None
+        """
+        super().__init__()
+
+        self.global_context = global_context
+
+        in_channels = channels * 3 if global_context else channels
+
+        self.tdnn = TDNNBlock(in_channels, attention_channels, 1, 1)
+        self.tanh = nn.Tanh()
+        self.conv = Conv1dSamePaddingReflect(
+            in_channels=attention_channels, out_channels=channels, kernel_size=1
+        )
+
+    def _compute_statistics(
+        self,
+        x: torch.Tensor,
+        m: torch.Tensor,
+        eps: float = 1e-12,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Compute the statistics of a tensor.
+
+        Args:
+            x (torch.Tensor): Input tensor. Shape: (N, L, D).
+            m (torch.Tensor): Mask tensor. Shape: (N, L).
+            eps (float): Small value to prevent division by zero. Defaults to 1e-12.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Mean and standard deviation tensors. Shape: (N, L).
+        """
+        mean = (m * x).sum(dim=2)
+        std = torch.sqrt((m * (x - mean.unsqueeze(dim=2)).pow(2)).sum(dim=2).clamp(eps))
+        return mean, std
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
+        if self.global_context:
+            L = x.size(-1)
+            mean, std = self._compute_statistics(x, 1 / L)
+            mean = mean.unsqueeze(2).repeat(1, 1, L)
+            std = std.unsqueeze(2).repeat(1, 1, L)
+            attn = torch.cat([x, mean, std], dim=1)
+        else:
+            attn = x
+
+        attn = self.conv(self.tanh(self.tdnn(attn)))
+        attn = F.softmax(attn, dim=2)
+
+        mean, std = self._compute_statistics(x, attn)
+
+        stats = torch.cat((mean, std), dim=1)
+        stats = stats.unsqueeze(dim=2)
+
+        return stats
 
 
 @dataclass
@@ -359,6 +457,7 @@ class ECAPATDNNConfig(BaseEncoderConfig):
         channels (List[int]): List of channel sizes for each encoder module.
         kernel_sizes (List[int]): List of kernel sizes for each encoder module.
         dilations (List[int]): List of dilation factors for each encoder module.
+        groups (List[int]): List of groups for each encoder module.
         attention_channels (int): Number of channels for Attentive Statistics Pooling (ASP).
         res2net_scale (int): Scale factor for the number of channels in the Res2Net modules.
         se_channels (int): Number of channels for the Squeeze-and-Excitation modules.
@@ -367,11 +466,13 @@ class ECAPATDNNConfig(BaseEncoderConfig):
 
     pooling: bool = True
 
-    channels: List[int] = field(default_factory=lambda: [1024, 1024, 1024, 1024, 3072])
+    channels: List[int] = field(default_factory=lambda: [512, 512, 512, 512, 1536])
 
     kernel_sizes: List[int] = field(default_factory=lambda: [5, 3, 3, 3, 1])
 
     dilations: List[int] = field(default_factory=lambda: [1, 2, 3, 4, 1])
+
+    groups: List[int] = field(default_factory=lambda: [1, 1, 1, 1, 1])
 
     attention_channels: int = 128
 
@@ -382,138 +483,6 @@ class ECAPATDNNConfig(BaseEncoderConfig):
     global_context: bool = True
 
 
-class ECAPATDNN(BaseEncoder):
-    """An implementation of the speaker embedding model in a paper.
-    "ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in
-    TDNN Based Speaker Verification" (https://arxiv.org/abs/2005.07143).
-    """
-
-    def __init__(
-        self,
-        config: ECAPATDNNConfig
-        # input_size,
-        # device="cpu",
-        # lin_neurons=512,
-        # activation=torch.nn.ReLU,
-        # channels=[512, 512, 512, 512, 1536],
-        # kernel_sizes=[5, 3, 3, 3, 1],
-        # dilations=[1, 2, 3, 4, 1],
-        # attention_channels=128,
-        # res2net_scale=8,
-        # se_channels=128,
-        # global_context=True,
-        # groups=[1, 1, 1, 1, 1],
-        # log_input=True,
-        # n_mels=80,
-    ):
-        super().__init__(config)
-
-        # ...
-        n_mels = config.mel_n_mels
-        input_size = config.mel_n_mels
-        lin_neurons = config.encoder_dim
-        activation = torch.nn.ReLU
-        channels = config.channels
-        kernel_sizes = config.kernel_sizes
-        dilations = config.dilations
-        attention_channels = config.attention_channels
-        res2net_scale = config.res2net_scale
-        se_channels = config.se_channels
-        global_context = config.global_context
-        groups = [1, 1, 1, 1, 1]
-
-
-        assert len(channels) == len(kernel_sizes)
-        assert len(channels) == len(dilations)
-        self.instancenorm   = nn.InstanceNorm1d(n_mels)
-        self.n_mels     = n_mels
-        # self.log_input  = log_input
-        self.channels = channels
-        self.blocks = nn.ModuleList()
-
-        # The initial TDNN layer
-        self.blocks.append(
-            TDNNBlock(
-                input_size,
-                channels[0],
-                kernel_sizes[0],
-                dilations[0],
-                activation,
-                groups[0],
-            )
-        )
-
-        # SE-Res2Net layers
-        for i in range(1, len(channels) - 1):
-            self.blocks.append(
-                SERes2NetBlock(
-                    channels[i - 1],
-                    channels[i],
-                    res2net_scale=res2net_scale,
-                    se_channels=se_channels,
-                    kernel_size=kernel_sizes[i],
-                    dilation=dilations[i],
-                    activation=activation,
-                    groups=groups[i],
-                )
-            )
-
-        # Multi-layer feature aggregation
-        self.mfa = TDNNBlock(
-            channels[-1],
-            channels[-1],
-            kernel_sizes[-1],
-            dilations[-1],
-            activation,
-            groups=groups[-1],
-        )
-
-        # Attentive Statistical Pooling
-        self.asp = AttentiveStatisticsPooling(
-            channels[-1],
-            attention_channels=attention_channels,
-            global_context=global_context,
-        )
-        self.asp_bn = BatchNorm1d(input_size=channels[-1] * 2)
-
-        # Final linear transformation
-        self.fc = Conv1d(
-            in_channels=channels[-1] * 2,
-            out_channels=lin_neurons,
-            kernel_size=1,
-        )
-
-    def forward(self, x, lengths=None):
-        """Returns the embedding vector.
-        """
-        x = super().forward(x)
-
-        xl = []
-        for layer in self.blocks:
-            try:
-                x = layer(x, lengths=lengths)
-            except TypeError:
-                x = layer(x)
-            xl.append(x)
-
-        # Multi-layer feature aggregation
-        x = torch.cat(xl[1:], dim=1)
-        x = self.mfa(x)
-
-        # Attentive Statistical Pooling
-        x = self.asp(x, lengths=lengths)
-        x = self.asp_bn(x)
-
-        # Final linear transformation
-        x = self.fc(x)
-
-        x = x.transpose(1, 2)
-        x = x.squeeze(1)
-
-        return x
-
-
-'''
 class ECAPATDNN(BaseEncoder):
     """
     Emphasized Channel Attention, Propagation and Aggregation in TDNN (ECAPA-TDNN) encoder.
@@ -545,6 +514,9 @@ class ECAPATDNN(BaseEncoder):
         """
         super().__init__(config)
 
+        assert len(config.channels) == len(config.kernel_sizes)
+        assert len(config.channels) == len(config.dilations)
+
         self.pooling = config.pooling
 
         self.blocks = nn.ModuleList()
@@ -555,6 +527,7 @@ class ECAPATDNN(BaseEncoder):
                 config.channels[0],
                 config.kernel_sizes[0],
                 config.dilations[0],
+                config.groups[0],
             )
         )
 
@@ -567,6 +540,7 @@ class ECAPATDNN(BaseEncoder):
                     se_channels=config.se_channels,
                     kernel_size=config.kernel_sizes[i],
                     dilation=config.dilations[i],
+                    groups=config.groups[i],
                 )
             )
 
@@ -575,6 +549,7 @@ class ECAPATDNN(BaseEncoder):
             config.channels[-1],
             config.kernel_sizes[-1],
             config.dilations[-1],
+            config.groups[-1],
         )
 
         self.asp = AttentiveStatisticsPooling(
@@ -625,4 +600,3 @@ class ECAPATDNN(BaseEncoder):
             Z = Z.squeeze(dim=2)
 
         return Z
-'''
