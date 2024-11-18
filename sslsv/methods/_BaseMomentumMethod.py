@@ -158,6 +158,20 @@ class BaseMomentumMethod(BaseMethod):
         """
         return [(self.encoder, self.encoder_momentum)]
 
+    def on_train_step_start(self, step: int, max_steps: int):
+        """
+        Update tau.
+
+        Args:
+            step (int): Current training step.
+            max_steps (int): Total number of training steps.
+
+        Returns:
+            None
+        """
+        if self.tau_scheduler:
+            self.momentum_updater.update_tau(step, max_steps)
+
     def on_train_step_end(self, step: int, max_steps: int):
         """
         Update the momentum parameters.
@@ -171,6 +185,3 @@ class BaseMomentumMethod(BaseMethod):
         """
         for m, mm in self.get_momentum_pairs():
             self.momentum_updater.update(m, mm)
-
-        if self.tau_scheduler:
-            self.momentum_updater.update_tau(step, max_steps)
