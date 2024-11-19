@@ -11,7 +11,7 @@ method:
     kmeans_nb_prototypes: 6000
     inter_sampling_size: 0
 trainer:
-  last_checkpoint: 'models/ssps/voxceleb2/swav/_swav/checkpoints/model_latest.pt'
+  last_checkpoint: 'models/ssps/voxceleb2/swav/_swav/checkpoints/model_latest_ssps-6k.pt'
   epochs: 110
 evaluation:
   validation:

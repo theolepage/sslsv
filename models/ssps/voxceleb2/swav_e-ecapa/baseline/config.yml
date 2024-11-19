@@ -1,0 +1,21 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+method:
+  type: 'swav'
+  projector_hidden_dim: 2048
+  projector_output_dim: 512
+trainer:
+  last_checkpoint: 'models/ssps/voxceleb2/swav_e-ecapa/_swav/checkpoints/model_latest.pt'
+  epochs: 110
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

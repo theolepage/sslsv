@@ -149,6 +149,8 @@ class DINO(BaseMomentumMethod):
         loss_fn (DINOLoss): Loss function.
     """
 
+    SSPS_NB_POS_EMBEDDINGS = 2
+
     def __init__(
         self,
         config: DINOConfig,
@@ -170,6 +172,8 @@ class DINO(BaseMomentumMethod):
 
         self.freeze_last_layer = config.freeze_last_layer
         self.clip_grad = config.clip_grad
+
+        self.embeddings_dim = config.head_output_dim
 
         self.head = DINOHead(
             input_dim=self.encoder.encoder_dim,
@@ -209,12 +213,12 @@ class DINO(BaseMomentumMethod):
         if not training:
             return self.encoder_momentum(X)
 
-        N, V, L = X.shape
+        N, V, L = X.size()
 
         X = X.transpose(0, 1)
 
-        global_frames = X[:2, :, :].reshape(-1, L)
-        local_frames = X[2:, :, : L // 2].reshape(-1, L // 2)
+        global_frames = X[0:2, :, :].reshape(-1, L)
+        local_frames = X[2:6, :, : L // 2].reshape(-1, L // 2)
 
         T = self.head_momentum(self.encoder_momentum(global_frames))
 
@@ -226,7 +230,11 @@ class DINO(BaseMomentumMethod):
             axis=0,
         )
 
-        return S, T
+        Z_ssps = None
+        if self.ssps:
+            Z_ssps = F.normalize(self.encoder(X[-1]).detach(), p=2, dim=-1)
+
+        return S, T, Z_ssps
 
     def update_optim(
         self,
@@ -321,9 +329,18 @@ class DINO(BaseMomentumMethod):
         Returns:
             T: Loss tensor.
         """
-        S, T = Z
+        S, T, Z_ssps = Z
 
-        loss = self.loss_fn(S, T)
+        if self.ssps:
+            self.ssps.sample(indices=indices, embeddings=Z_ssps)
+            T_1, T_2 = T.chunk(2)
+            T_1_pp = self.ssps.apply(0, T_1)
+            T_2_pp = self.ssps.apply(1, T_2)
+            T = torch.cat((T_1_pp, T_2_pp))
+            self.ssps.update_buffers(step_rel, indices, Z_ssps, [T_1, T_2])
+            loss = self.loss_fn(S, T)
+        else:
+            loss = self.loss_fn(S, T)
 
         self.log_step_metrics(
             {
@@ -345,6 +362,8 @@ class DINO(BaseMomentumMethod):
         Returns:
             None
         """
+        super().on_train_epoch_start(epoch, max_epochs)
+
         self.current_epoch = epoch
         self.loss_fn.epoch = epoch
 

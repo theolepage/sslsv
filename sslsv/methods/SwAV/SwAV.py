@@ -88,9 +88,10 @@ class SwAV(BaseMethod):
 
         self.epoch = 0
 
-        self.proj_dim = self.encoder.encoder_dim
+        self.embeddings_dim = self.encoder.encoder_dim
 
         if config.enable_projector:
+            self.embeddings_dim = config.projector_output_dim
             # self.projector = nn.Sequential(
             #     nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
             #     nn.BatchNorm1d(config.projector_hidden_dim),
@@ -106,11 +107,10 @@ class SwAV(BaseMethod):
                 nn.ReLU(),
                 nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
             )
-            self.proj_dim = config.projector_output_dim
 
         self.prototypes = nn.utils.weight_norm(
             nn.Linear(
-                self.proj_dim,
+                self.embeddings_dim,
                 config.nb_prototypes,
                 bias=False,
             )
@@ -140,7 +140,7 @@ class SwAV(BaseMethod):
                 torch.zeros(
                     2,
                     self.config.queue_size // get_world_size(),
-                    self.proj_dim,
+                    self.embeddings_dim,
                     device=self.trainer.device,
                 ),
             )
@@ -280,8 +280,8 @@ class SwAV(BaseMethod):
 
         if self.ssps:
             self.ssps.sample(indices=indices, embeddings=Z_ssps)
-            Z_2_pp = self.ssps.apply(2, Z_2)
-            self.ssps.update_queues(step_rel, indices, Z_ssps, Z_1, Z_2)
+            Z_2_pp = self.ssps.apply(0, Z_2)
+            self.ssps.update_buffers(step_rel, indices, Z_ssps, [Z_2])
             loss = self._compute_loss(Z_1, Z_2_pp)
         else:
             loss = self._compute_loss(Z_1, Z_2)

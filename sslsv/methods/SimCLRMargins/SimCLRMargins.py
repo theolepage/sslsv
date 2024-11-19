@@ -115,7 +115,10 @@ class SimCLRMargins(BaseMethod):
         self.epoch = 0
         self.max_epochs = 0
 
+        self.embeddings_dim = self.encoder.encoder_dim
+
         if config.enable_projector:
+            self.embeddings_dim = config.projector_output_dim
             self.projector = nn.Sequential(
                 nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
                 nn.ReLU(),
@@ -285,8 +288,8 @@ class SimCLRMargins(BaseMethod):
 
         if self.ssps:
             self.ssps.sample(indices=indices, embeddings=Z_ssps)
-            Z_2_pp = self.ssps.apply(2, Z_2)
-            self.ssps.update_queues(step_rel, indices, Z_ssps, Z_1, Z_2)
+            Z_2_pp = self.ssps.apply(0, Z_2)
+            self.ssps.update_buffers(step_rel, indices, Z_ssps, [Z_2])
             loss = self.loss_fn(Z_1, Z_2_pp)
         else:
             loss = self.loss_fn(Z_1, Z_2)

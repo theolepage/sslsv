@@ -126,7 +126,7 @@ class SSPS_KNNSampling(_SSPS_BaseSampling):
     def sample(self, indices, embeddings, train_indices, train_embeddings):
         self.ssps_indices = torch.full_like(indices, -1)
 
-        sim = embeddings @ train_embeddings[0].T
+        sim = embeddings @ train_embeddings.T
 
         sampling_pool = 0
 
@@ -166,7 +166,7 @@ class SSPS_KNNSampling(_SSPS_BaseSampling):
 
     def apply(self, Z, train_embeddings):
         ssps_mask = self.ssps_indices != -1
-        Z[ssps_mask] = train_embeddings[self.ssps_indices[ssps_mask]]
+        Z[ssps_mask] = train_embeddings[self.ssps_indices[ssps_mask]].clone()
         return Z
 
 
@@ -175,7 +175,7 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
     def __init__(self, config):
         super().__init__(config)
 
-    def init(self, device, dataset_size):
+    def init(self, device, dataset_size, batch_size):
         self.device = device
 
         self.kmeans = KMeans(
@@ -183,12 +183,12 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
             nb_prototypes=self.config.kmeans_nb_prototypes,
             nb_iters=self.config.kmeans_nb_iters,
             verbose=self.verbose,
-            batch_size=128,
+            batch_size=batch_size // get_world_size(),
         )
 
     def _run_kmeans(self, train_indices, train_embeddings):
         local_train_indices = train_indices[get_rank() :: get_world_size()]
-        local_train_embeddings = train_embeddings[0, get_rank() :: get_world_size()]
+        local_train_embeddings = train_embeddings[get_rank() :: get_world_size()]
 
         self.assignments, self.centroids, self.similarities = self.kmeans.run(
             local_train_indices.contiguous(),
@@ -317,7 +317,7 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
     def prepare(self, train_indices, train_embeddings):
         super().prepare(train_indices, train_embeddings)
 
-        self._create_cluster_to_nearby_samples()
+        # self._create_cluster_to_nearby_samples()
 
     def sample(self, indices, embeddings, train_indices, train_embeddings):
         self.ssps_indices = torch.full_like(indices, -1)
@@ -342,8 +342,11 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
                 self.config.inter_sampling_prob_exp_lambda,
             )
 
-            # Sample one sample nearby selected cluster
-            nearby_samples = self.cluster_to_nearby_samples[cluster_selected]
+            # Sample one sample from selected cluster
+            # nearby_samples = self.cluster_to_nearby_samples[cluster_selected]
+            nearby_samples = train_indices[
+                self.assignments[train_indices] == cluster_selected
+            ]
             if len(nearby_samples) == 0:
                 continue
 
@@ -359,10 +362,10 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
         metrics = self._determine_metrics(
             indices,
             self.ssps_indices,
-            # {
-            # "ssps_inter_sampling_pool": inter_sampling_pool,
-            # "ssps_intra_sampling_pool": intra_sampling_pool,
-            # },
+            {
+                # "ssps_inter_sampling_pool": inter_sampling_pool,
+                "ssps_intra_sampling_pool": intra_sampling_pool,
+            },
             repr_sampling=True,
         )
 
@@ -375,5 +378,5 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
 
     def apply(self, Z, train_embeddings):
         ssps_mask = self.ssps_indices != -1
-        Z[ssps_mask] = train_embeddings[self.ssps_indices[ssps_mask]]
+        Z[ssps_mask] = train_embeddings[self.ssps_indices[ssps_mask]].clone()
         return Z

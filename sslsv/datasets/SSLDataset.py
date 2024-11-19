@@ -47,7 +47,7 @@ def sample_frames(
 
 def sample_frames_dino(
     audio: np.ndarray,
-    frame_length: int,
+    frame_length: int = None,
     large_frames_count: int = 2,
     large_frames_length: int = 4 * 16000,
     small_frames_count: int = 4,
@@ -174,15 +174,30 @@ class SSLDataset(Dataset):
             )
         else:  # isinstance(i, tuple)
             file, label = self.files[i[0]], self.labels[i[0]]
-            frame1 = load_audio(
-                self.config.base_path / self.files[i[0]],
-                frame_length=self.config.frame_length,
-            )
-            frame2 = load_audio(
-                self.config.base_path / self.files[i[1]],
-                frame_length=self.config.frame_length,
-            )
-            frames = [frame1, frame2]
+            if self.config.frame_sampling == FrameSamplingEnum.DINO:
+                data1 = load_audio(
+                    self.config.base_path / self.files[i[0]],
+                    frame_length=None,
+                    min_length=self.MIN_LOAD_AUDIO_LENGTH,
+                )
+                data2 = load_audio(
+                    self.config.base_path / self.files[i[1]],
+                    frame_length=None,
+                    min_length=self.MIN_LOAD_AUDIO_LENGTH,
+                )
+                frames1 = sample_frames_dino(data1)
+                frames2 = sample_frames_dino(data2)
+                frames = [frames1[i] if i % 2 == 0 else frames2[i] for i in range(len(frames1))]
+            else:
+                frame1 = load_audio(
+                    self.config.base_path / self.files[i[0]],
+                    frame_length=self.config.frame_length,
+                )
+                frame2 = load_audio(
+                    self.config.base_path / self.files[i[1]],
+                    frame_length=self.config.frame_length,
+                )
+                frames = [frame1, frame2]
 
         frames = [self.preprocess_data(f) for f in frames]
 

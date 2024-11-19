@@ -1,0 +1,29 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+  mel_n_mels: 80
+  mel_win_fn: 'hann'
+method:
+  type: 'dino'
+trainer:
+  last_checkpoint: 'models/ssps/voxceleb2/dino_e-ecapa/_dino/checkpoints/model_latest.pt'
+  epochs: 70
+  batch_size: 128
+  optimizer: 'sgd'
+  learning_rate: 0.2
+  weight_decay: 0.00005
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  num_workers: 6
+  ssl: true
+  frame_length: 64000
+  frame_sampling: 'dino'
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true
+    strategy: 'all'

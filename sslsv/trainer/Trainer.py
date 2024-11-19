@@ -157,12 +157,11 @@ class Trainer:
         Returns:
             None
         """
-        nb_steps = self.config.trainer.epochs * len(self.train_dataloader)
-
         for step_rel, (indices, X, info) in enumerate(
             logger.log(self.train_dataloader)
         ):
             step = self.epoch * len(self.train_dataloader) + step_rel
+            nb_steps = self.config.trainer.epochs * len(self.train_dataloader)
 
             self.model.module.on_train_step_start(step, nb_steps)
 
@@ -404,9 +403,11 @@ class Trainer:
         model = self.model.module.state_dict()
 
         # Remove SSPS queue from model_epoch-* checkpoints
-        if suffix != "latest" and "ssps.queue_indices" in model:
-            model.pop("ssps.queue_indices", None)
-            model.pop("ssps.queue_embeddings", None)
+        if suffix != "latest" and "ssps.train_embeddings_ref" in model:
+            model.pop("ssps.train_indices_ref", None)
+            model.pop("ssps.train_embeddings_ref", None)
+            model.pop("ssps.train_indices_pos", None)
+            model.pop("ssps.train_embeddings_pos", None)
 
         torch.save(
             {

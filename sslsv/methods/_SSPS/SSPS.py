@@ -34,7 +34,7 @@ class SSPSConfig:
 
     sampling: SSPSSamplingMethodEnum = SSPSSamplingMethodEnum.KMEANS_REPR
 
-    queue_size: Optional[int] = None
+    pos_queue_size: int = 50000
 
     kmeans_nb_prototypes: int = 50000
     kmeans_nb_iters: int = 10
@@ -70,23 +70,44 @@ class SSPS(nn.Module):
 
         self.sampling = self._SAMPLING_METHODS[config.sampling](config)
 
-    def initialize(self, dataset_size, batch_size, embeddings_dim, device):
+    def initialize(
+        self,
+        dataset_size,
+        batch_size,
+        ref_embeddings_dim,
+        pos_embeddings_dim,
+        device,
+        nb_pos_embeddings=1,
+    ):
         self.batch_size = batch_size
 
-        self.sampling.init(device, dataset_size)
+        self.sampling.init(device, dataset_size, batch_size)
 
-        train_dataset_size = dataset_size - (dataset_size % self.batch_size)
-        self.queue_size = (
-            self.config.queue_size if self.config.queue_size else train_dataset_size
-        )
-
+        self.train_buffer_size_ref = dataset_size - (dataset_size % self.batch_size)
         self.register_buffer(
-            "queue_indices",
-            torch.zeros(self.queue_size, dtype=torch.long, device=device),
+            "train_indices_ref",
+            -torch.ones(self.train_buffer_size_ref, dtype=torch.long, device=device),
         )
         self.register_buffer(
-            "queue_embeddings",
-            torch.randn(3, self.queue_size, embeddings_dim, device=device),
+            "train_embeddings_ref",
+            torch.randn(self.train_buffer_size_ref, ref_embeddings_dim, device=device),
+        )
+
+        self.train_buffer_size_pos = self.config.pos_queue_size - (
+            self.config.pos_queue_size % self.batch_size
+        )
+        self.register_buffer(
+            "train_indices_pos",
+            -torch.ones(self.train_buffer_size_pos, dtype=torch.long, device=device),
+        )
+        self.register_buffer(
+            "train_embeddings_pos",
+            torch.randn(
+                nb_pos_embeddings,
+                self.train_buffer_size_pos,
+                pos_embeddings_dim,
+                device=device,
+            ),
         )
 
     def set_epoch(self, epoch: int):
@@ -95,28 +116,32 @@ class SSPS(nn.Module):
 
     def prepare_sampling(self):
         if self.enabled:
-            self.sampling.prepare(self.queue_indices, self.queue_embeddings)
+            self.sampling.prepare(self.train_indices_ref, self.train_embeddings_ref)
 
     def sample(self, indices, embeddings):
         if self.enabled:
             self.step_metrics = self.sampling.sample(
                 indices,
                 embeddings,
-                self.queue_indices,
-                self.queue_embeddings,
+                self.train_indices_pos,
+                self.train_embeddings_pos,
             )
 
     def apply(self, i, Z):
         if self.enabled:
-            Z = self.sampling.apply(Z.clone(), self.queue_embeddings[i])
+            Z = self.sampling.apply(Z.clone(), self.train_embeddings_pos[i])
 
         return Z
 
-    def update_queues(self, step_rel, indices, Z_ssps, Z_1, Z_2):
+    def update_buffers(self, step_rel, indices, Z_ssps, embeddings):
         if self.enabled_next_epoch:
-            start_idx = (step_rel * self.batch_size) % self.queue_size
+            start_idx = step_rel * self.batch_size
             end_idx = start_idx + self.batch_size
-            self.queue_indices[start_idx:end_idx] = gather(indices)
-            self.queue_embeddings[0, start_idx:end_idx] = gather(Z_ssps)
-            self.queue_embeddings[1, start_idx:end_idx] = gather(Z_1.detach())
-            self.queue_embeddings[2, start_idx:end_idx] = gather(Z_2.detach())
+            self.train_indices_ref[start_idx:end_idx] = gather(indices)
+            self.train_embeddings_ref[start_idx:end_idx] = gather(Z_ssps)
+
+            start_idx = (step_rel * self.batch_size) % self.train_buffer_size_pos
+            end_idx = start_idx + self.batch_size
+            self.train_indices_pos[start_idx:end_idx] = gather(indices)
+            for i, Z in enumerate(embeddings):
+                self.train_embeddings_pos[i, start_idx:end_idx] = gather(Z.detach())

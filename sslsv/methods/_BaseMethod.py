@@ -32,6 +32,7 @@ class BaseMethod(nn.Module):
         trainer (Trainer): Trainer object.
         step_metrics (Dict[str, Union[T, int, float]]): Metrics for the current training step.
         encoder (BaseEncoder): Encoder object.
+        embeddings_dim (int): Dimension of embeddings.
     """
 
     def __init__(
@@ -61,8 +62,10 @@ class BaseMethod(nn.Module):
 
         self.ssps = SSPS(config.ssps) if config.ssps else None
         self._ddp_params_and_buffers_to_ignore = [
-            "ssps.queue_embeddings",
-            "ssps.queue_indices",
+            "ssps.train_embeddings_ref",
+            "ssps.train_indices_ref",
+            "ssps.train_embeddings_pos",
+            "ssps.train_indices_pos",
         ]
 
     def log_step_metrics(
@@ -180,8 +183,10 @@ class BaseMethod(nn.Module):
             self.ssps.initialize(
                 dataset_size=len(self.trainer.train_dataloader.dataset),
                 batch_size=self.trainer.config.trainer.batch_size,
-                embeddings_dim=self.encoder.encoder_dim,
+                ref_embeddings_dim=self.encoder.encoder_dim,
+                pos_embeddings_dim=self.embeddings_dim,
                 device=self.trainer.device,
+                nb_pos_embeddings=getattr(self, "SSPS_NB_POS_EMBEDDINGS", 1),
             )
 
     def on_train_end(self):

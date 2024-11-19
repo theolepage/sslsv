@@ -7,7 +7,7 @@ method:
   ssps:
     start_epoch: 100
 trainer:
-  epochs: 100
+  epochs: 101
 evaluation:
   validation:
     - type: 'sv_cosine'
