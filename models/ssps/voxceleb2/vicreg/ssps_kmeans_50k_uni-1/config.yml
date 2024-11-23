@@ -10,6 +10,7 @@ method:
     sampling: 'kmeans-repr'
     kmeans_nb_prototypes: 50000
     inter_sampling_size: 1
+    pos_queue_size: 50000
 trainer:
   last_checkpoint: 'models/ssps/voxceleb2/vicreg/_vicreg/checkpoints/model_latest_ssps-50k.pt'
   epochs: 110
