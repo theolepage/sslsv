@@ -1,4 +1,4 @@
-from typing import Callable, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 from enum import Enum
 
 import torch
@@ -40,6 +40,7 @@ class BaseContrastiveLoss(nn.Module):
         A: T,
         B: T,
         discard_identity: bool = True,
+        ssps_assignments: Optional[T] = None,
     ) -> Tuple[T, T]:
         """
         Determine the positives and negatives for a contrastive loss.
@@ -48,6 +49,7 @@ class BaseContrastiveLoss(nn.Module):
             A (T): First embeddings tensor. Shape: (N, V_A, D).
             B (T): Second embeddings tensor. Shape: (N, V_B, D).
             discard_identity (bool): Whether to discard identity comparisons. Defaults to True.
+            ssps_assignments (Optional[T]): SSPS assignments to prevent false negatives.
 
         Returns:
             Tuple[T, T]: Positive and negative logits tensors.
@@ -71,6 +73,13 @@ class BaseContrastiveLoss(nn.Module):
             world_size=get_world_size(),
             discard_identity=discard_identity,
         )
+
+        if ssps_assignments is not None:
+            assignments = ssps_assignments.repeat(2)
+            assignments_all = gather(assignments)
+            assignments_mask = assignments_all.unsqueeze(0) == assignments.unsqueeze(1)
+            assignments_mask[~neg_mask] = False
+            logits[assignments_mask] = 0
 
         pos = logits[pos_mask].view(V_A * N, -1)
         neg = logits[neg_mask].view(V_A * N, -1)
@@ -218,7 +227,13 @@ class NTXent(BaseContrastiveLoss):
         """
         return self.scale * logits
 
-    def _compute_loss(self, A: T, B: T, discard_identity: bool):
+    def _compute_loss(
+        self,
+        A: T,
+        B: T,
+        discard_identity: bool,
+        ssps_assignments: Optional[T] = None,
+    ):
         """
         Determine and process logits to compute loss.
 
@@ -226,11 +241,12 @@ class NTXent(BaseContrastiveLoss):
             A (T): First embeddings tensor.
             B (T): Second embeddings tensor.
             discard_identity (bool): Whether to discard identity comparisons.
+            ssps_assignments (Optional[T]): SSPS assignments to prevent false negatives.
 
         Returns:
             T: Loss tensor.
         """
-        pos, neg = self._determine_logits(A, B, discard_identity)
+        pos, neg = self._determine_logits(A, B, discard_identity, ssps_assignments)
 
         # Compute norms of A
         N, V_A, D = A.size()
@@ -254,7 +270,13 @@ class NTXent(BaseContrastiveLoss):
 
         return loss
 
-    def forward(self, A: T, B: T, discard_identity: bool) -> T:
+    def forward(
+        self,
+        A: T,
+        B: T,
+        discard_identity: bool,
+        ssps_assignments: Optional[T] = None,
+    ) -> T:
         """
         Compute loss.
 
@@ -262,14 +284,25 @@ class NTXent(BaseContrastiveLoss):
             A (T): First embeddings tensor.
             B (T): Second embeddings tensor.
             discard_identity (bool): Whether to discard identity comparisons.
+            ssps_assignments (Optional[T]): SSPS assignments to prevent false negatives.
 
         Returns:
             T: Loss tensor.
         """
         if self.symmetric:
-            return self._compute_loss(A, B, discard_identity)
+            return self._compute_loss(
+                A,
+                B,
+                discard_identity,
+                ssps_assignments=ssps_assignments,
+            )
 
-        return self._compute_loss(A[:, 0:1], B[:, 1:2], discard_identity=False)
+        return self._compute_loss(
+            A[:, 0:1],
+            B[:, 1:2],
+            discard_identity=False,
+            ssps_assignments=ssps_assignments,
+        )
 
 
 class NTXentSphereFace(NTXent):
@@ -845,13 +878,14 @@ class SimCLRMarginsLoss(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, Z_1: T, Z_2: T) -> T:
+    def forward(self, Z_1: T, Z_2: T, ssps_assignments: Optional[T] = None) -> T:
         """
         Compute loss.
 
         Args:
             Z_1 (T): First embeddings tensor.
             Z_2 (T): Second embeddings tensor.
+            ssps_assignments (Optional[T]): SSPS assignments to prevent false negatives.
 
         Returns:
             T: Loss tensor.
@@ -867,7 +901,12 @@ class SimCLRMarginsLoss(nn.Module):
         #     if self.reg:
         #         loss += self.reg(LOCAL_VIEWS, GLOBAL_VIEWS, discard_identity=False)
         # else:
-        loss = self.loss_fn(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_identity=True)
+        loss = self.loss_fn(
+            GLOBAL_VIEWS,
+            GLOBAL_VIEWS,
+            discard_identity=True,
+            ssps_assignments=ssps_assignments,
+        )
         if self.reg:
             loss += self.reg(GLOBAL_VIEWS, GLOBAL_VIEWS, discard_identity=True)
 

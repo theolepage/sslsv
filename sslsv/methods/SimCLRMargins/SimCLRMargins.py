@@ -290,7 +290,11 @@ class SimCLRMargins(BaseMethod):
             self.ssps.sample(indices=indices, embeddings=Z_ssps)
             Z_2_pp = self.ssps.apply(0, Z_2)
             self.ssps.update_buffers(step_rel, indices, Z_ssps, [Z_2])
-            loss = self.loss_fn(Z_1, Z_2_pp)
+            loss = self.loss_fn(
+                Z_1,
+                Z_2_pp,
+                ssps_assignments=self.ssps.sampling.assignments[indices],
+            )
         else:
             loss = self.loss_fn(Z_1, Z_2)
 

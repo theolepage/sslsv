@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 from torch import nn
@@ -77,13 +77,19 @@ class SimCLRLoss(nn.Module):
 
         return pos_mask, neg_mask
 
-    def forward(self, Z_1: T, Z_2: T) -> T:
+    def forward(
+        self,
+        Z_1: T,
+        Z_2: T,
+        ssps_assignments: Optional[T] = None,
+    ) -> T:
         """
         Compute loss.
 
         Args:
             Z_1 (T): Embeddings tensor of view 1.
             Z_2 (T): Embeddings tensor of view 2.
+            ssps_assignments (Optional[T]): SSPS assignments to prevent false negatives.
 
         Returns:
             T: Loss tensor.
@@ -94,7 +100,7 @@ class SimCLRLoss(nn.Module):
         Z = F.normalize(Z, p=2, dim=1)
 
         sim = (Z @ gather(Z).T) / self.temperature
-        # sim: (V_A*N, V_B*N)
+        # sim: (V_A*N, V_B*N*world_size)
 
         pos_mask, neg_mask = self.create_contrastive_masks(
             N=N,
@@ -103,6 +109,13 @@ class SimCLRLoss(nn.Module):
             rank=get_rank(),
             world_size=get_world_size(),
         )
+
+        if ssps_assignments is not None:
+            assignments = ssps_assignments.repeat(2)
+            assignments_all = gather(assignments)
+            assignments_mask = assignments_all.unsqueeze(0) == assignments.unsqueeze(1)
+            assignments_mask[~neg_mask] = False
+            sim[assignments_mask] = 0
 
         pos = sim[pos_mask].view(N * 2, -1)  # (N*2, 1) positives
         neg = sim[neg_mask].view(N * 2, -1)  # (N*2, N*2*world_size-2) negatives
