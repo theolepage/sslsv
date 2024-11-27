@@ -511,6 +511,7 @@ class Trainer:
         )
 
         self.wandb_url = wandb.init(
+            mode="disabled",
             project=self.config.trainer.wandb_project,
             id=wandb_id,
             resume="allow",
