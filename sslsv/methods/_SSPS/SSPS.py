@@ -123,6 +123,8 @@ class SSPS(nn.Module):
             self.step_metrics = self.sampling.sample(
                 indices,
                 embeddings,
+                self.train_indices_ref,
+                self.train_embeddings_ref,
                 self.train_indices_pos,
                 self.train_embeddings_pos,
             )

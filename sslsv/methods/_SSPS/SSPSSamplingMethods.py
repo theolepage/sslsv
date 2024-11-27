@@ -20,16 +20,24 @@ class _SSPS_BaseSampling:
 
         self.global_metrics = {}
 
-    def init(self, device, dataset_size):
+    def init(self, device, dataset_size, batch_size):
         pass
 
-    def prepare(self, train_indices, train_embeddings):
+    def prepare(self, train_indices_ref, train_embeddings_ref):
         pass
 
-    def sample(self, indices, embeddings):
+    def sample(
+        self,
+        indices,
+        embeddings,
+        train_indices_ref,
+        train_embeddings_ref,
+        train_indices_pos,
+        train_embeddings_pos,
+    ):
         raise NotImplementedError
 
-    def apply(self):
+    def apply(self, Z, train_embeddings_pos):
         raise NotImplementedError
 
     def _sample(self, array, fn, exp_lambda):
@@ -123,24 +131,33 @@ class SSPS_KNNSampling(_SSPS_BaseSampling):
 
         self.config = config
 
-    def sample(self, indices, embeddings, train_indices, train_embeddings):
+    def sample(
+        self,
+        indices,
+        embeddings,
+        train_indices_ref,
+        train_embeddings_ref,
+        train_indices_pos,
+        train_embeddings_pos,
+    ):
+        assert len(train_indices_ref) == len(train_indices_pos)
+
         self.ssps_indices = torch.full_like(indices, -1)
 
-        sim = embeddings @ train_embeddings.T
+        sim = embeddings @ train_embeddings_ref.T
 
         sampling_pool = 0
 
         for i in range(len(indices)):
             samples_sim = sim[i]
-
-            train_indices_ = torch.nonzero(train_indices != indices[i]).view(-1)
+            train_indices_ = torch.nonzero(train_indices_pos != indices[i]).view(-1)
 
             nearby_samples = torch.topk(
                 samples_sim[train_indices_],
                 self.config.intra_sampling_size,
             )[1]
 
-            nearby_samples = train_indices[train_indices_[nearby_samples]]
+            nearby_samples = train_indices_pos[train_indices_[nearby_samples]]
 
             sampling_pool += len(nearby_samples)
 
@@ -153,20 +170,20 @@ class SSPS_KNNSampling(_SSPS_BaseSampling):
         metrics = self._determine_metrics(
             indices,
             self.ssps_indices,
-            # {"ssps_sampling_pool": sampling_pool},
+            {"ssps_sampling_pool": sampling_pool},
             repr_sampling=True,
         )
 
         self.ssps_indices, coverage = self._find_train_indices_in_queue(
-            self.ssps_indices, train_indices
+            self.ssps_indices, train_indices_pos
         )
         metrics["ssps_coverage"] = metrics["ssps_coverage"] * coverage
 
         return metrics
 
-    def apply(self, Z, train_embeddings):
+    def apply(self, Z, train_embeddings_pos):
         ssps_mask = self.ssps_indices != -1
-        Z[ssps_mask] = train_embeddings[self.ssps_indices[ssps_mask]].clone()
+        Z[ssps_mask] = train_embeddings_pos[self.ssps_indices[ssps_mask]].clone()
         return Z
 
 
@@ -187,12 +204,9 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
         )
 
     def _run_kmeans(self, train_indices, train_embeddings):
-        local_train_indices = train_indices[get_rank() :: get_world_size()]
-        local_train_embeddings = train_embeddings[get_rank() :: get_world_size()]
-
         self.assignments, self.centroids, self.similarities = self.kmeans.run(
-            local_train_indices.contiguous(),
-            local_train_embeddings.contiguous(),
+            train_indices,
+            train_embeddings,
         )
 
         # torch.save(self.assignments, "assignments.pt")
@@ -242,11 +256,19 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
 
         # torch.save(self.cluster_to_nearby_clusters, "cluster_to_nearby_clusters.pt")
 
-    def prepare(self, train_indices, train_embeddings):
-        self._run_kmeans(train_indices, train_embeddings)
+    def prepare(self, train_indices_ref, train_embeddings_ref):
+        self._run_kmeans(train_indices_ref, train_embeddings_ref)
         self._create_cluster_to_nearby_clusters()
 
-    def sample(self, indices, embeddings, train_indices, train_embeddings):
+    def sample(
+        self,
+        indices,
+        embeddings,
+        train_indices_ref,
+        train_embeddings_ref,
+        train_indices_pos,
+        train_embeddings_pos,
+    ):
         self.ssps_indices = torch.full_like(indices, -1)
 
         inter_sampling_pool = 0
@@ -278,7 +300,7 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
 
         return metrics
 
-    def apply(self, Z, train_embeddings):
+    def apply(self, Z, train_embeddings_pos):
         ssps_mask = self.ssps_indices != -1
         Z[ssps_mask] = self.centroids[self.ssps_indices[ssps_mask]]
         return Z
@@ -314,12 +336,20 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
 
         # torch.save(self.cluster_to_nearby_samples, "cluster_to_nearby_samples.pt")
 
-    def prepare(self, train_indices, train_embeddings):
-        super().prepare(train_indices, train_embeddings)
+    def prepare(self, train_indices_ref, train_embeddings_ref):
+        super().prepare(train_indices_ref, train_embeddings_ref)
 
         # self._create_cluster_to_nearby_samples()
 
-    def sample(self, indices, embeddings, train_indices, train_embeddings):
+    def sample(
+        self,
+        indices,
+        embeddings,
+        train_indices_ref,
+        train_embeddings_ref,
+        train_indices_pos,
+        train_embeddings_pos,
+    ):
         self.ssps_indices = torch.full_like(indices, -1)
 
         inter_sampling_pool = 0
@@ -344,8 +374,8 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
 
             # Sample one sample from selected cluster
             # nearby_samples = self.cluster_to_nearby_samples[cluster_selected]
-            nearby_samples = train_indices[
-                self.assignments[train_indices] == cluster_selected
+            nearby_samples = train_indices_pos[
+                self.assignments[train_indices_pos] == cluster_selected
             ]
             if len(nearby_samples) == 0:
                 continue
@@ -370,13 +400,13 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
         )
 
         self.ssps_indices, coverage = self._find_train_indices_in_queue(
-            self.ssps_indices, train_indices
+            self.ssps_indices, train_indices_pos
         )
         metrics["ssps_coverage"] = metrics["ssps_coverage"] * coverage
 
         return metrics
 
-    def apply(self, Z, train_embeddings):
+    def apply(self, Z, train_embeddings_pos):
         ssps_mask = self.ssps_indices != -1
-        Z[ssps_mask] = train_embeddings[self.ssps_indices[ssps_mask]].clone()
+        Z[ssps_mask] = train_embeddings_pos[self.ssps_indices[ssps_mask]].clone()
         return Z

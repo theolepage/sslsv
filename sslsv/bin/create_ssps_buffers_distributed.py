@@ -67,6 +67,8 @@ class Trainer:
         self.model.module.trainer = self
 
         self.model.eval()
+        for p in self.model.parameters():
+            p.requires_grad = False
 
         self.model.module.on_train_start()
         self.model.module.ssps.enabled_next_epoch = True

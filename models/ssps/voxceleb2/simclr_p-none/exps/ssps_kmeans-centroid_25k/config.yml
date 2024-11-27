@@ -1,18 +1,18 @@
 encoder:
   type: 'resnet34'
 method:
-  type: 'vicreg'
-  projector_hidden_dim: 2048
-  projector_output_dim: 512
+  type: 'simclr'
+  enable_projector: false
+  temperature: 0.03
   ssps:
     start_epoch: 100
     verbose: true
-    sampling: 'kmeans-repr'
+    sampling: 'kmeans'
     kmeans_nb_prototypes: 25000
-    inter_sampling_size: 1
+    inter_sampling_size: 0
     pos_queue_size: 25000
 trainer:
-  last_checkpoint: 'models/ssps/voxceleb2/vicreg/_vicreg/checkpoints/model_latest_ssps-25k.pt'
+  last_checkpoint: 'models/ssps/voxceleb2/simclr_p-none/_simclr/checkpoints/model_latest_ssps-25k.pt'
   epochs: 110
 evaluation:
   validation:
