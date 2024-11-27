@@ -16,7 +16,7 @@ sbatch <<EOT
 
 module purge
 
-module load cpuarch/amd
+module load arch/a100
 module load pytorch-gpu/py3/1.12.1
 
 srun python -u sslsv/bin/create_ssps_buffers_distributed_jz.py $1/config.yml
