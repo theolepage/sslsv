@@ -84,6 +84,10 @@ class SSPS(nn.Module):
         self.sampling.init(device, dataset_size, batch_size)
 
         self.train_buffer_size_ref = dataset_size - (dataset_size % self.batch_size)
+        if self.config.sampling == SSPSSamplingMethodEnum.KNN:
+            self.train_buffer_size_ref = self.config.pos_queue_size - (
+                self.config.pos_queue_size % self.batch_size
+            )
         self.register_buffer(
             "train_indices_ref",
             -torch.ones(self.train_buffer_size_ref, dtype=torch.long, device=device),
@@ -137,7 +141,7 @@ class SSPS(nn.Module):
 
     def update_buffers(self, step_rel, indices, Z_ssps, embeddings):
         if self.enabled_next_epoch:
-            start_idx = step_rel * self.batch_size
+            start_idx = (step_rel * self.batch_size) % self.train_buffer_size_ref
             end_idx = start_idx + self.batch_size
             self.train_indices_ref[start_idx:end_idx] = gather(indices)
             self.train_embeddings_ref[start_idx:end_idx] = gather(Z_ssps)

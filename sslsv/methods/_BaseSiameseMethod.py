@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 
+import torch
 import torch.nn.functional as F
 from torch import nn
 from torch import Tensor as T
@@ -91,7 +92,10 @@ class BaseSiameseMethod(BaseMethod):
 
         Z_ssps = None
         if self.ssps:
-            Z_ssps = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
+            self.encoder.eval()
+            with torch.no_grad():
+                Z_ssps = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
+            self.encoder.train()
 
         return Z_1, Z_2, Z_ssps
 
@@ -137,7 +141,7 @@ class BaseSiameseMethod(BaseMethod):
             loss = self.loss_fn(
                 Z_1,
                 Z_2_pp,
-                ssps_assignments=self.ssps.sampling.assignments[indices],
+                # ssps_assignments=self.ssps.sampling.assignments[indices],
             )
         else:
             loss = self.loss_fn(Z_1, Z_2)
