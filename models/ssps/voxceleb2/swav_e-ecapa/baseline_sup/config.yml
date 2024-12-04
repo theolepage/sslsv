@@ -7,7 +7,7 @@ method:
   projector_output_dim: 512
 trainer:
   last_checkpoint: 'models/ssps/voxceleb2/swav_e-ecapa/_swav/checkpoints/model_latest.pt'
-  epochs: 110
+  epochs: 120
 evaluation:
   validation:
     - type: 'sv_cosine'

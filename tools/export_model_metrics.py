@@ -13,6 +13,13 @@ def export_model_metrics(args: argparse.Namespace):
     Returns:
         None
     """
+    def formatf2(value):
+        return f"{value:.2f}"
+
+
+    def formatf4(value):
+        return f"{value:.4f}"
+
     res = {}
 
     for config_path in args.configs:
@@ -32,30 +39,24 @@ def export_model_metrics(args: argparse.Namespace):
         # model_name = config_path.split("/")[-2]
         model_name = "/".join(config_path.split("/")[-3:-1])
 
-        eer = eval["test/sv_cosine/voxceleb1_test_O/eer"]
-        mindcf = eval["test/sv_cosine/voxceleb1_test_O/mindcf"]
-
         res[model_name] = {
-            "EER (%)": f"{eer:.2f}",
-            "minDCF": f"{mindcf:.4f}",
+            "VoxCeleb1-O___EER (%)": formatf2(eval["test/sv_cosine/voxceleb1_test_O/eer"]),
+            "VoxCeleb1-O___minDCF": formatf4(eval["test/sv_cosine/voxceleb1_test_O/mindcf"]),
+            "VoxCeleb1-E___EER (%)": formatf2(eval["test/sv_cosine/voxceleb1_test_E/eer"]),
+            "VoxCeleb1-E___minDCF": formatf4(eval["test/sv_cosine/voxceleb1_test_E/mindcf"]),
+            "VoxCeleb1-H___EER (%)": formatf2(eval["test/sv_cosine/voxceleb1_test_H/eer"]),
+            "VoxCeleb1-H___minDCF": formatf4(eval["test/sv_cosine/voxceleb1_test_H/mindcf"]),
         }
 
         last_epoch = list(train.keys())[-1]
 
         if "ssps_speaker_acc" in train[last_epoch]:
-            ssps_speaker_acc = train[last_epoch]["ssps_speaker_acc"]
-            ssps_video_acc = train[last_epoch]["ssps_video_acc"]
-            ssps_kmeans_nmi_speaker = train[last_epoch]["ssps_kmeans_nmi_speaker"]
-            ssps_kmeans_nmi_video = train[last_epoch]["ssps_kmeans_nmi_video"]
-
             res[model_name].update(
                 {
-                    "EER (%)": f"{eer:.2f}",
-                    "minDCF": f"{mindcf:.4f}",
-                    "Speaker Accuracy": f"{ssps_speaker_acc:.2f}",
-                    "Video Accuracy": f"{ssps_video_acc:.2f}",
-                    "NMI Speaker": f"{ssps_kmeans_nmi_speaker:.2f}",
-                    "NMI Video": f"{ssps_kmeans_nmi_video:.2f}",
+                    "Speaker Accuracy": formatf2(train[last_epoch]["ssps_speaker_acc"]),
+                    "Video Accuracy": formatf2(train[last_epoch]["ssps_video_acc"])",
+                    "NMI Speaker": formatf2(train[last_epoch]["ssps_kmeans_nmi_speaker"]),
+                    "NMI Video": formatf2(train[last_epoch]["ssps_kmeans_nmi_video"]),
                 }
             )
 

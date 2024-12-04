@@ -1,13 +1,9 @@
 encoder:
-  type: 'ecapatdnn'
-  channels: [1024, 1024, 1024, 1024, 3072]
+  type: 'resnet34'
 method:
-  type: 'swav'
+  type: 'byol'
   projector_hidden_dim: 2048
   projector_output_dim: 512
-trainer:
-  last_checkpoint: 'models/ssps/voxceleb2/swav_e-ecapa/_swav/checkpoints/model_latest.pt'
-  epochs: 120
 evaluation:
   validation:
     - type: 'sv_cosine'

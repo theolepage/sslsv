@@ -77,8 +77,17 @@ class DeepCluster(BaseMethod):
         """
         super().__init__(config, create_encoder_fn)
 
+        # self.projector = nn.Sequential(
+        #     nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+        #     nn.BatchNorm1d(config.projector_hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(config.projector_hidden_dim, config.projector_output_dim),
+        # )
         self.projector = nn.Sequential(
             nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
+            nn.BatchNorm1d(config.projector_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(config.projector_hidden_dim, config.projector_hidden_dim),
             nn.BatchNorm1d(config.projector_hidden_dim),
             nn.ReLU(),
             nn.Linear(config.projector_hidden_dim, config.projector_output_dim),

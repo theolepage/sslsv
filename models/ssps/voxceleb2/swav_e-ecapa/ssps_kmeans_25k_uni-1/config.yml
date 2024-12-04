@@ -14,7 +14,7 @@ method:
     pos_queue_size: 25000
 trainer:
   last_checkpoint: 'models/ssps/voxceleb2/swav_e-ecapa/_swav/checkpoints/model_latest_ssps-25k.pt'
-  epochs: 110
+  epochs: 120
 evaluation:
   validation:
     - type: 'sv_cosine'
