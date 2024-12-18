@@ -187,7 +187,7 @@ class SSLDataset(Dataset):
                 )
                 frames1 = sample_frames_dino(data1)
                 frames2 = sample_frames_dino(data2)
-                frames = [frames1[i] if i % 2 == 0 else frames2[i] for i in range(len(frames1))]
+                frames = [frames1[i] if i < 2 else frames2[i] for i in range(len(frames1))]
             else:
                 frame1 = load_audio(
                     self.config.base_path / self.files[i[0]],

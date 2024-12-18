@@ -6,9 +6,9 @@ encoder:
 method:
   type: 'dino'
   ssps:
-    start_epoch: 100
+    start_epoch: 80
 trainer:
-  epochs: 70
+  epochs: 100
   batch_size: 128
   optimizer: 'sgd'
   learning_rate: 0.2

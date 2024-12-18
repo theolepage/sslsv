@@ -383,6 +383,13 @@ def evaluate(
 
         metrics = {}
         for task in tasks:
+            if prefix == "test": # FIXME
+                task.trials = [
+                    "voxceleb1_test_O",
+                    "voxceleb1_test_H",
+                    "voxceleb1_test_E",
+                ]
+
             evaluation = REGISTERED_EVALUATIONS[task.__type__][0](
                 model,
                 config,

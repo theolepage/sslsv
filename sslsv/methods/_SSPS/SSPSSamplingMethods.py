@@ -302,7 +302,7 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
 
     def apply(self, Z, train_embeddings_pos):
         ssps_mask = self.ssps_indices != -1
-        Z[ssps_mask] = self.centroids[self.ssps_indices[ssps_mask]]
+        Z[ssps_mask] = self.centroids[self.ssps_indices[ssps_mask]].clone()
         return Z
 
 

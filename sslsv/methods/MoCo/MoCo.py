@@ -76,6 +76,8 @@ class MoCo(BaseMomentumMethod):
         loss_fn (MoCoLoss): Loss function.
     """
 
+    SSPS_NB_POS_EMBEDDINGS = 2
+
     def __init__(
         self,
         config: MoCoConfig,
@@ -95,10 +97,10 @@ class MoCo(BaseMomentumMethod):
 
         self.queue_size = config.queue_size
 
-        queue_dim = self.encoder.encoder_dim
+        self.embeddings_dim = self.encoder.encoder_dim
 
         if config.enable_projector:
-            queue_dim = config.projector_output_dim
+            self.embeddings_dim = config.projector_output_dim
 
             # self.projector = nn.Sequential(
             #     nn.Linear(self.encoder.encoder_dim, config.projector_hidden_dim),
@@ -131,7 +133,7 @@ class MoCo(BaseMomentumMethod):
             )
             initialize_momentum_params(self.projector, self.projector_momentum)
 
-        self.register_buffer("queue", torch.randn(2, queue_dim, self.queue_size))
+        self.register_buffer("queue", torch.randn(2, self.embeddings_dim, self.queue_size))
         self.queue = F.normalize(self.queue, dim=1)
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
@@ -216,18 +218,29 @@ class MoCo(BaseMomentumMethod):
         if not training:
             return self.encoder(X)
 
+        frame_length = self.trainer.config.dataset.frame_length
+
         # Queries
-        Q_1 = self._compute_embeddings(X[:, 0, :])
-        Q_2 = self._compute_embeddings(X[:, 1, :])
+        Q_1 = self._compute_embeddings(X[:, 0, :frame_length])
+        Q_2 = self._compute_embeddings(X[:, 1, :frame_length])
 
         # Keys
         X_s, idx_unshuffle = self._batch_shuffle_ddp(X)
-        K_1 = self._compute_embeddings(X_s[:, 0, :], momentum=True)
-        K_2 = self._compute_embeddings(X_s[:, 1, :], momentum=True)
+        K_1 = self._compute_embeddings(X_s[:, 0, :frame_length], momentum=True)
+        K_2 = self._compute_embeddings(X_s[:, 1, :frame_length], momentum=True)
         K_1 = self._batch_unshuffle_ddp(K_1, idx_unshuffle)
         K_2 = self._batch_unshuffle_ddp(K_2, idx_unshuffle)
 
-        return Q_1, K_2, Q_2, K_1
+        Z_ssps = None
+        if self.ssps:
+            encoder_training_mode = self.encoder.training
+            self.encoder.eval()
+            with torch.no_grad():
+                Z_ssps = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
+            if encoder_training_mode:
+                self.encoder.train()
+
+        return Q_1, K_2, Q_2, K_1, Z_ssps
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         """
@@ -320,7 +333,7 @@ class MoCo(BaseMomentumMethod):
         Returns:
             T: Loss tensor.
         """
-        Q_1, K_2, Q_2, K_1 = Z
+        Q_1, K_2, Q_2, K_1, Z_ssps = Z
 
         Q_1 = F.normalize(Q_1, p=2, dim=1)
         K_2 = F.normalize(K_2, p=2, dim=1)
@@ -335,11 +348,24 @@ class MoCo(BaseMomentumMethod):
             current_labels = labels
             queue_labels = self.queue_labels.clone().detach()
 
-        loss = self.loss_fn(Q_1, K_2, queue[1], current_labels, queue_labels)
-        loss += self.loss_fn(Q_2, K_1, queue[0], current_labels, queue_labels)
-        loss /= 2
+        if self.ssps:
+            self.ssps.sample(indices=indices, embeddings=Z_ssps)
+            K_1_pp = self.ssps.apply(0, K_1)
+            K_2_pp = self.ssps.apply(1, K_2)
+            self.ssps.update_buffers(step_rel, indices, Z_ssps, [K_1, K_2])
+            loss = (
+                self.loss_fn(Q_1, K_2_pp, queue[1], current_labels, queue_labels)
+                + self.loss_fn(Q_2, K_1_pp, queue[0], current_labels, queue_labels)
+            ) / 2
 
-        self._enqueue(torch.stack((gather(K_1), gather(K_2))))
+            self._enqueue(torch.stack((gather(K_1_pp), gather(K_2_pp))))
+        else:
+            loss = (
+                self.loss_fn(Q_1, K_2, queue[1], current_labels, queue_labels)
+                + self.loss_fn(Q_2, K_1, queue[0], current_labels, queue_labels)
+            ) / 2
+
+            self._enqueue(torch.stack((gather(K_1), gather(K_2))))
 
         if self.config.prevent_class_collisions:
             self._enqueue_labels(gather(labels))

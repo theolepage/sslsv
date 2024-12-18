@@ -1,0 +1,29 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+method:
+  type: 'simclr'
+  enable_projector: false
+  temperature: 0.03
+  ssps:
+    start_epoch: 100
+    verbose: true
+    sampling: 'kmeans-repr'
+    kmeans_nb_prototypes: 25000
+    inter_sampling_size: 1
+    pos_queue_size: 25000
+trainer:
+  last_checkpoint: 'models/ssps/voxceleb2/simclr_e-ecapa/_simclr/checkpoints/model_latest_ssps-25k.pt'
+  epochs: 120
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  ssps: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

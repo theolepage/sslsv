@@ -27,8 +27,11 @@ jobs = get_slurm_jobs()
 etas = []
 
 for slurm_id, slurm_name in jobs:
-    with open(f'{slurm_name}/slurm_{slurm_id}', 'r') as f:
-        slurm_file = f.readlines()
+    try:
+        with open(f'{slurm_name}/slurm_{slurm_id}', 'r') as f:
+            slurm_file = f.readlines()
+    except:
+        continue
 
     last_epoch = [
         int(line.strip().replace('Epoch ', ''))

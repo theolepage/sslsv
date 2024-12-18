@@ -6,7 +6,7 @@ encoder:
 method:
   type: 'dino'
   ssps:
-    start_epoch: 60
+    start_epoch: 80
     verbose: true
     sampling: 'kmeans-repr'
     kmeans_nb_prototypes: 6000
@@ -14,7 +14,7 @@ method:
     pos_queue_size: 6000
 trainer:
   last_checkpoint: 'models/ssps/voxceleb2/dino_e-ecapa/_dino/checkpoints/model_latest_ssps-6k.pt'
-  epochs: 70
+  epochs: 100
   batch_size: 128
   optimizer: 'sgd'
   learning_rate: 0.2

@@ -232,10 +232,12 @@ class DINO(BaseMomentumMethod):
 
         Z_ssps = None
         if self.ssps:
+            encoder_training_mode = self.encoder.training
             self.encoder.eval()
             with torch.no_grad():
-                Z_ssps = F.normalize(self.encoder(X[-1]).detach(), p=2, dim=-1)
-            self.encoder.train()
+                Z_ssps = F.normalize(self.encoder_momentum(X[-1]).detach(), p=2, dim=-1)
+            if encoder_training_mode:
+                self.encoder.train()
 
         return S, T, Z_ssps
 
