@@ -129,13 +129,17 @@ Our training framework is depicted by the figure below.
 
 - **Combiner** (`sslsv.methods.Combiner`)  
   Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning ([arXiv](https://arxiv.org/abs/2207.05506))  
-  *Théo Lepage, Réda Dehak*
+  *Théo Lepage, Réda Dehak*s
 
-- **SimCLR Margins** (`sslsv.methods.SimCLRMargins`)  
+<!-- - **SimCLR Margins** (`sslsv.methods.SimCLRMargins`)  
   Experimenting with Additive Margins for Contrastive Self-Supervised Speaker Verification ([arXiv](https://arxiv.org/abs/2306.03664))  
-  *Théo Lepage, Réda Dehak*
+  *Théo Lepage, Réda Dehak* -->
 
 - **SimCLR Margins** (`sslsv.methods.SimCLRMargins`)  
+  Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations ([arXiv](https://arxiv.org/abs/2404.14913))  
+  *Théo Lepage, Réda Dehak*
+
+- **MoCo Margins** (`sslsv.methods.MoCoMargins`)  
   Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations ([arXiv](https://arxiv.org/abs/2404.14913))  
   *Théo Lepage, Réda Dehak*
 
@@ -290,6 +294,14 @@ Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments 
 If you use *sslsv*, please consider starring this repository on GitHub and citing one the following papers.
 
 ```BibTeX
+@InProceedings{lepage2024AdditiveMarginSSLSV,
+  author    = {Lepage, Théo and Dehak, Réda},
+  booktitle = {The Speaker and Language Recognition Workshop (Odyssey)},
+  title     = {Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations},
+  year      = {2024},
+  url       = {https://www.isca-archive.org/odyssey_2024/lepage24_odyssey.html},
+}
+
 @InProceedings{lepage2023ExperimentingAdditiveMarginsSSLSV,
   author    = {Lepage, Théo and Dehak, Réda},
   booktitle = {INTERSPEECH},

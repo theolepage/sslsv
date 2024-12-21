@@ -49,6 +49,7 @@ from sslsv.methods.DeepCluster.DeepCluster import DeepCluster, DeepClusterConfig
 from sslsv.methods.SwAV.SwAV import SwAV, SwAVConfig
 from sslsv.methods.Combiner.Combiner import Combiner, CombinerConfig
 from sslsv.methods.SimCLRMargins.SimCLRMargins import SimCLRMargins, SimCLRMarginsConfig
+from sslsv.methods.MoCoMargins.MoCoMargins import MoCoMargins, MoCoMarginsConfig
 
 # Evaluations
 from sslsv.evaluations._BaseEvaluation import EvaluationTaskConfig
@@ -106,6 +107,7 @@ REGISTERED_METHODS = {
     "swav": (SwAV, SwAVConfig),
     "combiner": (Combiner, CombinerConfig),
     "simclr_margins": (SimCLRMargins, SimCLRMarginsConfig),
+    "moco_margins": (MoCoMargins, MoCoMarginsConfig),
 }
 
 
@@ -383,7 +385,7 @@ def evaluate(
 
         metrics = {}
         for task in tasks:
-            if prefix == "test": # FIXME
+            if prefix == "test":  # FIXME
                 task.trials = [
                     "voxceleb1_test_O",
                     "voxceleb1_test_H",
