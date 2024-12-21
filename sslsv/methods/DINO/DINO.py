@@ -198,7 +198,7 @@ class DINO(BaseMomentumMethod):
             teacher_temp_warmup_epochs=config.teacher_temperature_warmup_epochs,
         )
 
-    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T]]:
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T]]:
         """
         Forward pass.
 
@@ -207,8 +207,7 @@ class DINO(BaseMomentumMethod):
             training (bool): Whether the forward pass is for training. Defaults to False.
 
         Returns:
-            Union[T, Tuple[T, T, Optional[T], Optional[T]]]: Encoder output for inference or
-                embeddings for training.
+            Union[T, Tuple[T, T, T]]: Encoder output for inference or embeddings for training.
         """
         if not training:
             return self.encoder_momentum(X)
@@ -230,16 +229,16 @@ class DINO(BaseMomentumMethod):
             axis=0,
         )
 
-        Z_ssps = None
+        Y_ref = None
         if self.ssps:
             encoder_training_mode = self.encoder.training
             self.encoder.eval()
             with torch.no_grad():
-                Z_ssps = F.normalize(self.encoder_momentum(X[-1]).detach(), p=2, dim=-1)
+                Y_ref = F.normalize(self.encoder_momentum(X[-1]).detach(), p=2, dim=-1)
             if encoder_training_mode:
                 self.encoder.train()
 
-        return S, T, Z_ssps
+        return S, T, Y_ref
 
     def update_optim(
         self,
@@ -315,7 +314,7 @@ class DINO(BaseMomentumMethod):
 
     def train_step(
         self,
-        Z: Tuple[T, T],
+        Z: Tuple[T, T, T],
         step: int,
         step_rel: Optional[int] = None,
         indices: Optional[T] = None,
@@ -325,7 +324,7 @@ class DINO(BaseMomentumMethod):
         Perform a training step.
 
         Args:
-            Z (Tuple[T, T]): Embedding tensors.
+            Z (Tuple[T, T, T]): Embedding tensors.
             step (int): Current training step.
             step_rel (Optional[int]): Current training step (relative to the epoch).
             indices (Optional[T]): Training sample indices.
@@ -334,15 +333,15 @@ class DINO(BaseMomentumMethod):
         Returns:
             T: Loss tensor.
         """
-        S, T, Z_ssps = Z
+        S, T, Y_ref = Z
 
         if self.ssps:
-            self.ssps.sample(indices=indices, embeddings=Z_ssps)
+            self.ssps.sample(indices, Y_ref)
             T_1, T_2 = T.chunk(2)
             T_1_pp = self.ssps.apply(0, T_1)
             T_2_pp = self.ssps.apply(1, T_2)
             T = torch.cat((T_1_pp, T_2_pp))
-            self.ssps.update_buffers(step_rel, indices, Z_ssps, [T_1, T_2])
+            self.ssps.update_buffers(step_rel, indices, Y_ref, [T_1, T_2])
             loss = self.loss_fn(S, T)
         else:
             loss = self.loss_fn(S, T)

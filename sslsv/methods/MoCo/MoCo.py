@@ -1,11 +1,10 @@
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import Tensor as T
-
-from dataclasses import dataclass
 
 from sslsv.encoders._BaseEncoder import BaseEncoder
 from sslsv.methods._BaseMomentumMethod import (
@@ -133,7 +132,9 @@ class MoCo(BaseMomentumMethod):
             )
             initialize_momentum_params(self.projector, self.projector_momentum)
 
-        self.register_buffer("queue", torch.randn(2, self.embeddings_dim, self.queue_size))
+        self.register_buffer(
+            "queue", torch.randn(2, self.embeddings_dim, self.queue_size)
+        )
         self.queue = F.normalize(self.queue, dim=1)
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
@@ -204,7 +205,7 @@ class MoCo(BaseMomentumMethod):
                 return self.projector_momentum(self.encoder_momentum(X))
             return self.encoder_momentum(X)
 
-    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T, T]]:
         """
         Forward pass.
 
@@ -213,7 +214,7 @@ class MoCo(BaseMomentumMethod):
             training (bool): Whether the forward pass is for training. Defaults to False.
 
         Returns:
-            Union[T, Tuple[T, T, T, T]]: Encoder output for inference or embeddings for training.
+            Union[T, Tuple[T, T, T, T, T]]: Encoder output for inference or embeddings for training.
         """
         if not training:
             return self.encoder(X)
@@ -231,16 +232,16 @@ class MoCo(BaseMomentumMethod):
         K_1 = self._batch_unshuffle_ddp(K_1, idx_unshuffle)
         K_2 = self._batch_unshuffle_ddp(K_2, idx_unshuffle)
 
-        Z_ssps = None
+        Y_ref = None
         if self.ssps:
             encoder_training_mode = self.encoder.training
             self.encoder.eval()
             with torch.no_grad():
-                Z_ssps = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
+                Y_ref = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
             if encoder_training_mode:
                 self.encoder.train()
 
-        return Q_1, K_2, Q_2, K_1, Z_ssps
+        return Q_1, K_2, Q_2, K_1, Y_ref
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         """
@@ -314,7 +315,7 @@ class MoCo(BaseMomentumMethod):
 
     def train_step(
         self,
-        Z: Tuple[T, T, T, T],
+        Z: Tuple[T, T, T, T, T],
         step: int,
         step_rel: Optional[int] = None,
         indices: Optional[T] = None,
@@ -324,7 +325,7 @@ class MoCo(BaseMomentumMethod):
         Perform a training step.
 
         Args:
-            Z (Tuple[T, T, T, T]): Embedding tensors.
+            Z (Tuple[T, T, T, T, T]): Embedding tensors.
             step (int): Current training step.
             step_rel (Optional[int]): Current training step (relative to the epoch).
             indices (Optional[T]): Training sample indices.
@@ -333,7 +334,7 @@ class MoCo(BaseMomentumMethod):
         Returns:
             T: Loss tensor.
         """
-        Q_1, K_2, Q_2, K_1, Z_ssps = Z
+        Q_1, K_2, Q_2, K_1, Y_ref = Z
 
         Q_1 = F.normalize(Q_1, p=2, dim=1)
         K_2 = F.normalize(K_2, p=2, dim=1)
@@ -349,10 +350,10 @@ class MoCo(BaseMomentumMethod):
             queue_labels = self.queue_labels.clone().detach()
 
         if self.ssps:
-            self.ssps.sample(indices=indices, embeddings=Z_ssps)
+            self.ssps.sample(indices, Y_ref)
             K_1_pp = self.ssps.apply(0, K_1)
             K_2_pp = self.ssps.apply(1, K_2)
-            self.ssps.update_buffers(step_rel, indices, Z_ssps, [K_1, K_2])
+            self.ssps.update_buffers(step_rel, indices, Y_ref, [K_1, K_2])
             loss = (
                 self.loss_fn(Q_1, K_2_pp, queue[1], current_labels, queue_labels)
                 + self.loss_fn(Q_2, K_1_pp, queue[0], current_labels, queue_labels)

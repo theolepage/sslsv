@@ -1,17 +1,38 @@
+from typing import Dict, List, Tuple
 import torch
+from torch import Tensor as T
 
 import pandas as pd
 from tqdm import tqdm
-from sklearn.metrics import normalized_mutual_info_score, adjusted_rand_score
+from sklearn.metrics import normalized_mutual_info_score
 
 from sslsv.methods._SSPS.KMeans import KMeans
+from .SSPSConfig import SSPSConfig
 
-from sslsv.utils.distributed import is_main_process, get_rank, get_world_size
+from sslsv.utils.distributed import is_main_process, get_world_size
 
 
 class _SSPS_BaseSampling:
+    """
+    Base class for SSPS sampling methods.
 
-    def __init__(self, config):
+    Attributes:
+        config (SSPSConfig): SSPS configuration.
+        verbose (bool): Whether to log status messages and progress bars.
+        global_metrics (Dict[str, float]): SSPS global metrics (constant during epoch).
+        df_train (pandas.DataFrame): Train set dataframe to compute speaker and video accuracies.
+    """
+
+    def __init__(self, config: SSPSConfig):
+        """
+        Initialize a SSPS sampling method.
+
+        Args:
+            config (SSPSConfig): SSPS configuration.
+
+        Returns:
+            None
+        """
         self.config = config
         self.verbose = config.verbose
 
@@ -20,30 +41,86 @@ class _SSPS_BaseSampling:
 
         self.global_metrics = {}
 
-    def init(self, device, dataset_size, batch_size):
+    def init(self, device: torch.device, dataset_size: int, batch_size: int):
+        """
+        Initialize sampling.
+
+        Args:
+            device (torch.device): Device on which tensors will be allocated.
+            dataset_size (int): Number of samples in the train set.
+            batch_size (int): Batch size.
+
+        Returns:
+            None
+        """
         pass
 
-    def prepare(self, train_indices_ref, train_embeddings_ref):
+    def prepare(self, train_indices_ref: T, train_embeddings_ref: T):
+        """
+        Prepare sampling (e.g. perform clustering).
+
+        Args:
+            train_indices_ref (T): Memory queue of reference indices.
+            train_embeddings_ref (T): Memory queue of reference embeddings.
+
+        Returns:
+            None
+        """
         pass
 
     def sample(
         self,
-        indices,
-        embeddings,
-        train_indices_ref,
-        train_embeddings_ref,
-        train_indices_pos,
-        train_embeddings_pos,
-    ):
+        indices: T,
+        Y_ref: T,
+        train_indices_ref: T,
+        train_embeddings_ref: T,
+        train_indices_pos: T,
+        train_embeddings_pos: T,
+    ) -> Dict[str, float]:
+        """
+        Sample pseudo-positives indices.
+
+        Args:
+            indices (T): Indices of current batch.
+            Y_ref (T): Reference representations (Y_ref) of current batch.
+            train_indices_ref (T): Memory queue of reference indices.
+            train_embeddings_ref (T): Memory queue of reference embeddings.
+            train_indices_pos (T): Memory queue of positive indices.
+            train_embeddings_pos (T): Memory queue of positive embeddings.
+
+        Returns:
+            Dict[str, floast]: SSPS metrics.
+        """
         raise NotImplementedError
 
-    def apply(self, Z, train_embeddings_pos):
+    def apply(self, Z: T, train_embeddings_pos: T) -> T:
+        """
+        Extract and substitute pseudo-positives.
+
+        Args:
+            Z (T): Positives embeddings.
+            train_embeddings_pos (T): Memory queue of positive embeddings.
+
+        Returns:
+            T: Pseudo-positives embeddings.
+        """
         raise NotImplementedError
 
-    def _sample(self, array, fn, exp_lambda):
+    def _sample(self, array: List[int], fn: str, exp_lambda: float) -> int:
+        """
+        Sample an element from a list of indices.
+
+        Args:
+            array (List[int]): List of indices.
+            fn (str): Probability function used for sampling.
+            exp_lambda (float): Exponential lambda for sampling.
+
+        Returns:
+            int: Sampled index.
+        """
         N = len(array)
 
-        if fn == "exp_decay":
+        if fn == "exp":
             probabilities = exp_lambda * torch.exp(
                 -exp_lambda * torch.arange(N).float()
             )
@@ -56,7 +133,20 @@ class _SSPS_BaseSampling:
         return res
 
     @staticmethod
-    def _find_train_indices_in_queue(ssps_indices, train_indices):
+    def _find_train_indices_in_queue(
+        ssps_indices: T,
+        train_indices: T,
+    ) -> Tuple[T, float]:
+        """
+        Find train indices in queue.
+
+        Args:
+            ssps_indices (T): Pseudo-positives indices in train set.
+            train_indices (T): Train indices in queue.
+
+        Returns:
+            Tuple[T, float]: Pseudo-positives indices in queue and coverage.
+        """
         queue_indices = torch.full_like(ssps_indices, -1)
 
         coverage = 0
@@ -82,11 +172,23 @@ class _SSPS_BaseSampling:
 
     def _determine_metrics(
         self,
-        indices,
-        ssps_indices,
-        sampling_metrics={},
-        repr_sampling=False,
-    ):
+        indices: T,
+        ssps_indices: T,
+        sampling_metrics: Dict[str, float] = {},
+        repr_sampling: bool = False,
+    ) -> Dict[str, float]:
+        """
+        Determine SSPS metrics (speaker_acc, video_acc, coverage).
+
+        Args:
+            indices (T): Indices of current batch..
+            ssps_indices (T): Pseudo-positives indices in train set.
+            sampling_metrics (Dict[str, float]): Metrics related to sampling.
+            repr_sampling (bool): Whether to determine speaker and video accuracies.
+
+        Returns:
+            Dict[str, float]: SSPS metrics.
+        """
         repr_metrics = {}
 
         if repr_sampling:
@@ -125,26 +227,50 @@ class _SSPS_BaseSampling:
 
 
 class SSPS_KNNSampling(_SSPS_BaseSampling):
+    """
+    SSPS Nearest-Neighbors sampling.
+    """
 
-    def __init__(self, config):
+    def __init__(self, config: SSPSConfig):
+        """
+        Initialize a SSPS Nearest-Neighbors sampling.
+
+        Args:
+            config (SSPSConfig): SSPS configuration.
+
+        Returns:
+            None
+        """
         super().__init__(config)
-
-        self.config = config
 
     def sample(
         self,
-        indices,
-        embeddings,
-        train_indices_ref,
-        train_embeddings_ref,
-        train_indices_pos,
-        train_embeddings_pos,
-    ):
+        indices: T,
+        Y_ref: T,
+        train_indices_ref: T,
+        train_embeddings_ref: T,
+        train_indices_pos: T,
+        train_embeddings_pos: T,
+    ) -> Dict[str, float]:
+        """
+        Sample pseudo-positives indices.
+
+        Args:
+            indices (T): Indices of current batch.
+            Y_ref (T): Reference representations (Y_ref) of current batch.
+            train_indices_ref (T): Memory queue of reference indices.
+            train_embeddings_ref (T): Memory queue of reference embeddings.
+            train_indices_pos (T): Memory queue of positive indices.
+            train_embeddings_pos (T): Memory queue of positive embeddings.
+
+        Returns:
+            Dict[str, floast]: SSPS metrics.
+        """
         assert len(train_indices_ref) == len(train_indices_pos)
 
         self.ssps_indices = torch.full_like(indices, -1)
 
-        sim = embeddings @ train_embeddings_ref.T
+        sim = Y_ref @ train_embeddings_ref.T
 
         sampling_pool = 0
 
@@ -181,18 +307,51 @@ class SSPS_KNNSampling(_SSPS_BaseSampling):
 
         return metrics
 
-    def apply(self, Z, train_embeddings_pos):
+    def apply(self, Z: T, train_embeddings_pos: T) -> T:
+        """
+        Extract and substitute pseudo-positives.
+
+        Args:
+            Z (T): Positives embeddings.
+            train_embeddings_pos (T): Memory queue of positive embeddings.
+
+        Returns:
+            T: Pseudo-positives embeddings.
+        """
         ssps_mask = self.ssps_indices != -1
         Z[ssps_mask] = train_embeddings_pos[self.ssps_indices[ssps_mask]].clone()
         return Z
 
 
 class SSPS_KMeansSampling(_SSPS_BaseSampling):
+    """
+    SSPS K-Means Clustering (centroid) sampling.
+    """
 
-    def __init__(self, config):
+    def __init__(self, config: SSPSConfig):
+        """
+        Initialize a SSPS K-Means Clustering (centroid) sampling.
+
+        Args:
+            config (SSPSConfig): SSPS configuration.
+
+        Returns:
+            None
+        """
         super().__init__(config)
 
-    def init(self, device, dataset_size, batch_size):
+    def init(self, device: torch.device, dataset_size: int, batch_size: int):
+        """
+        Initialize sampling.
+
+        Args:
+            device (torch.device): Device on which tensors will be allocated.
+            dataset_size (int): Number of samples in the train set.
+            batch_size (int): Batch size.
+
+        Returns:
+            None
+        """
         self.device = device
 
         self.kmeans = KMeans(
@@ -203,7 +362,17 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
             batch_size=batch_size // get_world_size(),
         )
 
-    def _run_kmeans(self, train_indices, train_embeddings):
+    def _run_kmeans(self, train_indices: T, train_embeddings: T):
+        """
+        Perform K-Means clustering.
+
+        Args:
+            train_indices (T): Train indices.
+            train_embeddings (T): Train embeddings.
+
+        Returns:
+            None
+        """
         self.assignments, self.centroids, self.similarities = self.kmeans.run(
             train_indices,
             train_embeddings,
@@ -233,6 +402,12 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
         }
 
     def _create_cluster_to_nearby_clusters(self):
+        """
+        Create mapping of cluster to nearby clusters for inter-sampling.
+
+        Returns:
+            None
+        """
         # self.cluster_to_nearby_clusters = torch.load("cluster_to_nearby_clusters.pt")
         # return
 
@@ -256,19 +431,43 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
 
         # torch.save(self.cluster_to_nearby_clusters, "cluster_to_nearby_clusters.pt")
 
-    def prepare(self, train_indices_ref, train_embeddings_ref):
+    def prepare(self, train_indices_ref: T, train_embeddings_ref: T):
+        """
+        Prepare sampling (e.g. perform clustering).
+
+        Args:
+            train_indices_ref (T): Memory queue of reference indices.
+            train_embeddings_ref (T): Memory queue of reference embeddings.
+
+        Returns:
+            None
+        """
         self._run_kmeans(train_indices_ref, train_embeddings_ref)
         self._create_cluster_to_nearby_clusters()
 
     def sample(
         self,
-        indices,
-        embeddings,
-        train_indices_ref,
-        train_embeddings_ref,
-        train_indices_pos,
-        train_embeddings_pos,
-    ):
+        indices: T,
+        Y_ref: T,
+        train_indices_ref: T,
+        train_embeddings_ref: T,
+        train_indices_pos: T,
+        train_embeddings_pos: T,
+    ) -> Dict[str, float]:
+        """
+        Sample pseudo-positives indices.
+
+        Args:
+            indices (T): Indices of current batch.
+            Y_ref (T): Reference representations (Y_ref) of current batch.
+            train_indices_ref (T): Memory queue of reference indices.
+            train_embeddings_ref (T): Memory queue of reference embeddings.
+            train_indices_pos (T): Memory queue of positive indices.
+            train_embeddings_pos (T): Memory queue of positive embeddings.
+
+        Returns:
+            Dict[str, floast]: SSPS metrics.
+        """
         self.ssps_indices = torch.full_like(indices, -1)
 
         inter_sampling_pool = 0
@@ -300,18 +499,46 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
 
         return metrics
 
-    def apply(self, Z, train_embeddings_pos):
+    def apply(self, Z: T, train_embeddings_pos: T) -> T:
+        """
+        Extract and substitute pseudo-positives.
+
+        Args:
+            Z (T): Positives embeddings.
+            train_embeddings_pos (T): Memory queue of positive embeddings.
+
+        Returns:
+            T: Pseudo-positives embeddings.
+        """
         ssps_mask = self.ssps_indices != -1
         Z[ssps_mask] = self.centroids[self.ssps_indices[ssps_mask]].clone()
         return Z
 
 
 class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
+    """
+    SSPS K-Means Clustering (representation) sampling.
+    """
 
-    def __init__(self, config):
+    def __init__(self, config: SSPSConfig):
+        """
+        Initialize a SSPS K-Means Clustering (representation) sampling.
+
+        Args:
+            config (SSPSConfig): SSPS configuration.
+
+        Returns:
+            None
+        """
         super().__init__(config)
 
     def _create_cluster_to_nearby_samples(self):
+        """
+        Create mapping of cluster to nearby (assigned) samples for intra-sampling.
+
+        Returns:
+            None
+        """
         # self.cluster_to_nearby_samples = torch.load("cluster_to_nearby_samples.pt")
         # return
 
@@ -336,20 +563,44 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
 
         # torch.save(self.cluster_to_nearby_samples, "cluster_to_nearby_samples.pt")
 
-    def prepare(self, train_indices_ref, train_embeddings_ref):
+    def prepare(self, train_indices_ref: T, train_embeddings_ref: T):
+        """
+        Prepare sampling (e.g. perform clustering).
+
+        Args:
+            train_indices_ref (T): Memory queue of reference indices.
+            train_embeddings_ref (T): Memory queue of reference embeddings.
+
+        Returns:
+            None
+        """
         super().prepare(train_indices_ref, train_embeddings_ref)
 
         # self._create_cluster_to_nearby_samples()
 
     def sample(
         self,
-        indices,
-        embeddings,
-        train_indices_ref,
-        train_embeddings_ref,
-        train_indices_pos,
-        train_embeddings_pos,
-    ):
+        indices: T,
+        Y_ref: T,
+        train_indices_ref: T,
+        train_embeddings_ref: T,
+        train_indices_pos: T,
+        train_embeddings_pos: T,
+    ) -> Dict[str, float]:
+        """
+        Sample pseudo-positives indices.
+
+        Args:
+            indices (T): Indices of current batch.
+            Y_ref (T): Reference representations (Y_ref) of current batch.
+            train_indices_ref (T): Memory queue of reference indices.
+            train_embeddings_ref (T): Memory queue of reference embeddings.
+            train_indices_pos (T): Memory queue of positive indices.
+            train_embeddings_pos (T): Memory queue of positive embeddings.
+
+        Returns:
+            Dict[str, floast]: SSPS metrics.
+        """
         self.ssps_indices = torch.full_like(indices, -1)
 
         inter_sampling_pool = 0
@@ -406,7 +657,17 @@ class SSPS_KMeansReprSampling(SSPS_KMeansSampling):
 
         return metrics
 
-    def apply(self, Z, train_embeddings_pos):
+    def apply(self, Z: T, train_embeddings_pos: T) -> T:
+        """
+        Extract and substitute pseudo-positives.
+
+        Args:
+            Z (T): Positives embeddings.
+            train_embeddings_pos (T): Memory queue of positive embeddings.
+
+        Returns:
+            T: Pseudo-positives embeddings.
+        """
         ssps_mask = self.ssps_indices != -1
         Z[ssps_mask] = train_embeddings_pos[self.ssps_indices[ssps_mask]].clone()
         return Z

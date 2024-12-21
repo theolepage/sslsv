@@ -145,7 +145,7 @@ class SwAV(BaseMethod):
                 ),
             )
 
-    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T]]:
         """
         Forward pass.
 
@@ -154,7 +154,7 @@ class SwAV(BaseMethod):
             training (bool): Whether the forward pass is for training. Defaults to False.
 
         Returns:
-            Union[T, Tuple[T, T, T, T]]: Encoder output for inference or embeddings for training.
+            Union[T, Tuple[T, T, T]]: Encoder output for inference or embeddings for training.
         """
         if not training:
             return self.encoder(X)
@@ -173,16 +173,16 @@ class SwAV(BaseMethod):
             self.projector(Y_2) if self.config.enable_projector else Y_2, dim=-1
         )
 
-        Z_ssps = None
+        Y_ref = None
         if self.ssps:
             encoder_training_mode = self.encoder.training
             self.encoder.eval()
             with torch.no_grad():
-                Z_ssps = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
+                Y_ref = F.normalize(self.encoder(X[:, -1]).detach(), p=2, dim=-1)
             if encoder_training_mode:
                 self.encoder.train()
 
-        return Z_1, Z_2, Z_ssps
+        return Z_1, Z_2, Y_ref
 
     def get_learnable_params(self) -> Iterable[Dict[str, Any]]:
         """
@@ -262,7 +262,7 @@ class SwAV(BaseMethod):
 
     def train_step(
         self,
-        Z: Tuple[T, T, T, T],
+        Z: Tuple[T, T, T],
         step: int,
         step_rel: Optional[int] = None,
         indices: Optional[T] = None,
@@ -272,7 +272,7 @@ class SwAV(BaseMethod):
         Perform a training step.
 
         Args:
-            Z (Tuple[T, T, T, T]): Embedding tensors.
+            Z (Tuple[T, T, T]): Embedding tensors.
             step (int): Current training step.
             step_rel (Optional[int]): Current training step (relative to the epoch).
             indices (Optional[T]): Training sample indices.
@@ -281,12 +281,12 @@ class SwAV(BaseMethod):
         Returns:
             T: Loss tensor.
         """
-        Z_1, Z_2, Z_ssps = Z
+        Z_1, Z_2, Y_ref = Z
 
         if self.ssps:
-            self.ssps.sample(indices=indices, embeddings=Z_ssps)
+            self.ssps.sample(indices, Y_ref)
             Z_2_pp = self.ssps.apply(0, Z_2)
-            self.ssps.update_buffers(step_rel, indices, Z_ssps, [Z_2])
+            self.ssps.update_buffers(step_rel, indices, Y_ref, [Z_2])
             loss = self._compute_loss(Z_1, Z_2_pp)
         else:
             loss = self._compute_loss(Z_1, Z_2)
