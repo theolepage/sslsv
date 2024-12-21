@@ -2,11 +2,10 @@ encoder:
   type: 'resnet34'
 method:
   type: 'simclr_margins'
-  loss: 'nt-xent-adaface'
-  scale: 30
+  loss:
+    loss: 'nt-xent-adaface'
+    scale: 30
   enable_projector: false
-trainer:
-  batch_size: 200
 evaluation:
   validation:
     - type: 'sv_cosine'
