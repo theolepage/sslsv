@@ -143,6 +143,8 @@ Our training framework is depicted by the figure below.
   Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations ([arXiv](https://arxiv.org/abs/2404.14913))  
   *Théo Lepage, Réda Dehak*
 
+- **SimCLR MultiViews** (`sslsv.methods.SimCLRMultiViews`)  
+
 </details>
 
 

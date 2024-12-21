@@ -18,7 +18,7 @@ class SimCLRMarginsConfig(SimCLRConfig):
         loss (SimCLRMarginsLossConfig): Loss configuration.
     """
 
-    loss: SimCLRMarginsLossConfig = None
+    loss: SimCLRMarginsLossConfig = SimCLRMarginsLossConfig()
 
 
 class SimCLRMargins(SimCLR):
@@ -37,7 +37,6 @@ class SimCLRMargins(SimCLR):
     Attributes:
         epoch (int): Current epoch.
         max_epochs (int): Maximum number of epochs.
-        projector (nn.Sequential): Projector module.
         loss_fn (SimCLRMarginsLoss): Loss function.
     """
 

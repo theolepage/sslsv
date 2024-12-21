@@ -50,6 +50,10 @@ from sslsv.methods.SwAV.SwAV import SwAV, SwAVConfig
 from sslsv.methods.Combiner.Combiner import Combiner, CombinerConfig
 from sslsv.methods.SimCLRMargins.SimCLRMargins import SimCLRMargins, SimCLRMarginsConfig
 from sslsv.methods.MoCoMargins.MoCoMargins import MoCoMargins, MoCoMarginsConfig
+from sslsv.methods.SimCLRMultiViews.SimCLRMultiViews import (
+    SimCLRMultiViews,
+    SimCLRMultiViewsConfig,
+)
 
 # Evaluations
 from sslsv.evaluations._BaseEvaluation import EvaluationTaskConfig
@@ -108,6 +112,7 @@ REGISTERED_METHODS = {
     "combiner": (Combiner, CombinerConfig),
     "simclr_margins": (SimCLRMargins, SimCLRMarginsConfig),
     "moco_margins": (MoCoMargins, MoCoMarginsConfig),
+    "simclr_multiviews": (SimCLRMultiViews, SimCLRMultiViewsConfig),
 }
 
 
