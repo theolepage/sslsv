@@ -275,13 +275,17 @@ Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments 
 ### SOTA
 
 - **Train set**: VoxCeleb2
-- **Evaluation**: SV on VoxCeleb1-O (original) trials
-- **Encoder**: Fast ResNet-34
+- **Evaluation**: VoxCeleb1-O (Original)
+- **Encoder**: ECAPA-TDNN (C=1024)
 
-| Method      |              Model            | EER (%) | minDCF (p=0.01)  | Checkpoint    |
-|-------------|:-----------------------------:|:-------:|:----------------:|:-------------:|
-| **SimCLR**  | `ssl/voxceleb2/simclr/simclr` | -       | -                | [:link:](...) |
-| ...         |                               |         |                  |               |
+| Method         | Model                                              | EER (%) | minDCF (p=0.01)  | Checkpoint    |
+|----------------|----------------------------------------------------|:-------:|:----------------:|:-------------:|
+| **SimCLR**     | `ssl/voxceleb2/simclr/simclr_e-ecapa-1024`         | 6.41    | 0.5160           | [:link:](https://drive.google.com/drive/folders/1jQO5cYDUw5sEemkFPmrBXAaVIW943lE8?usp=sharing) |
+| **MoCo**       | `ssl/voxceleb2/moco/moco_e-ecapa-1024`             | 6.38    | 0.5384           | [:link:](https://drive.google.com/drive/folders/1du3e0DaavfuN16kSqCXFSj1EM74MoGWa?usp=sharing) |
+| **SwAV**       | `ssl/voxceleb2/swav/swav_e-ecapa-1024`             | 8.33    | 0.6120           | [:link:](https://drive.google.com/drive/folders/1ShF3qEzzw_eVJ9guP8isopl-cUwR-2Sn?usp=sharing) |
+| **VICReg**     | `ssl/voxceleb2/vicreg/vicreg_e-ecapa-1024`         | 7.85    | 0.6004           | [:link:](https://drive.google.com/drive/folders/1_SIlJrMXk7G0inims3efFKNOwUMCZOC6?usp=sharing) |
+| **DINO**       | `ssl/voxceleb2/dino/dino+_e-ecapa-1024`            | 2.92    | 0.3523           | [:link:](https://drive.google.com/drive/folders/1kQyJ_QdlneX_t9UgjZev6BpUO6zflcUR?usp=sharing) |
+| **Supervised** | `ssl/voxceleb2/supervised/supervised_e-ecapa-1024` | 1.34    | 0.1521           | [:link:](https://drive.google.com/drive/folders/1vKTEdHBnVl_22838n4OGH_h8Nx--yl_P?usp=sharing) |
 
 ---
 

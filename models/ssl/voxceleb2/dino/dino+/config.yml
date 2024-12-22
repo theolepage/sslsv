@@ -1,6 +1,5 @@
 encoder:
-  type: 'ecapatdnn'
-  channels: [1024, 1024, 1024, 1024, 3072]
+  type: 'resnet34'
   mel_n_mels: 80
   mel_win_fn: 'hann'
 method:
