@@ -1,0 +1,19 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'simclr_margins'
+  loss:
+    loss: 'nt-xent-cosface'
+    margin: 0.05
+  enable_projector: false
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

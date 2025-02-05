@@ -63,7 +63,7 @@ class SimCLRMarginsLossConfig:
 
     symmetric: bool = True
 
-    scale: float = 30
+    scale: float = 33.3333333333
 
     margin: float = 0.1
     margin_learnable: bool = False
@@ -544,6 +544,12 @@ class SimCLRNTXentMagFace(SimCLRNTXent):
         """
         super().__init__(config)
 
+        self.l_margin = config.magface_l_margin
+        self.u_margin = config.magface_u_margin
+        self.l_a = config.magface_l_a
+        self.u_a = config.magface_u_a
+        self.lambda_g = config.magface_lambda_g
+
     def _m(self, x_norm: T) -> T:
         """
         Compute margin values.
@@ -554,9 +560,9 @@ class SimCLRNTXentMagFace(SimCLRNTXent):
         Returns:
             T: Output tensor.
         """
-        return (self.config.u_margin - self.config.l_margin) / (
-            self.config.u_a - self.config.l_a
-        ) * (x_norm - self.config.l_a) + self.config.l_margin
+        return (self.u_margin - self.l_margin) / (
+            self.u_a - self.l_a
+        ) * (x_norm - self.l_a) + self.l_margin
 
     def _g(self, x_norm: T) -> T:
         """
@@ -568,7 +574,7 @@ class SimCLRNTXentMagFace(SimCLRNTXent):
         Returns:
             T: Output tensor.
         """
-        g = 1 / (self.config.u_a**2) * x_norm + 1 / x_norm
+        g = 1 / (self.u_a**2) * x_norm + 1 / x_norm
         return torch.mean(g)
 
     def _process_pos(self, pos: T, norms: T = None) -> T:
@@ -582,11 +588,11 @@ class SimCLRNTXentMagFace(SimCLRNTXent):
         Returns:
             T: Positives tensor.
         """
-        norms = torch.clip(norms, min=self.config.l_a, max=self.config.u_a)
+        norms = torch.clip(norms, min=self.l_a, max=self.u_a)
 
         ada_margins = self._m(norms)
 
-        self.additional_loss = self.config.lambda_g * self._g(norms)
+        self.additional_loss = self.lambda_g * self._g(norms)
 
         return SimCLRNTXentArcFace._add_aam(pos, ada_margins)
 
@@ -613,6 +619,8 @@ class SimCLRNTXentAdaFace(SimCLRNTXent):
             None
         """
         super().__init__(config)
+
+        self.h = config.adaface_h
 
         self.t_alpha = 0.01
         self.eps = 1e-3
