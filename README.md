@@ -87,6 +87,14 @@ Our training framework is depicted by the figure below.
   Improved Baselines with Momentum Contrastive Learning ([arXiv](https://arxiv.org/abs/2003.04297))  
   *Xinlei Chen, Haoqi Fan, Ross Girshick, Kaiming He*
 
+- **DeepCluster v2** (`sslsv.methods.DeepCluster`)  
+  Deep Clustering for Unsupervised Learning of Visual Features ([arXiv](https://arxiv.org/abs/1807.05520))  
+  *Mathilde Caron, Piotr Bojanowski, Armand Joulin, Matthijs Douze*
+
+- **SwAV** (`sslsv.methods.SwAV`)  
+  Unsupervised Learning of Visual Features by Contrasting Cluster Assignments ([arXiv](https://arxiv.org/abs/2006.09882))  
+  *Mathilde Caron, Ishan Misra, Julien Mairal, Priya Goyal, Piotr Bojanowski, Armand Joulin*
+
 - **W-MSE** (`sslsv.methods.WMSE`)  
   Whitening for Self-Supervised Representation Learning ([arXiv](https://arxiv.org/abs/2007.06346))  
   *Aleksandr Ermolov, Aliaksandr Siarohin, Enver Sangineto, Nicu Sebe*
@@ -114,14 +122,6 @@ Our training framework is depicted by the figure below.
 - **DINO** (`sslsv.methods.DINO`)  
   Emerging Properties in Self-Supervised Vision Transformers ([arXiv](https://arxiv.org/abs/2104.14294))  
   *Mathilde Caron, Hugo Touvron, Ishan Misra, Hervé Jégou, Julien Mairal, Piotr Bojanowski, Armand Joulin*
-
-- **DeepCluster v2** (`sslsv.methods.DeepCluster`)  
-  Deep Clustering for Unsupervised Learning of Visual Features ([arXiv](https://arxiv.org/abs/1807.05520))  
-  *Mathilde Caron, Piotr Bojanowski, Armand Joulin, Matthijs Douze*
-
-- **SwAV** (`sslsv.methods.SwAV`)  
-  Unsupervised Learning of Visual Features by Contrasting Cluster Assignments ([arXiv](https://arxiv.org/abs/2006.09882))  
-  *Mathilde Caron, Ishan Misra, Julien Mairal, Priya Goyal, Piotr Bojanowski, Armand Joulin*
 </details>
 
 <details open>
@@ -129,21 +129,20 @@ Our training framework is depicted by the figure below.
 
 - **Combiner** (`sslsv.methods.Combiner`)  
   Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning ([arXiv](https://arxiv.org/abs/2207.05506))  
-  *Théo Lepage, Réda Dehak*s
-
-<!-- - **SimCLR Margins** (`sslsv.methods.SimCLRMargins`)  
-  Experimenting with Additive Margins for Contrastive Self-Supervised Speaker Verification ([arXiv](https://arxiv.org/abs/2306.03664))  
-  *Théo Lepage, Réda Dehak* -->
+  *Theo Lepage, Reda Dehak*
 
 - **SimCLR Margins** (`sslsv.methods.SimCLRMargins`)  
   Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations ([arXiv](https://arxiv.org/abs/2404.14913))  
-  *Théo Lepage, Réda Dehak*
+  *Theo Lepage, Reda Dehak*
 
 - **MoCo Margins** (`sslsv.methods.MoCoMargins`)  
   Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations ([arXiv](https://arxiv.org/abs/2404.14913))  
-  *Théo Lepage, Réda Dehak*
+  *Theo Lepage, Reda Dehak*
 
-- **SimCLR MultiViews** (`sslsv.methods.SimCLRMultiViews`)  
+- **SSPS** (`sslsv.methods._SSPS`)  
+  Self-Supervised Frameworks for Speaker Verification via Bootstrapped Positive Sampling
+ ([arxiv](https://arxiv.org/abs/2501.17772))  
+ *Theo Lepage, Reda Dehak*
 
 </details>
 
@@ -300,27 +299,41 @@ Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments 
 If you use *sslsv*, please consider starring this repository on GitHub and citing one the following papers.
 
 ```BibTeX
+@Article{lepage2025SSLSVBootstrappedPositiveSampling,
+  title     = {Self-Supervised Frameworks for Speaker Verification via Bootstrapped Positive Sampling},
+  author    = {Lepage, Theo and Dehak, Reda},
+  year      = {2025},
+  journal   = {arXiv preprint library},
+  url       = {https://arxiv.org/abs/2501.17772},
+}
+
 @InProceedings{lepage2024AdditiveMarginSSLSV,
-  author    = {Lepage, Théo and Dehak, Réda},
-  booktitle = {The Speaker and Language Recognition Workshop (Odyssey)},
   title     = {Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations},
+  author    = {Lepage, Theo and Dehak, Reda},
   year      = {2024},
+  booktitle = {The Speaker and Language Recognition Workshop (Odyssey 2024)},
+  pages     = {38--42},
+  doi       = {10.21437/odyssey.2024-6},
   url       = {https://www.isca-archive.org/odyssey_2024/lepage24_odyssey.html},
 }
 
 @InProceedings{lepage2023ExperimentingAdditiveMarginsSSLSV,
-  author    = {Lepage, Théo and Dehak, Réda},
-  booktitle = {INTERSPEECH},
   title     = {Experimenting with Additive Margins for Contrastive Self-Supervised Speaker Verification},
+  author    = {Lepage, Theo and Dehak, Reda},
   year      = {2023},
+  booktitle = {Interspeech 2023},
+  pages     = {4708--4712},
+  doi       = {10.21437/Interspeech.2023-1479},
   url       = {https://www.isca-speech.org/archive/interspeech_2023/lepage23_interspeech.html},
 }
 
-@InProceedings{lepage2022LabelEfficientSelfSupervisedSV,
-  author    = {Lepage, Théo and Dehak, Réda},
-  booktitle = {INTERSPEECH},
+@InProceedings{lepage2022LabelEfficientSSLSV,
   title     = {Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning},
+  author    = {Lepage, Theo and Dehak, Reda},
   year      = {2022},
+  booktitle = {Interspeech 2022},
+  pages     = {4018--4022},
+  doi       = {10.21437/Interspeech.2022-802},
   url       = {https://www.isca-speech.org/archive/interspeech_2022/lepage22_interspeech.html},
 }
 ```
