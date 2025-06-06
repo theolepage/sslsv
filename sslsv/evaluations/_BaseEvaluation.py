@@ -36,12 +36,14 @@ class EvaluationTaskConfig:
 
     Attributes:
         __type__ (str): Type of evaluation task.
+        __subtype__ (str): Subtype of evaluation task.
         batch_size (int): Batch size for evaluation.
         num_frames (int): Number of frames to extract from each audio file.
         frame_length (Optional[int]): Length of the frames to extract from the audio files.
     """
 
     __type__: str = None
+    __subtype__: str = None
 
     batch_size: int = 64
     num_frames: int = 1

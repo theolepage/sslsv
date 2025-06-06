@@ -164,6 +164,7 @@ def actdcf(
         float: actDCF value.
     """
     beta = np.log((c_fa / c_miss) * (1 - p_target) / p_target)
+    beta = 0.5
     i = sorted_scores.searchsorted(beta).item()
 
     c_det = c_miss * fnrs[i] * p_target + c_fa * fprs[i] * (1 - p_target)
@@ -218,10 +219,11 @@ class SpeakerVerificationEvaluationTaskConfig(EvaluationTaskConfig):
     trials: List[str] = field(
         default_factory=lambda: [
             "voxceleb1_test_O",
-            # 'voxceleb1_test_H',
-            # 'voxceleb1_test_E',
-            # 'voxsrc2021_val',
-            # 'voices2019_dev'
+            # "voxceleb1_test_E",
+            # "voxceleb1_test_H",
+            # "voxsrc2021_val",
+            # "sitw_eval_core-core",
+            # "voices2019_dev",
         ]
     )
 
@@ -229,9 +231,9 @@ class SpeakerVerificationEvaluationTaskConfig(EvaluationTaskConfig):
         default_factory=lambda: [
             "eer",
             "mindcf",
-            # 'actdcf',
-            # 'cllr',
-            # 'avgrprec'
+            # "actdcf",
+            # "cllr",
+            # "avgrprec"
         ]
     )
 

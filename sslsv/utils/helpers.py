@@ -406,9 +406,12 @@ def evaluate(
                 validation,
             )
 
+            prefix = f"{prefix}/{task.__type__}{f'_{task.__subtype__}' if task.__subtype__ else ''}/"
+
             task_metrics = evaluation.evaluate()
             task_metrics = add_prefix_to_dict_keys(
-                task_metrics, prefix=f"{prefix}/{task.__type__}/"
+                task_metrics,
+                prefix=prefix,
             )
             metrics.update(task_metrics)
 

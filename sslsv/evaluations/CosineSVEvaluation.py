@@ -62,6 +62,8 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
         """
         super().__init__(*args, **kwargs)
 
+        self.task_config.__subtype__ = self.task_config.score_norm.value
+
     def _extract_train_embeddings(self):
         """
         Extract embeddings from training data for score normalization.
@@ -145,12 +147,12 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
         """
         cohort_size = self.task_config.score_norm_cohort_size
 
-        score_e_c = self._compute_score(self.train_embeddings, enrol)
+        score_e_c = (self.train_embeddings @ enrol.T).view(-1)
         score_e_c = torch.topk(score_e_c, k=cohort_size, dim=0)[0]
         self.mean_e_c = torch.mean(score_e_c)
         self.std_e_c = torch.std(score_e_c)
 
-        score_t_c = self._compute_score(self.train_embeddings, test)
+        score_t_c = (self.train_embeddings @ test.T).view(-1)
         score_t_c = torch.topk(score_t_c, k=cohort_size, dim=0)[0]
         self.mean_t_c = torch.mean(score_t_c)
         self.std_t_c = torch.std(score_t_c)
