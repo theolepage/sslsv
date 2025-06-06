@@ -55,8 +55,17 @@ def evaluate(args: argparse.Namespace):
         else:
             print_metrics(metrics)
 
-        with open(config.model_path / "evaluation.json", "w") as f:
-            json.dump(metrics, f, indent=4)
+        eval_path = config.model_path / "evaluation.json"
+        if eval_path.exists():
+            with open(eval_path, "r") as f:
+                eval_data = json.load(f)
+        else:
+            eval_data = {}
+
+        eval_data.update(metrics)
+
+        with open(eval_path, "w") as f:
+            json.dump(eval_data, f, indent=4)
 
     torch.distributed.destroy_process_group()
 

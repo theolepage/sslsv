@@ -14,7 +14,7 @@ from sslsv.utils.helpers import load_config, load_model, evaluate as evaluate_
 
 
 def metrics_to_nested_dict(
-    data: Dict[str, float]
+    data: Dict[str, float],
 ) -> Dict[str, Dict[str, Dict[str, float]]]:
     """
     Convert a flat dictionary of metrics data into a nested dictionary with
@@ -141,8 +141,17 @@ def evaluate(args: argparse.Namespace):
     else:
         print_metrics(metrics)
 
-    with open(config.model_path / "evaluation.json", "w") as f:
-        json.dump(metrics, f, indent=4)
+    eval_path = config.model_path / "evaluation.json"
+    if eval_path.exists():
+        with open(eval_path, "r") as f:
+            eval_data = json.load(f)
+    else:
+        eval_data = {}
+
+    eval_data.update(metrics)
+
+    with open(eval_path, "w") as f:
+        json.dump(eval_data, f, indent=4)
 
 
 if __name__ == "__main__":
