@@ -36,6 +36,7 @@ class DataAugmentationConfig:
 
     Attributes:
         enable (bool): Whether data-augmentation is enabled.
+        aug_prob (float): Probability of applying augmentations
         strategy (DataAugmentationStrategyEnum): Data-augmentation techniques to apply.
         musan_noise_snr (Tuple[int, int]): Signal-to-noise ratio (SNR) range for MUSAN noise.
         musan_speech_snr (Tuple[int, int]): Signal-to-noise ratio (SNR) range for MUSAN speech.
@@ -46,6 +47,8 @@ class DataAugmentationConfig:
     """
 
     enable: bool = True
+
+    aug_prob: float = 1.0
 
     strategy: DataAugmentationStrategyEnum = DataAugmentationStrategyEnum.BOTH
 
@@ -188,6 +191,9 @@ class DataAugmentation:
         Returns:
             np.ndarray: Output audio.
         """
+        if random.random() >= self.config.aug_prob:
+            return audio
+
         if self.config.strategy == DataAugmentationStrategyEnum.REVERB:
             audio = self.reverberate(audio)
         elif self.config.strategy == DataAugmentationStrategyEnum.NOISE:
