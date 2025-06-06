@@ -248,5 +248,6 @@ class BaseEvaluation:
 
         if is_dist_initialized():
             embeddings = self._ddp_sync_embeddings(embeddings)
+            embeddings = {file: embeddings[file] for file in files}
 
         return embeddings

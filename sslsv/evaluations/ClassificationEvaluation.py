@@ -77,12 +77,13 @@ class ClassificationEvaluation(BaseEvaluation):
 
         df = pd.read_csv(self.config.dataset.base_path / file)
         df["Label"] = pd.factorize(df[self.task_config.key])[0]
-        df = df[df["Set"] == subset]
+        if "Set" in df.columns:
+            df = df[df["Set"] == subset]
 
         X = self._extract_embeddings(
-            df["File"].tolist(), numpy=True, desc=f"Extracting {subset} embeddings"
+            df["File"].tolist(), desc=f"Extracting {subset} embeddings"
         )
-        X = np.array(list(X.values())).squeeze()
+        X = torch.stack(list(X.values())).numpy().squeeze()
 
         y = np.array(df["Label"])
 
@@ -108,7 +109,7 @@ class ClassificationEvaluation(BaseEvaluation):
         prefix = file[:-4]
 
         accuracy = accuracy_score(y_test, y_test_pred)
-        f1score = f1_score(y_test, y_test_pred, average="macro")
+        f1score = f1_score(y_test, y_test_pred, average="weighted")
 
         metrics = {
             f"{prefix}/accuracy": accuracy,
