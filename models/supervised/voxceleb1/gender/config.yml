@@ -5,7 +5,7 @@ encoder:
 method:
   type: 'supervised'
   nb_classes: 2
-  speaker_classification: false
+  classifier: 'linear'
 trainer:
   epochs: 200
   tracked_metric: 'val/classification/voxceleb1_train_gender/accuracy'

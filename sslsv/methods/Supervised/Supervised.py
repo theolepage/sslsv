@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional
 
 import torch
@@ -12,6 +13,19 @@ from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
 from .AAMSoftmaxLoss import AAMSoftmaxLoss
 
 
+class ClassifierEnum(Enum):
+    """
+    Enumeration for classifiers.
+
+    Attributes:
+        SPEAKER (str): Speaker classifier.
+        LINEAR (str): Linear classifier.
+    """
+
+    SPEAKER = "speaker"
+    LINEAR = "linear"
+
+
 @dataclass
 class SupervisedConfig(BaseMethodConfig):
     """
@@ -19,16 +33,18 @@ class SupervisedConfig(BaseMethodConfig):
 
     Attributes:
         nb_classes (int): Number of classes.
-        speaker_classification (bool): Whether to use a speaker classifier.
+        classifier (ClassifierEnum): Classifier.
+        freeze_encoder (bool): Whether to freeze the encoder.
     """
 
-    nb_classes: int = 1211
-    speaker_classification: bool = True
+    nb_classes: int = 5994
+    classifier: ClassifierEnum = ClassifierEnum.SPEAKER
+    freeze_encoder: bool = False
 
 
-class Classifier(nn.Module):
+class LinearClassifier(nn.Module):
     """
-    Classifier for supervised method.
+    Linear Classifier for supervised method.
 
     Attributes:
         classifier (nn.Linear): Classifier module.
@@ -39,7 +55,7 @@ class Classifier(nn.Module):
         Initialize a Classifier module.
 
         Args:
-            input_dim (int): Dimension of the input.
+            input_dim (int): Input dimension.
             nb_classes (int): Number of classes.
 
         Returns:
@@ -75,7 +91,7 @@ class SpeakerClassifier(nn.Module):
         Initialize a Speaker Classifier module.
 
         Args:
-            input_dim (int): Dimension of the input.
+            input_dim (int): Input dimension.
             nb_classes (int): Number of classes.
 
         Returns:
@@ -103,7 +119,7 @@ class Supervised(BaseMethod):
     """
     Supervised method.
 
-    * Classification (Softmax)
+    * Linear classification (Softmax)
     * Speaker classification (AAM-Softmax)
 
     Attributes:
@@ -128,13 +144,24 @@ class Supervised(BaseMethod):
         """
         super().__init__(config, create_encoder_fn)
 
-        classifier_cls = (
-            SpeakerClassifier if config.speaker_classification else Classifier
+        if config.freeze_encoder:
+            for p in self.encoder.parameters():
+                p.requires_grad = False
+
+        _CLASSIFIERS_CLASSES = {
+            ClassifierEnum.SPEAKER: SpeakerClassifier,
+            ClassifierEnum.LINEAR: LinearClassifier,
+        }
+
+        self.classifier = _CLASSIFIERS_CLASSES[config.classifier](
+            self.encoder.encoder_dim,
+            config.nb_classes,
         )
-        self.classifier = classifier_cls(self.encoder.encoder_dim, config.nb_classes)
 
         loss_cls = (
-            AAMSoftmaxLoss if config.speaker_classification else nn.CrossEntropyLoss
+            AAMSoftmaxLoss
+            if config.classifier == ClassifierEnum.SPEAKER
+            else nn.CrossEntropyLoss
         )
         self.loss_fn = loss_cls()
 
@@ -162,6 +189,8 @@ class Supervised(BaseMethod):
             Iterable[Dict[str, Any]]: Collection of parameters.
         """
         extra_learnable_params = [{"params": self.classifier.parameters()}]
+        if self.config.freeze_encoder:
+            return extra_learnable_params
         return super().get_learnable_params() + extra_learnable_params
 
     def train_step(
@@ -187,7 +216,7 @@ class Supervised(BaseMethod):
         """
         loss = self.loss_fn(Z, labels)
 
-        if self.config.speaker_classification:
+        if self.config.classifier == ClassifierEnum.SPEAKER:
             loss, accuracy = loss
         else:
             accuracy = torch.sum(torch.argmax(Z, dim=-1) == labels) / Z.size(0)

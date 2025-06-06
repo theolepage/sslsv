@@ -3,7 +3,7 @@ encoder:
 method:
   type: 'supervised'
   nb_classes: 5
-  speaker_classification: false
+  classifier: 'linear'
 trainer:
   init_weights: 'models/supervised/voxceleb2/sv/checkpoints/model_latest.pt'
   epochs: 100
