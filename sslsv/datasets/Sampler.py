@@ -14,6 +14,7 @@ class SamplerConfig:
 
     Attributes:
         enable (bool): Whether the sampler is enabled.
+        nb_utterances (Optional[int]): Number of utterances.
         nb_speakers (Optional[int]): Number of speakers.
         nb_samples_per_spk (Optional[int]): Number of samples per speaker.
         create_contrastive_pairs (bool): Whether to create contrastive pairs.
@@ -22,6 +23,7 @@ class SamplerConfig:
     """
 
     enable: bool = True
+    nb_utterances: Optional[int] = None
     nb_speakers: Optional[int] = None
     nb_samples_per_spk: Optional[int] = None
     create_contrastive_pairs: bool = False
@@ -98,7 +100,13 @@ class Sampler(TorchSampler):
             self.seed = self.seed + self.epoch
         rng = np.random.default_rng(seed=self.seed)
 
-        indices = rng.permutation(len(self.labels))
+        total_nb_samples = len(self.labels)
+        
+        nb_samples = total_nb_samples
+        if self.config.nb_utterances:
+            nb_samples = min(self.config.nb_utterances, total_nb_samples)
+
+        indices = rng.choice(total_nb_samples, size=nb_samples, replace=False)
 
         # Create list of utterances for each speaker
         spk_to_utterances = defaultdict(list)
