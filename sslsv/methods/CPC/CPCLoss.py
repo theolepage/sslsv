@@ -41,8 +41,8 @@ class CPCLoss(nn.Module):
         loss = 0
         for t in range(nb_t_to_predict):
             loss += self.infonce(
-                Y_future[:, :, t].contiguous(),
                 Y_future_preds[:, :, t].contiguous(),
+                Y_future[:, :, t].contiguous(),
             )
 
         loss /= nb_t_to_predict
