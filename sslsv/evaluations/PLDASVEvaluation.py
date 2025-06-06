@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from pathlib import Path
+import torch
 import numpy as np
 import pickle
 import pandas as pd
@@ -35,12 +36,14 @@ def create_stat_object(
     Returns:
         StatObject_SB: StatObject_SB object.
     """
+    s = np.array([None] * embeddings.shape[0])
+    b = np.array([[1.0]] * embeddings.shape[0])
     return StatObject_SB(
         modelset=modelset,
         segset=segset,
-        start=None,
-        stop=None,
-        stat0=None,
+        start=s,
+        stop=s,
+        stat0=b,
         stat1=embeddings,
     )
 
@@ -107,12 +110,12 @@ class PLDASVEvaluation(SpeakerVerificationEvaluation):
             labels = None
 
         embeddings = self._extract_embeddings(
-            files, labels, desc=f"Extracting {key} embeddings", numpy=True
+            files, labels, desc=f"Extracting {key} embeddings"
         )
 
         # Convert embeddings from dict to numpy arrays
         embeddings_keys = np.array(list(embeddings.keys()))
-        embeddings_values = np.array(list(embeddings.values())).squeeze(axis=1)
+        embeddings_values = torch.cat(list(embeddings.values())).numpy()
 
         assert self.task_config.num_frames == 1
 

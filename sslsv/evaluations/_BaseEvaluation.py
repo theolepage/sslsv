@@ -173,7 +173,6 @@ class BaseEvaluation:
         files: List[str],
         labels: Optional[List[int]] = None,
         desc: Optional[str] = None,
-        numpy: bool = False,
     ) -> Dict[str, Union[torch.Tensor, np.ndarray]]:
         """
         Extract embeddings for evaluation.
@@ -182,7 +181,6 @@ class BaseEvaluation:
             files (List[str]): List of file paths.
             labels (Optional[List[int]]): List of labels. Defaults to None.
             desc (Optional[str]): Description for the progress bar during extraction. Defaults to None.
-            numpy (bool): Whether to return embeddings as numpy arrays. Defaults to False.
 
         Returns:
             Dict[str, Union[torch.Tensor, np.ndarray]]: Dictionary mapping file paths to embeddings.
@@ -239,12 +237,7 @@ class BaseEvaluation:
 
             Y = self._extract_embeddings_post(Y)
 
-            embeddings.update(
-                {
-                    info["files"][i]: (Y[i].cpu().numpy() if numpy else Y[i].cpu())
-                    for i in range(B)
-                }
-            )
+            embeddings.update({info["files"][i]: Y[i].cpu() for i in range(B)})
 
         if is_dist_initialized():
             embeddings = self._ddp_sync_embeddings(embeddings)
