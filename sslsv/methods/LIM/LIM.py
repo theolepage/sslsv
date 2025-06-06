@@ -6,14 +6,14 @@ import torch.nn.functional as F
 from torch import Tensor as T
 
 from sslsv.encoders._BaseEncoder import BaseEncoder
-from sslsv.methods._BaseMethod import BaseMethod, BaseMethodConfig
+from sslsv.methods._BaseSiameseMethod import BaseSiameseMethod, BaseSiameseMethodConfig
 from sslsv.utils.distributed import gather
 
 from .LIMLoss import LIMLoss, LIMLossEnum
 
 
 @dataclass
-class LIMConfig(BaseMethodConfig):
+class LIMConfig(BaseSiameseMethodConfig):
     """
     LIM method configuration.
 
@@ -24,7 +24,7 @@ class LIMConfig(BaseMethodConfig):
     loss: LIMLossEnum = LIMLossEnum.BCE
 
 
-class LIM(BaseMethod):
+class LIM(BaseSiameseMethod):
     """
     LIM (Local Info Max) method.
 
@@ -57,28 +57,6 @@ class LIM(BaseMethod):
 
         self.loss_fn = LIMLoss(config.loss)
 
-    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T]]:
-        """
-        Forward pass.
-
-        Args:
-            X (T): Input tensor.
-            training (bool): Whether the forward pass is for training. Defaults to False.
-
-        Returns:
-            Union[T, Tuple[T, T]]: Encoder output for inference or embeddings for training.
-        """
-        if not training:
-            return self.encoder(X)
-
-        X_1 = X[:, 0, :]
-        X_2 = X[:, 1, :]
-
-        Y_1 = self.encoder(X_1)
-        Y_2 = self.encoder(X_2)
-
-        return Y_1, Y_2
-
     def train_step(
         self,
         Z: Tuple[T, T],
@@ -91,7 +69,7 @@ class LIM(BaseMethod):
         Perform a training step.
 
         Args:
-            Z (Tuple[T, T]): Embedding tensors.
+            Z (Tuple[T, T, T]): Embedding tensors.
             step (int): Current training step.
             step_rel (Optional[int]): Current training step (relative to the epoch).
             indices (Optional[T]): Training sample indices.
@@ -100,17 +78,17 @@ class LIM(BaseMethod):
         Returns:
             T: Loss tensor.
         """
-        Y_1, Y_2 = Z
+        Z_1, Z_2, _ = Z
 
-        N, _ = Y_1.size()
+        N, _ = Z_1.size()
 
         # Determine negatives
-        Y_2_all = gather(Y_2)
-        neg_idx = torch.randint(0, Y_2_all.size(0), size=(N,))
-        Y_R = Y_2_all[neg_idx]
+        Z_2_all = gather(Z_2)
+        neg_idx = torch.randint(0, Z_2_all.size(0), size=(N,))
+        Z_R = Z_2_all[neg_idx]
 
-        pos = F.cosine_similarity(Y_1, Y_2, dim=-1)
-        neg = F.cosine_similarity(Y_1, Y_R, dim=-1)
+        pos = F.cosine_similarity(Z_1, Z_2, dim=-1)
+        neg = F.cosine_similarity(Z_1, Z_R, dim=-1)
 
         loss = self.loss_fn(pos, neg)
 
