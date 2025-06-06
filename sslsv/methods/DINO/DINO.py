@@ -29,6 +29,7 @@ class DINOHead(nn.Module):
 
     def __init__(
         self,
+        enable_projector: bool,
         input_dim: int,
         hidden_dim: int,
         bottleneck_dim: int,
@@ -38,6 +39,7 @@ class DINOHead(nn.Module):
         Initialize a DINO head module.
 
         Args:
+            enable_projector (bool): Whether to enable the projector.
             input_dim (int): Dimension of the input.
             hidden_dim (int): Dimension of the hidden layers.
             bottleneck_dim (int): Dimension of the bottleneck layer.
@@ -48,17 +50,21 @@ class DINOHead(nn.Module):
         """
         super().__init__()
 
-        self.mlp = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.GELU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.GELU(),
-            nn.Linear(hidden_dim, bottleneck_dim),
-        )
+        self.enable_projector = enable_projector
 
-        self.apply(self._init_weights)
+        if self.enable_projector:
+            self.mlp = nn.Sequential(
+                nn.Linear(input_dim, hidden_dim),
+                nn.BatchNorm1d(hidden_dim),
+                nn.GELU(),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.BatchNorm1d(hidden_dim),
+                nn.GELU(),
+                nn.Linear(hidden_dim, bottleneck_dim),
+            )
+            self.apply(self._init_weights)
+        else:
+            bottleneck_dim = input_dim
 
         self.last_layer = nn.utils.weight_norm(
             nn.Linear(bottleneck_dim, output_dim, bias=False)
@@ -91,7 +97,8 @@ class DINOHead(nn.Module):
         Returns:
             T: Output tensor.
         """
-        x = self.mlp(x)
+        if self.enable_projector:
+            x = self.mlp(x)
         x = F.normalize(x, p=2, dim=-1)
         x = self.last_layer(x)
         return x
@@ -103,7 +110,10 @@ class DINOConfig(BaseMomentumMethodConfig):
     DINO method configuration.
 
     Attributes:
+        global_count (int): Number of global (large) views.
+        local_count (int): Number of local (small) views.
         start_tau (float): Initial value for tau (momentum parameters update).
+        enable_projector (bool): Whether to enable the projector.
         head_hidden_dim (int): Head hidden dimension.
         head_bottleneck_dim (int): Head bottleneck dimension.
         head_output_dim (int): Head output dimension.
@@ -115,8 +125,12 @@ class DINOConfig(BaseMomentumMethodConfig):
         teacher_temperature_warmup_epochs (int): Number of epochs for the teacher temperature warmup.
     """
 
+    global_count: int = 2
+    local_count: int = 4
+
     start_tau: float = 0.996
 
+    enable_projector: bool = True
     head_hidden_dim: int = 2048
     head_bottleneck_dim: int = 256
     head_output_dim: int = 65536
@@ -176,6 +190,7 @@ class DINO(BaseMomentumMethod):
         self.embeddings_dim = config.head_output_dim
 
         self.head = DINOHead(
+            enable_projector=config.enable_projector,
             input_dim=self.encoder.encoder_dim,
             hidden_dim=config.head_hidden_dim,
             bottleneck_dim=config.head_bottleneck_dim,
@@ -183,6 +198,7 @@ class DINO(BaseMomentumMethod):
         )
 
         self.head_momentum = DINOHead(
+            enable_projector=config.enable_projector,
             input_dim=self.encoder.encoder_dim,
             hidden_dim=config.head_hidden_dim,
             bottleneck_dim=config.head_bottleneck_dim,
@@ -191,6 +207,8 @@ class DINO(BaseMomentumMethod):
         initialize_momentum_params(self.head, self.head_momentum)
 
         self.loss_fn = DINOLoss(
+            global_count=config.global_count,
+            local_count=config.local_count,
             nb_prototypes=config.head_output_dim,
             student_temp=config.student_temperature,
             teacher_temp=config.teacher_temperature,
@@ -216,8 +234,8 @@ class DINO(BaseMomentumMethod):
 
         X = X.transpose(0, 1)
 
-        global_frames = X[0:2, :, :].reshape(-1, L)
-        local_frames = X[2:6, :, : L // 2].reshape(-1, L // 2)
+        global_frames = X[:self.config.global_count, :, :].reshape(-1, L)
+        local_frames = X[self.config.global_count:, :, : L // 2].reshape(-1, L // 2)
 
         T = self.head_momentum(self.encoder_momentum(global_frames))
 
@@ -270,6 +288,8 @@ class DINO(BaseMomentumMethod):
         )
         lr_schedule = np.concatenate((warmup_lr_schedule, lr_schedule))
         lr = lr_schedule[step]
+
+        # lr = init_lr * (0.95 ** ((step // nb_steps_per_epoch) // 5))
 
         for i, param_group in enumerate(optimizer.param_groups):
             param_group["lr"] = lr
@@ -342,14 +362,15 @@ class DINO(BaseMomentumMethod):
             T_2_pp = self.ssps.apply(1, T_2)
             T = torch.cat((T_1_pp, T_2_pp))
             self.ssps.update_buffers(step_rel, indices, Y_ref, [T_1, T_2])
-            loss = self.loss_fn(S, T)
+            loss, loss_metrics = self.loss_fn(S, T)
         else:
-            loss = self.loss_fn(S, T)
+            loss, loss_metrics = self.loss_fn(S, T)
 
         self.log_step_metrics(
             {
                 "train/loss": loss,
                 "train/tau": self.momentum_updater.tau,
+                **loss_metrics
             },
         )
 

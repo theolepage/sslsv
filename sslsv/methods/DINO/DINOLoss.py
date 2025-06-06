@@ -22,6 +22,8 @@ class DINOLoss(nn.Module):
 
     def __init__(
         self,
+        global_count: int,
+        local_count: int,
         nb_prototypes: int,
         student_temp: float,
         teacher_temp: float,
@@ -33,6 +35,8 @@ class DINOLoss(nn.Module):
         Initialize a DINO loss.
 
         Args:
+            global_count (int): Number of global views.
+            local_count (int): Number of local views.
             nb_prototypes (int): Head output dimension.
             student_temp (float): Temperature value for the student.
             teacher_temp (float): Temperature value for the teacher.
@@ -46,6 +50,9 @@ class DINOLoss(nn.Module):
         super().__init__()
 
         self.epoch = 0
+
+        self.global_count = global_count
+        self.local_count = local_count
 
         self.student_temp = student_temp
         self.teacher_temp_warmup = torch.linspace(
@@ -80,29 +87,49 @@ class DINOLoss(nn.Module):
         Returns:
             T: Loss tensor.
         """
-        student = student / self.student_temp
-        student = student.chunk(2 + 4)
+        student = F.log_softmax(
+            student / self.student_temp,
+            dim=-1
+        ).chunk(self.global_count + self.local_count)
 
-        teacher_ = F.softmax((teacher - self.center) / self._get_teacher_temp(), dim=-1)
-        teacher_ = teacher_.detach().chunk(2)
+        teacher_ = F.softmax(
+            (teacher - self.center) / self._get_teacher_temp(),
+            dim=-1
+        )
+
+        teacher_entropy = torch.distributions.Categorical(
+            teacher_,
+            validate_args=False
+        ).entropy().mean()
+
+        teacher_std = teacher_.std(dim=0).mean()
+
+        teacher_ = teacher_.detach().chunk(self.global_count)
 
         loss = 0
+        kl_div = 0
         nb_loss_terms = 0
         for j in range(len(teacher_)):
             for i in range(len(student)):
                 if i == j:
                     continue
 
-                loss += torch.sum(
-                    -teacher_[j] * F.log_softmax(student[i], dim=-1), dim=-1
-                ).mean()
+                loss += torch.sum(-teacher_[j] * student[i], dim=-1).mean()
+                kl_div += nn.KLDivLoss(reduction="batchmean")(student[i], teacher_[j])
                 nb_loss_terms += 1
 
         loss /= nb_loss_terms
+        kl_div /= nb_loss_terms
 
         self.update_center(teacher)
 
-        return loss
+        metrics = {
+            'train/kl_div': kl_div.detach(),
+            'train/teacher_std': teacher_std.detach(),
+            'train/teacher_h': teacher_entropy.detach(),
+        }
+
+        return loss, metrics
 
     @torch.no_grad()
     def update_center(self, teacher: T):

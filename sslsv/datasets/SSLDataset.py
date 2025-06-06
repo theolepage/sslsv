@@ -47,22 +47,20 @@ def sample_frames(
 
 def sample_frames_dino(
     audio: np.ndarray,
-    frame_length: int = None,
-    large_frames_count: int = 2,
-    large_frames_length: int = 4 * 16000,
-    small_frames_count: int = 4,
-    small_frames_length: int = 2 * 16000,
+    global_frames_count: int = 2,
+    global_frames_length: int = 4 * 16000,
+    local_frames_count: int = 4,
+    local_frames_length: int = 2 * 16000,
 ) -> List[np.ndarray]:
     """
     Sample frames from an audio signal (DINO multi-crops sampling).
 
     Args:
         audio (np.ndarray): Input audio signal. Shape: (C, L).
-        frame_length (int): Unused.
-        large_frames_count (int): Number of large frames. Defaults to 2.
-        large_frames_length (int): Length of large frames. Defaults to 4*16000.
-        small_frames_count (int): Number of small frames. Defaults to 4.
-        small_frames_length (int): Length of small frames. Defaults to 2*16000.
+        global_frames_count (int): Number of global frames. Defaults to 2.
+        global_frames_length (int): Length of global frames. Defaults to 4*16000.
+        local_frames_count (int): Number of local frames. Defaults to 4.
+        local_frames_length (int): Length of local frames. Defaults to 2*16000.
 
     Returns:
         List[np.ndarray]: List of audio frames.
@@ -71,14 +69,14 @@ def sample_frames_dino(
 
     frames = []
 
-    for _ in range(large_frames_count):
-        pos = np.random.randint(0, audio_length - large_frames_length + 1)
-        frame = audio[:, pos : pos + large_frames_length]
+    for _ in range(global_frames_count):
+        pos = np.random.randint(0, audio_length - global_frames_length + 1)
+        frame = audio[:, pos : pos + global_frames_length]
         frames.append(frame)
 
-    for _ in range(small_frames_count):
-        pos = np.random.randint(0, audio_length - small_frames_length + 1)
-        frame = audio[:, pos : pos + small_frames_length]
+    for _ in range(local_frames_count):
+        pos = np.random.randint(0, audio_length - local_frames_length + 1)
+        frame = audio[:, pos : pos + local_frames_length]
         frames.append(frame)
 
     return frames
@@ -90,14 +88,7 @@ class SSLDataset(Dataset):
 
     Attributes:
         MIN_LOAD_AUDIO_LENGTH (int): Minimum length when loading audio data.
-        FRAME_SAMPLING_METHODS (Dict[FrameSamplingEnum, Callable[..., List[np.ndarray]]]): Dictionary
-            mapping frame sampling options to corresponding methods.
     """
-
-    FRAME_SAMPLING_METHODS = {
-        FrameSamplingEnum.DEFAULT: sample_frames,
-        FrameSamplingEnum.DINO: sample_frames_dino,
-    }
 
     def __init__(
         self,
@@ -117,7 +108,10 @@ class SSLDataset(Dataset):
         """
         super().__init__(config, files, labels, num_frames)
 
-        self.MIN_LOAD_AUDIO_LENGTH = 64000
+        self.MIN_LOAD_AUDIO_LENGTH = max(self.config.frame_length, max(
+            self.config.ssl_dino_global_length,
+            self.config.ssl_dino_local_length,
+        ))
 
         if self.config.ssps:
             self.MIN_LOAD_AUDIO_LENGTH = max(
@@ -169,9 +163,16 @@ class SSLDataset(Dataset):
                 frame_length=None,
                 min_length=self.MIN_LOAD_AUDIO_LENGTH,
             )  # (1, T)
-            frames = self.FRAME_SAMPLING_METHODS[self.config.frame_sampling](
-                data, self.config.frame_length
-            )
+            if self.config.frame_sampling == FrameSamplingEnum.DINO:
+                frames = sample_frames_dino(
+                    data,
+                    self.config.ssl_dino_global_count,
+                    self.config.ssl_dino_global_length,
+                    self.config.ssl_dino_local_count,
+                    self.config.ssl_dino_local_length
+                )
+            else:
+                frames = sample_frames(data, self.config.frame_length)
         else:  # isinstance(i, tuple)
             file, label = self.files[i[0]], self.labels[i[0]]
             if self.config.frame_sampling == FrameSamplingEnum.DINO:
@@ -185,8 +186,20 @@ class SSLDataset(Dataset):
                     frame_length=None,
                     min_length=self.MIN_LOAD_AUDIO_LENGTH,
                 )
-                frames1 = sample_frames_dino(data1)
-                frames2 = sample_frames_dino(data2)
+                frames1 = sample_frames_dino(
+                    data1,
+                    self.config.ssl_dino_global_count,
+                    self.config.ssl_dino_global_length,
+                    self.config.ssl_dino_local_count,
+                    self.config.ssl_dino_local_length
+                )
+                frames2 = sample_frames_dino(
+                    data2,
+                    self.config.ssl_dino_global_count,
+                    self.config.ssl_dino_global_length,
+                    self.config.ssl_dino_local_count,
+                    self.config.ssl_dino_local_length
+                )
                 frames = [frames1[i] if i < 2 else frames2[i] for i in range(len(frames1))]
             else:
                 frame1 = load_audio(
