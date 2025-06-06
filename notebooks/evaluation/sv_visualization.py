@@ -152,11 +152,15 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot:
 
     plot = (
         ggplot()
-        + xlab("False Positive Rate (%)")
-        + ylab("False Negative Rate (%)")
-        + ggtitle("Detection Error Tradeoff (DET) Curve")
+        + labs(x="False Positive Rate (%)", y="False Negative Rate (%)", color="Models")
+        # + ggtitle("Detection Error Tradeoff (DET) Curve")
         + theme_bw()
-        + theme(figure_size=(8, 8), text=element_text(size=10))
+        + theme(
+            figure_size=(9.5, 8),
+            text=element_text(size=14),
+            # legend_position='top',
+            # legend_title=element_blank(),
+        )
         + scale_x_continuous(
             breaks=scale_breaks,
             labels=scale_labels,
@@ -176,8 +180,8 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot:
         )
 
         df = pd.DataFrame()
-        df["fprs"] = pts[1]
-        df["fnrs"] = pts[0]
+        df["fprs"] = pts[1][::10]
+        df["fnrs"] = pts[0][::10]
         df["model"] = model_name
 
         df = df.sort_values(by=["fprs", "fnrs"], ascending=[True, False])
@@ -198,7 +202,7 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot:
 
     plot += geom_abline(size=0.05)
 
-    plot += scale_color_discrete(name="Models", labels=labels)
+    plot += scale_color_discrete(labels=labels)
     plot += scale_shape_manual(
         name="Metrics", labels=("EER", "minDCF"), values=("o", "^")
     )

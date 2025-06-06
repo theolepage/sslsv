@@ -69,7 +69,7 @@ class ScoreCalibration:
     def train(self, epochs: int = 50):
         losses = [cllr(self.target_llrs, self.nontarget_llrs)]
 
-        for _ in range(epochs):
+        for epoch in range(epochs):
 
             def closure():
                 self.optimizer.zero_grad()
@@ -82,7 +82,7 @@ class ScoreCalibration:
 
             loss = self.optimizer.step(closure)
 
-            if min(losses) - loss < 1e-4:
+            if epoch > 0 and min(losses) - loss < 1e-4:
                 break
 
             losses.append(loss.item())

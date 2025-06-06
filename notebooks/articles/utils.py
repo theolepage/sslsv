@@ -1,5 +1,7 @@
 import torch
 
+import numpy as np
+
 import json
 
 from sslsv.evaluations.CosineSVEvaluation import (
@@ -14,21 +16,40 @@ class _CosineSVEvaluation(CosineSVEvaluation):
     def __init__(self, embeddings_path, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.embeddings_path = embeddings_path
+        if embeddings_path:
+            self.embeddings_path = str(self.config.model_path / embeddings_path)
+        else:
+            self.embeddings_path = None
 
     def _extract_test_embeddings(self, trials):
-        test_embeddings = torch.load(self.embeddings_path)
-        self.test_embeddings = {
-            k.replace("data/", ""): v for k, v in test_embeddings.items()
-        }
+        if self.embeddings_path:
+            test_embeddings = torch.load(self.embeddings_path)
+            self.test_embeddings = {
+                k.replace("data/", ""): v for k, v in test_embeddings.items()
+            }
+        else:
+            super()._extract_test_embeddings(trials)
 
 
-def evaluate_sv(configs, embeddings_path, trials=["voxceleb1_test_O"]):
+def evaluate_sv(
+    models,
+    embeddings_path,
+    trials=["voxceleb1_test_O"],
+    checkpoint_suffix="avg",
+):
     res = {}
 
-    for config_path in configs:
-        config = load_config(config_path, verbose=False)
-        model = load_model(config).to("cpu")
+    for name, path in models.items():
+        config = load_config(f"{path}/config.yml", verbose=False)
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = load_model(config).to(device)
+
+        checkpoint = torch.load(
+            config.model_ckpt_path / f"model_{checkpoint_suffix}.pt", weights_only=False
+        )
+        model.load_state_dict(checkpoint["model"], strict=False)
+        model.eval()
 
         evaluation = _CosineSVEvaluation(
             model=model,
@@ -36,21 +57,24 @@ def evaluate_sv(configs, embeddings_path, trials=["voxceleb1_test_O"]):
             task_config=CosineSVEvaluationTaskConfig(
                 trials=trials,
                 metrics=["eer", "mindcf", "cllr"],
+                batch_size=16,
             ),
-            device="cpu",
-            verbose=False,
+            device=device,
+            verbose=True,
             validation=False,
-            embeddings_path=str(config.model_path / embeddings_path),
+            embeddings_path=embeddings_path,
         )
         metrics = evaluation.evaluate()
 
-        res[config_path.split("/")[-2]] = {
+        res[name] = {
+            "config": config,
             "scores": evaluation.scores,
             "targets": evaluation.targets,
+            "evaluation": evaluation,
         }
 
         metrics = {k: round(v, 4) for k, v in metrics.items()}
-        print(config_path.split("/")[-2], json.dumps(metrics, indent=4))
+        print(name, json.dumps(metrics, indent=4))
 
     return res
 
@@ -65,8 +89,10 @@ from plotnine import (
     theme_bw,
     theme,
     element_text,
+    scale_y_continuous,
     geom_line,
     geom_boxplot,
+    geom_point,
 )
 
 from sklearn.preprocessing import LabelEncoder
@@ -111,11 +137,20 @@ def plot_intra_class_similarity(type, checkpoints):
     )
 
     p = (
-        ggplot(data, aes(x="method", y="similarity"))
-        + geom_boxplot(outlier_alpha=0)
-        + labs(x=None, y=None, title=f"Intra-{type} cosine similarity")
+        ggplot(data, aes(x="method", y="similarity", fill="method"))
+        + geom_boxplot(outlier_alpha=0.5)
+        # + labs(x=None, y=None, title=f"Intra-{type} cosine similarity")
+        + labs(x="", y="")
+        + scale_y_continuous(
+            limits=(0.3, 0.7),
+            breaks=np.round(np.arange(0.3, 0.8, 0.1), 1),
+            labels=[" {:.2f}".format(x) for x in np.round(np.arange(0.3, 0.8, 0.1), 1)],
+        )
+        # + scale_y_continuous(limits=(0.25, 0.75), breaks=[0.25, 0.5, 0.75])
         + theme_bw()
-        + theme(figure_size=(12, 8), text=element_text(size=14))
+        + theme(
+            figure_size=(8, 4.75), text=element_text(size=14), legend_position="none"
+        )
     )
 
     stats = (
@@ -211,6 +246,8 @@ def plot_inter_class_similarity(type, checkpoints, nb_samples=1000):
     for method_name, ckpt_path in checkpoints.items():
         checkpoint = torch.load(ckpt_path)
 
+        checkpoint = {k: checkpoint[k] for k in sorted(checkpoint)}
+
         embeddings = torch.cat(list(checkpoint.values()), dim=0)
 
         labels = [v.split("/")[key] for v in checkpoint.keys()]
@@ -236,11 +273,16 @@ def plot_inter_class_similarity(type, checkpoints, nb_samples=1000):
     )
 
     p = (
-        ggplot(data, aes(x="method", y="similarity"))
-        + geom_boxplot(outlier_alpha=0)
-        + labs(x=None, y=None, title=f"Inter-{type} cosine similarity")
+        ggplot(data, aes(x="method", y="similarity", fill="method"))
+        + geom_boxplot(outlier_alpha=0.5)
+        # + labs(x=None, y=None, title=f"Inter-{type} cosine similarity")
+        + labs(x="", y="")
+        + scale_y_continuous(limits=(-0.5, 0.75))
+        # + scale_y_continuous(limits=(0.3, 0.7), breaks=[0.3, 0.4, 0.5, 0.6, 0.7])
         + theme_bw()
-        + theme(figure_size=(12, 8), text=element_text(size=14))
+        + theme(
+            figure_size=(8, 4.75), text=element_text(size=14), legend_position="none"
+        )
     )
 
     stats = (
