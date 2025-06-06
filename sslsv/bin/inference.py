@@ -82,6 +82,16 @@ def inference_(
     )
 
     files = glob(input)
+    # files = [line.rstrip() for line in open("data/voxceleb2_debug_list")]
+    # files = list(
+    #     dict.fromkeys(
+    #         [
+    #             "data/" + line.rstrip().split()[i]
+    #             for line in open("data/voxceleb1_test_O")
+    #             for i in (1, 2)
+    #         ]
+    #     )
+    # )
     dataset = Dataset(dataset_config, files, num_frames=num_frames)
 
     sampler = None

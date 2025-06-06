@@ -1,0 +1,16 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'supervised'
+  nb_classes: 5994
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true
+    aug_prob: 0.50

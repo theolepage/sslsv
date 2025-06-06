@@ -1,0 +1,20 @@
+encoder:
+  type: 'resnet34'
+  pooling: false
+method:
+  type: 'cpc'
+  nb_t_to_predict: 4
+  aggregator_type: 'gru'
+  aggregator_nb_layers: 1
+  aggregator_dim: 256
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

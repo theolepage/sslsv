@@ -1,0 +1,26 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'vicreg'
+  projector_hidden_dim: 2048
+  projector_output_dim: 512
+  inv_weight: 1.0
+  var_weight: 1.0
+  cov_weight: 0.1
+trainer:
+  last_checkpoint: 'models/ssl/voxceleb2/vicreg/vicreg_proj-2048-BN-R-2048-BN-R-512_inv-1.0_var-1.0_cov-0.1/checkpoints/model_epoch-9.pt'
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  sampler:
+    enable: true
+    create_contrastive_pairs: true
+    randomize_at_each_epoch: true
+  augmentation:
+    enable: true

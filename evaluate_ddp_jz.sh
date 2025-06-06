@@ -6,8 +6,9 @@ commands=""
 
 for model in $models; do
   commands+="
-python sslsv/bin/average_model.py $model/config.yml --silent
+python sslsv/bin/average_model.py $model/config.yml --silent# --limit_nb_epochs 80
 srun python -u sslsv/bin/evaluate_distributed_jz.py $model/config.yml --model_suffix avg --silent
+srun python -u sslsv/bin/inference_distributed_jz.py $model/config.yml --input 'data/voxceleb1/*/*/*.wav' --output $model/embeddings_vox1_avg.pt --model_suffix avg
 "
 done
 

@@ -1,0 +1,23 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'swav'
+  enable_projector: false
+  nb_prototypes: 6000
+trainer:
+  last_checkpoint: 'models/ssl/voxceleb2/swav/swav_proj-none_K-6000_t-0.1/checkpoints/model_epoch-9.pt'
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  sampler:
+    enable: true
+    create_contrastive_pairs: true
+    randomize_at_each_epoch: true
+  augmentation:
+    enable: true

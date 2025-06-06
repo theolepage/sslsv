@@ -1,0 +1,22 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'simclr'
+  projector_hidden_dim: 2048
+  projector_output_dim: 512
+  temperature: 0.03
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  sampler:
+    enable: true
+    create_contrastive_pairs: true
+    randomize_at_each_epoch: true
+  augmentation:
+    enable: true

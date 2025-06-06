@@ -1,0 +1,19 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'vicreg'
+  enable_projector: false
+  inv_weight: 1.0
+  var_weight: 1.0
+  cov_weight: 0.1
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

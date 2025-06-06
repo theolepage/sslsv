@@ -1,0 +1,24 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'simclr'
+  enable_projector: false
+  temperature: 0.03
+trainer:
+  epochs: 111
+  last_checkpoint: 'models/ssl/voxceleb2/simclr/simclr_proj-none_t-0.03/checkpoints/model_epoch-90.pt'
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  sampler:
+    enable: true
+    create_contrastive_pairs: true
+    randomize_at_each_epoch: true
+  augmentation:
+    enable: true

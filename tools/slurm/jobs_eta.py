@@ -18,44 +18,49 @@ def get_slurm_jobs():
         columns = line.split()
         job_id = columns[job_id_index]
         job_name = columns[job_name_index].replace('sslsv_', '')[:-1]
-        jobs.append((job_id, job_name))
+        jobs.append(job_id)
     
     return jobs
 
-jobs = get_slurm_jobs()
-
 etas = []
 
-for slurm_id, slurm_name in jobs:
+for slurm_id in get_slurm_jobs():
+    slurm_paths = glob(f'models/**/slurm_{slurm_id}', recursive=True)
+    if len(slurm_paths) == 0:
+        continue
+    slurm_path = slurm_paths[0]
+
     try:
-        with open(f'{slurm_name}/slurm_{slurm_id}', 'r') as f:
+        with open(slurm_path, 'r') as f:
             slurm_file = f.readlines()
+
+        last_epoch = [
+            int(line.strip().replace('Epoch ', ''))
+            for line in slurm_file
+            if 'Epoch' in line
+        ][-1]
+        
+        last_duration = [
+            line.strip().replace('Duration: ', '')
+            for line in slurm_file
+            if 'Duration' in line
+        ][-1]
+        
+        last_duration = datetime.strptime(last_duration, "%H:%M:%S")
+        last_duration = timedelta(
+            hours=last_duration.hour,
+            minutes=last_duration.minute,
+            seconds=last_duration.second
+        )
     except:
         continue
-
-    last_epoch = [
-        int(line.strip().replace('Epoch ', ''))
-        for line in slurm_file
-        if 'Epoch' in line
-    ][-1]
-    
-    last_duration = [
-        line.strip().replace('Duration: ', '')
-        for line in slurm_file
-        if 'Duration' in line
-    ][-1]
-    
-    last_duration = datetime.strptime(last_duration, "%H:%M:%S")
-    last_duration = timedelta(
-        hours=last_duration.hour,
-        minutes=last_duration.minute,
-        seconds=last_duration.second
-    )
 
     remaining_duration = (NB_EPOCHS - last_epoch) * last_duration
 
     eta = datetime.now() + remaining_duration
     eta = eta.strftime("%d-%b %H:%M")
+
+    slurm_name = slurm_path
 
     etas.append((slurm_name, eta))
 

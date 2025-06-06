@@ -1,0 +1,22 @@
+encoder:
+  type: 'resnet34'
+  enable_last_bn: true
+method:
+  type: 'dino'
+trainer:
+  epochs: 80
+  batch_size: 128
+  weight_decay: 0.00005
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  frame_length: 64000
+  frame_sampling: 'dino'
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

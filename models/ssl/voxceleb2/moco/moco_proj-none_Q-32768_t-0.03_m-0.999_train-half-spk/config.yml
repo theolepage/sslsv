@@ -1,0 +1,23 @@
+encoder:
+  type: 'resnet34'
+method:
+  type: 'moco'
+  enable_projector: false
+  temperature: 0.03
+  queue_size: 32768
+trainer:
+  ddp_sync_batchnorm: false
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  sampler:
+    enable: true
+    nb_speakers: 2997
+  augmentation:
+    enable: true

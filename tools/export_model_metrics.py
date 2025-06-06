@@ -29,14 +29,14 @@ def export_model_metrics(args: argparse.Namespace):
         train_path = config_path.with_name("training.json")
 
         if not eval_path.is_file():
-            print(f"No evaluation file found for {config_path}")
+            # print(f"No evaluation file found for {config_path}")
             continue
 
         with open(eval_path, "r") as file:
             eval = json.load(file)
 
-        with open(train_path, "r") as file:
-            train = json.load(file)
+        # with open(train_path, "r") as file:
+        #     train = json.load(file)
 
         model_name = str(config_path)[7:-11]
 
@@ -61,7 +61,7 @@ def export_model_metrics(args: argparse.Namespace):
                 }
             )
 
-        last_epoch = list(train.keys())[-1]
+        # last_epoch = list(train.keys())[-1]
 
         # if "ssps_speaker_acc" in train[last_epoch]:
         #     res[model_name].update(
@@ -79,7 +79,6 @@ def export_model_metrics(args: argparse.Namespace):
         #         }
         #     )
 
-    print()
     # print(json.dumps(res, indent=4))
     print(json.dumps(res))
 

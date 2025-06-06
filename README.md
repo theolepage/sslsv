@@ -299,6 +299,14 @@ Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments 
 If you use *sslsv*, please consider starring this repository on GitHub and citing one the following papers.
 
 ```BibTeX
+@InProceedings{lepage2025SSPS,
+  title     = {SSPS: Self-Supervised Positive Sampling for Robust Self-Supervised Speaker Verification},
+  author    = {Lepage, Theo and Dehak, Reda},
+  year      = {2025},
+  booktitle = {Interspeech 2025},
+  url       = {https://arxiv.org/abs/2505.14561},
+}
+
 @Article{lepage2025SSLSVBootstrappedPositiveSampling,
   title     = {Self-Supervised Frameworks for Speaker Verification via Bootstrapped Positive Sampling},
   author    = {Lepage, Theo and Dehak, Reda},
@@ -324,7 +332,7 @@ If you use *sslsv*, please consider starring this repository on GitHub and citin
   booktitle = {Interspeech 2023},
   pages     = {4708--4712},
   doi       = {10.21437/Interspeech.2023-1479},
-  url       = {https://www.isca-speech.org/archive/interspeech_2023/lepage23_interspeech.html},
+  url       = {https://www.isca-archive.org/interspeech_2023/lepage23_interspeech.html},
 }
 
 @InProceedings{lepage2022LabelEfficientSSLSV,
@@ -334,7 +342,7 @@ If you use *sslsv*, please consider starring this repository on GitHub and citin
   booktitle = {Interspeech 2022},
   pages     = {4018--4022},
   doi       = {10.21437/Interspeech.2022-802},
-  url       = {https://www.isca-speech.org/archive/interspeech_2022/lepage22_interspeech.html},
+  url       = {https://www.isca-archive.org/interspeech_2022/lepage22_interspeech.html},
 }
 ```
 
