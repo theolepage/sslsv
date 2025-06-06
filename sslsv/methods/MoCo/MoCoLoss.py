@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 
 import torch
 from torch import nn
@@ -57,10 +57,21 @@ class MoCoLoss(nn.Module):
         # Prevent class collisions using labels
         if current_labels is not None and queue_labels is not None:
             mask = current_labels.unsqueeze(1) == queue_labels.unsqueeze(0)
-            neg[mask] = 0
+            neg[mask] = -torch.inf
 
         logits = torch.cat((pos, neg), dim=1) / self.temperature
 
         labels = torch.zeros(N, device=query.device, dtype=torch.long)
 
-        return F.cross_entropy(logits, labels)
+        entropy = torch.distributions.Categorical(F.softmax(logits, dim=-1)).entropy()
+        std = logits.std(dim=0)
+        metrics = {
+            'train/h': entropy.mean().detach(),
+            'train/std': std.mean().detach()
+        }
+
+        # collapse no negs: loss = -torch.log(torch.exp(pos / self.temperature)).mean()
+        
+        loss = F.cross_entropy(logits, labels)
+        
+        return loss, metrics

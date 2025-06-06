@@ -157,7 +157,10 @@ class MoCo(BaseMomentumMethod):
         """
         x_gather = gather(x)
 
-        idx_shuffle = torch.randperm(x_gather.size(0), device=get_rank())
+        idx_shuffle = torch.randperm(
+            x_gather.size(0),
+            device=get_rank() if is_dist_initialized() else None
+        )
         if is_dist_initialized():
             dist.broadcast(idx_shuffle, src=0)
 
@@ -354,27 +357,28 @@ class MoCo(BaseMomentumMethod):
             K_1_pp = self.ssps.apply(0, K_1)
             K_2_pp = self.ssps.apply(1, K_2)
             self.ssps.update_buffers(step_rel, indices, Y_ref, [K_1, K_2])
-            loss = (
-                self.loss_fn(Q_1, K_2_pp, queue[1], current_labels, queue_labels)
-                + self.loss_fn(Q_2, K_1_pp, queue[0], current_labels, queue_labels)
-            ) / 2
+            loss_1, metrics_1 = self.loss_fn(Q_1, K_2_pp, queue[1], current_labels, queue_labels)
+            loss_2, metrics_2 = self.loss_fn(Q_2, K_1_pp, queue[0], current_labels, queue_labels)
+            loss = (loss_1 + loss_2) / 2
 
             self._enqueue(torch.stack((gather(K_1_pp), gather(K_2_pp))))
         else:
-            loss = (
-                self.loss_fn(Q_1, K_2, queue[1], current_labels, queue_labels)
-                + self.loss_fn(Q_2, K_1, queue[0], current_labels, queue_labels)
-            ) / 2
+            loss_1, metrics_1 = self.loss_fn(Q_1, K_2, queue[1], current_labels, queue_labels)
+            loss_2, metrics_2 = self.loss_fn(Q_2, K_1, queue[0], current_labels, queue_labels)
+            loss = (loss_1 + loss_2) / 2
 
             self._enqueue(torch.stack((gather(K_1), gather(K_2))))
 
         if self.config.prevent_class_collisions:
             self._enqueue_labels(gather(labels))
 
+        loss_metrics = {k:(metrics_1[k] + metrics_2[k]) / 2 for k in metrics_1} 
+
         self.log_step_metrics(
             {
                 "train/loss": loss,
                 "train/tau": self.momentum_updater.tau,
+                **loss_metrics
             },
         )
 
