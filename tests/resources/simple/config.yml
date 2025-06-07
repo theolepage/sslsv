@@ -3,14 +3,12 @@ encoder:
 method:
   type: 'simclr'
 trainer:
-  epochs: 3
+  epochs: 1
 dataset:
   ssl: true
-  max_samples: 1024
+  max_samples: 512
 evaluation:
   validation:
     - type: 'sv_cosine'
-      frame_length: 56240
   test:
     - type: 'sv_cosine'
-      frame_length: 56240

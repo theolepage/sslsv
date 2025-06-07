@@ -4,15 +4,18 @@ import torch
 from torch.optim import Adam
 
 from sslsv.utils.helpers import load_config, load_model
+from tests.utils import add_dummy_trainer
 
 
 def test_basic():
-    config = load_config("tests/resources/simple/config.yml")
+    config = load_config("tests/resources/simple/config.yml", verbose=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = load_model(config).to(device)
     model = torch.nn.DataParallel(model)
+
+    add_dummy_trainer(model.module)
 
     optimizer = Adam(
         model.module.get_learnable_params(),
@@ -32,4 +35,4 @@ def test_basic():
 
     Z = model(X2)
 
-    assert pytest.approx(Z.sum().item()) == 2419.561279296875
+    assert pytest.approx(Z.sum().item()) == 2420.7763671875

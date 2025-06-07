@@ -4,6 +4,8 @@ from torch import nn
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
 from sslsv.methods.LIM.LIM import LIM, LIMConfig
 
+from tests.utils import add_dummy_trainer
+
 
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -13,7 +15,9 @@ def test_default():
     config = LIMConfig()
     method = LIM(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
 
-    assert count_parameters(method) == 1437078
+    add_dummy_trainer(method)
+
+    assert count_parameters(method) == 139906454
 
     # Inference
     Z = method(torch.randn(64, 32000))
@@ -24,11 +28,11 @@ def test_default():
     # Training
     Z = method(torch.randn(64, 2, 32000), training=True)
     assert isinstance(Z, tuple)
-    assert len(Z) == 2
-    for z in Z:
+    assert len(Z) == 3
+    for z in Z[:2]:
         assert isinstance(z, torch.Tensor)
         assert z.dtype == torch.float32
-        assert z.size() == (64, 512)
+        assert z.size() == (64, 8192)
 
     # Train step
     loss = method.train_step(Z, step=0)

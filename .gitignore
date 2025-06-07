@@ -10,13 +10,16 @@ build
 dist
 
 data
-env
+env*
 wandb
+
+models/export/
 
 models/**/tensorboard/
 models/**/wandb/
 models/**/*.json
 models/**/*.pt
+models/**/*.pkl
 
 tests/resources/**/tensorboard/
 tests/resources/**/wandb/

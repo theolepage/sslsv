@@ -71,11 +71,19 @@ from sslsv.evaluations.ClassificationEvaluation import (
 )
 
 
-LOGO = """
+# FIXME: Fix to allow loading old checkpoints with PyTorch 2.6
+# See https://docs.pytorch.org/docs/stable/notes/serialization.html#weights-only
+if hasattr(torch.serialization, "add_safe_globals"):
+    torch.serialization.add_safe_globals(
+        [np.dtype, np.core.multiarray.scalar, np.float64, np.dtypes.Float64DType]
+    )
+
+
+LOGO = r"""
          _
  ___ ___| |_____   __
 / __/ __| / __\ \ / /
-\__ \__ \ \__ \\\\ V /
+\__ \__ \ \__ \\ V /
 |___/___/_|___/ \_/
 """
 

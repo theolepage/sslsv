@@ -9,6 +9,8 @@ from sslsv.methods.Combiner.Combiner import (
     LossTypeCombinerEnum,
 )
 
+from tests.utils import add_dummy_trainer
+
 
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -24,7 +26,9 @@ def test_default():
     )
     method = Combiner(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
 
-    assert count_parameters(method) == 10888598
+    add_dummy_trainer(method)
+
+    assert count_parameters(method) == 139906454
 
     # Inference
     Z = method(torch.randn(64, 32000))
@@ -42,7 +46,7 @@ def test_default():
         if i < 2:
             assert z.size() == (64, 512)
         else:
-            assert z.size() == (64, 2048)
+            assert z.size() == (64, 8192)
 
     # Train step
     loss = method.train_step(Z, step=0)

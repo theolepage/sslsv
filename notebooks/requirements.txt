@@ -1,4 +1,5 @@
 plotnine
+patchworklib
 plotly
 seaborn
 matplotlib

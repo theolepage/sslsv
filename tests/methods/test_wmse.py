@@ -4,6 +4,8 @@ from torch import nn
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
 from sslsv.methods.WMSE.WMSE import WMSE, WMSEConfig
 
+from tests.utils import add_dummy_trainer
+
 
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -12,6 +14,8 @@ def count_parameters(model: nn.Module) -> int:
 def test_default():
     config = WMSEConfig()
     method = WMSE(config, create_encoder_fn=lambda: ResNet34(ResNet34Config()))
+
+    add_dummy_trainer(method)
 
     assert count_parameters(method) == 2030038
 
@@ -24,8 +28,8 @@ def test_default():
     # Training
     Z = method(torch.randn(128, 2, 32000), training=True)
     assert isinstance(Z, tuple)
-    assert len(Z) == 2
-    for z in Z:
+    assert len(Z) == 3
+    for z in Z[:2]:
         assert isinstance(z, torch.Tensor)
         assert z.dtype == torch.float32
         assert z.size() == (128, 64)

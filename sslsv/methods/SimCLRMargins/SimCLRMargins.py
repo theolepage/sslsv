@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterable, Optional, Tuple
 
 from torch import Tensor as T
@@ -18,7 +18,7 @@ class SimCLRMarginsConfig(SimCLRConfig):
         loss (SimCLRMarginsLossConfig): Loss configuration.
     """
 
-    loss: SimCLRMarginsLossConfig = SimCLRMarginsLossConfig()
+    loss: SimCLRMarginsLossConfig = field(default_factory=SimCLRMarginsLossConfig)
 
 
 class SimCLRMargins(SimCLR):

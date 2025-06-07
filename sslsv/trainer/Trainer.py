@@ -180,15 +180,16 @@ class Trainer:
                 indices = indices.to(self.device, non_blocking=True)
 
             # Forward and compute loss
-            with autocast(enabled=(self.scaler is not None)):
-                Z = self.model(X, training=True)
-                loss = self.model.module.train_step(
-                    Z,
-                    step=step,
-                    step_rel=step_rel,
-                    indices=indices,
-                    labels=labels,
-                )
+            # FIXME: deprecated in PyTorch 2.6
+            # with autocast(enabled=(self.scaler is not None)):
+            Z = self.model(X, training=True)
+            loss = self.model.module.train_step(
+                Z,
+                step=step,
+                step_rel=step_rel,
+                indices=indices,
+                labels=labels,
+            )
 
             self.optimizer.zero_grad(set_to_none=True)
 

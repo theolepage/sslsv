@@ -2,11 +2,11 @@
   <img src="logo.png" width=180 />
 </p>
 
-<!-- <p align="center">
+<p align="center">
   <img src="https://img.shields.io/badge/License-MIT-green">
-  <img src="https://img.shields.io/badge/Python-3.8-aff?logo=python">
-  <img src="https://img.shields.io/badge/PyTorch-1.11.0-blue?logo=pytorch">
-</p> -->
+  <img src="https://img.shields.io/badge/Python-3.13-aff?logo=python">
+  <img src="https://img.shields.io/badge/PyTorch-2.7-blue?logo=pytorch">
+</p>
 
 # sslsv
 
@@ -151,23 +151,23 @@ Our training framework is depicted by the figure below.
 
 ## Requirements
 
-*sslsv* runs on Python 3.8 with the following dependencies.
+*sslsv* runs on Python 3.13.3 with the following dependencies.
 
-| Module                | Versions  |
-|-----------------------|:---------:|
-| torch                 | >= 1.11.0 |
-| torchaudio            | >= 0.11.0 |
-| numpy                 | *         |
-| pandas                | *         |
-| soundfile             | *         |
-| scikit-learn          | *         |
-| speechbrain           | *         |
-| tensorboard           | *         |
-| wandb                 | *         |
-| ruamel.yaml           | *         |
-| dacite                | *         |
-| prettyprinter         | *         |
-| tqdm                  | *         |
+| Module                | Versions |
+|-----------------------|:--------:|
+| torch                 | 2.7.1    |
+| torchaudio            | 2.7.1    |
+| numpy                 | *        |
+| pandas                | *        |
+| soundfile             | *        |
+| scikit-learn          | *        |
+| speechbrain           | *        |
+| tensorboard           | *        |
+| wandb                 | *        |
+| ruamel.yaml           | *        |
+| dacite                | *        |
+| prettyprinter         | *        |
+| tqdm                  | *        |
 
 **Note**: developers will also need `pytest`, `pre-commit` and `twine` to work on this project.
 

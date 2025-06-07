@@ -1,5 +1,5 @@
-torch>=1.11.0
-torchaudio>=0.11.0
+torch==2.7.1
+torchaudio==2.7.1
 
 numpy
 pandas
@@ -13,3 +13,5 @@ ruamel.yaml
 dacite
 prettyprinter
 tqdm
+
+pytest

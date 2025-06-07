@@ -35,8 +35,8 @@ def train(args: argparse.Namespace):
     world_size = idr_torch.size
     rank = idr_torch.rank
 
-    torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
     torch.cuda.set_device(rank)
+    torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
 
     config = load_config(args.config, verbose=not args.silent)
     train_dataloader = load_train_dataloader(config)

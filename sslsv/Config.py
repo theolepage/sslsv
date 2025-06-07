@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pathlib import Path
 
@@ -34,6 +34,6 @@ class Config:
 
     encoder: BaseEncoderConfig = None
     method: BaseMethodConfig = None
-    trainer: TrainerConfig = TrainerConfig()
-    dataset: DatasetConfig = DatasetConfig()
-    evaluation: BaseEvaluationConfig = BaseEvaluationConfig()
+    trainer: TrainerConfig = field(default_factory=TrainerConfig)
+    dataset: DatasetConfig = field(default_factory=DatasetConfig)
+    evaluation: BaseEvaluationConfig = field(default_factory=BaseEvaluationConfig)
