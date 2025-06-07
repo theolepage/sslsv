@@ -1,0 +1,31 @@
+encoder:
+  type: 'resnet34'
+  pooling_mode: 'stats'
+  mel_n_mels: 80
+method:
+  type: 'dino'
+trainer:
+  epochs: 80
+  last_checkpoint: 'models/ssl/voxceleb2/dino/dino_proj-2048-BN-G-2048-BN-G-256-L2-65536_G-2x4_L-4x2_t-0.04/checkpoints/model_epoch-59.pt'
+  batch_size: 128
+  optimizer: 'sgd'
+  learning_rate: 0.2
+  weight_decay: 0.00005
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  frame_length: 64000
+  frame_sampling: 'dino'
+  train: 'voxceleb2_train.csv'
+  sampler:
+    enable: true
+    create_contrastive_pairs: true
+    randomize_at_each_epoch: true
+  augmentation:
+    enable: true
+    strategy: 'all'
