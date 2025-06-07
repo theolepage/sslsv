@@ -1,0 +1,28 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+method:
+  type: 'supervised'
+  nb_classes: 5
+  classifier: 'linear'
+  freeze_encoder: true
+trainer:
+  init_weights: 'models/ssl/voxceleb2/supervised/supervised_enc-ECAPATDNN-1024_loss-AAM_s-30_m-0.2/checkpoints/model_avg.pt'
+  epochs: 50
+  tracked_metric: 'val/classification/cremad_train/accuracy'
+  tracked_mode: 'max'
+  learning_rate: 0.0001
+evaluation:
+  validation:
+    - type: 'classification'
+      csv: 'cremad_train.csv'
+      key: 'Emotion'
+  test:
+    - type: 'classification'
+      csv: 'cremad_train.csv'
+      key: 'Emotion'
+dataset:
+  train: 'cremad_train.csv'
+  label_key: 'Emotion'
+  augmentation:
+    enable: true

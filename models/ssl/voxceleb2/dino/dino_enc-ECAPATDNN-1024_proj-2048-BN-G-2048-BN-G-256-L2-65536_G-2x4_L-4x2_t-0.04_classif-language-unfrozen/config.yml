@@ -1,0 +1,29 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+  mel_n_mels: 80
+method:
+  type: 'supervised'
+  nb_classes: 107
+  classifier: 'linear'
+  freeze_encoder: false
+trainer:
+  init_weights: 'models/ssl/voxceleb2/dino/dino_enc-ECAPATDNN-1024_proj-2048-BN-G-2048-BN-G-256-L2-65536_G-2x4_L-4x2_t-0.04/checkpoints/model_avg.pt'
+  epochs: 50
+  tracked_metric: 'val/classification/voxlingua107_train/accuracy'
+  tracked_mode: 'max'
+  learning_rate: 0.0001
+evaluation:
+  validation:
+    - type: 'classification'
+      csv: 'voxlingua107_train.csv'
+      key: 'Language'
+  test:
+    - type: 'classification'
+      csv: 'voxlingua107_train.csv'
+      key: 'Language'
+dataset:
+  train: 'voxlingua107_train.csv'
+  label_key: 'Language'
+  augmentation:
+    enable: true

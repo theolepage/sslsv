@@ -1,0 +1,28 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+method:
+  type: 'supervised'
+  nb_classes: 107
+  classifier: 'linear'
+  freeze_encoder: false
+trainer:
+  init_weights: 'models/ssl/voxceleb2/simclr/simclr_enc-ECAPATDNN-1024_proj-none_t-0.03/checkpoints/model_avg.pt'
+  epochs: 50
+  tracked_metric: 'val/classification/voxlingua107_train/accuracy'
+  tracked_mode: 'max'
+  learning_rate: 0.0001
+evaluation:
+  validation:
+    - type: 'classification'
+      csv: 'voxlingua107_train.csv'
+      key: 'Language'
+  test:
+    - type: 'classification'
+      csv: 'voxlingua107_train.csv'
+      key: 'Language'
+dataset:
+  train: 'voxlingua107_train.csv'
+  label_key: 'Language'
+  augmentation:
+    enable: true

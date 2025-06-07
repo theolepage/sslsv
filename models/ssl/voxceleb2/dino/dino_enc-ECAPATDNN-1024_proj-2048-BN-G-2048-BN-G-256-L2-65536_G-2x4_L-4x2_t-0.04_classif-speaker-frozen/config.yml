@@ -1,0 +1,29 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+  mel_n_mels: 80
+method:
+  type: 'supervised'
+  nb_classes: 1251
+  classifier: 'linear'
+  freeze_encoder: true
+trainer:
+  init_weights: 'models/ssl/voxceleb2/dino/dino_enc-ECAPATDNN-1024_proj-2048-BN-G-2048-BN-G-256-L2-65536_G-2x4_L-4x2_t-0.04/checkpoints/model_avg.pt'
+  epochs: 50
+  tracked_metric: 'val/classification/voxceleb1_train_speaker/accuracy'
+  tracked_mode: 'max'
+  learning_rate: 0.0001
+evaluation:
+  validation:
+    - type: 'classification'
+      csv: 'voxceleb1_train_speaker.csv'
+      key: 'Speaker'
+  test:
+    - type: 'classification'
+      csv: 'voxceleb1_train_speaker.csv'
+      key: 'Speaker'
+dataset:
+  train: 'voxceleb1_train_speaker.csv'
+  label_key: 'Speaker'
+  augmentation:
+    enable: true

@@ -2,6 +2,8 @@ import argparse
 import os
 import pandas as pd
 import shutil
+import random
+from collections import defaultdict
 from tqdm import tqdm
 
 from utils import glob
@@ -118,27 +120,33 @@ VOXLINGUA_LABEL_TO_NAME = {
 }
 
 
-def create_smaller_voxlingua107():
-    # Sample ~20% of original VoxLingua107
+def create_smaller_voxlingua107(sample_ratio=0.1, seed=42):
+    random.seed(seed)
 
+    files_by_lang = defaultdict(list)
     files = glob("/work2/home/ing2/datasets/voxlingua107/**/*/*.wav")
 
-    d = {}
-    new_files = []
     for file in files:
-        if file.split("/")[-3] == "test":
-            new_files.append(file)
-            continue
+        parts = file.split("/")
+        set_name = parts[-3]
+        lang = parts[-2]
 
-        lang = file.split("/")[-2]
-
-        if lang not in d:
-            d[lang] = 0
+        if set_name == "test":
+            files_by_lang["test"].append(file)
         else:
-            d[lang] += 1
+            files_by_lang[lang].append(file)
 
-        if d[lang] < 5000:
-            new_files.append(file)
+    # Subsample proportionally per class
+    new_files = []
+    for lang, files in files_by_lang.items():
+        if lang == "test":
+            new_files.extend(files)
+        else:
+            nb_sample = max(1, int(sample_ratio * len(files)))
+            sampled_files = random.sample(files, nb_sample)
+            new_files.extend(sampled_files)
+
+    print(f"Selected {len(new_files)} files.")
 
     for file in tqdm(new_files):
         new_file = file.replace("voxlingua107", "voxlingua107_smaller")

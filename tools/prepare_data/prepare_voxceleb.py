@@ -89,8 +89,8 @@ TRIALS = [
     ),
 ]
 
-VOX1_TRAIN_FILE = "voxceleb1_train"
-VOX2_TRAIN_FILE = "voxceleb2_train"
+VOX1_TRAIN_FILE = "voxceleb1_train.csv"
+VOX2_TRAIN_FILE = "voxceleb2_train.csv"
 
 
 def fix_vox_structure():
@@ -166,7 +166,7 @@ def create_vox2_train_csv():
     df.to_csv(VOX2_TRAIN_FILE, index=False)
 
 
-def create_vox1_train_csv_gender(test_split: float = 0.7):
+def create_vox1_train_csv_gender(test_split: float = 0.9):
     df = pd.read_csv(VOX1_TRAIN_FILE)
 
     # Add gender column
@@ -225,6 +225,15 @@ def create_vox2_train_csv_age():
     df.to_csv("voxceleb2_train_age.csv", index=False)
 
 
+def create_vox1_train_csv_speaker(test_split: float = 0.9):
+    df = pd.read_csv(VOX1_TRAIN_FILE)
+
+    mask = np.random.rand(len(df)) > test_split
+    df["Set"] = np.where(mask, "test", "train")
+
+    df.to_csv("voxceleb1_train_speaker.csv", index=False)
+
+
 def create_vox_trials():
     for filename, url in TRIALS:
         status = subprocess.call("wget %s -O %s" % (url, filename), shell=True)
@@ -272,3 +281,4 @@ if __name__ == "__main__":
 
     # create_vox1_train_csv_gender()
     # create_vox2_train_csv_age()
+    # create_vox1_train_csv_speaker()

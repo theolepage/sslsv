@@ -7,7 +7,7 @@ method:
   enable_projector: false
 trainer:
   epochs: 80
-  last_checkpoint: 'models/ssl/voxceleb2/dino/dino_proj-none_G-2x4_L-4x2_t-0.04_proj-none/checkpoints/model_epoch-59.pt'
+  last_checkpoint: 'models/ssl/voxceleb2/dino/dino_proj-L2-65536_G-2x4_L-4x2_t-0.04/checkpoints/model_epoch-59.pt'
   batch_size: 128
   optimizer: 'sgd'
   learning_rate: 0.2
