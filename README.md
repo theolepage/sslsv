@@ -271,20 +271,53 @@ Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments 
 
 ## Results
 
-### SOTA
+### SSL frameworks
 
+- **Configs**: `models/ssl/voxceleb2/`
 - **Train set**: VoxCeleb2
 - **Evaluation**: VoxCeleb1-O (Original)
-- **Encoder**: ECAPA-TDNN (C=1024)
+- **Encoder**: Fast ResNet-34 and ECAPA-TDNN
 
-| Method         | Model                                              | EER (%) | minDCF (p=0.01)  | Checkpoint    |
-|----------------|----------------------------------------------------|:-------:|:----------------:|:-------------:|
-| **SimCLR**     | `ssl/voxceleb2/simclr/simclr_e-ecapa-1024`         | 6.41    | 0.5160           | [:link:](https://drive.google.com/drive/folders/1jQO5cYDUw5sEemkFPmrBXAaVIW943lE8?usp=sharing) |
-| **MoCo**       | `ssl/voxceleb2/moco/moco_e-ecapa-1024`             | 6.38    | 0.5384           | [:link:](https://drive.google.com/drive/folders/1du3e0DaavfuN16kSqCXFSj1EM74MoGWa?usp=sharing) |
-| **SwAV**       | `ssl/voxceleb2/swav/swav_e-ecapa-1024`             | 8.33    | 0.6120           | [:link:](https://drive.google.com/drive/folders/1ShF3qEzzw_eVJ9guP8isopl-cUwR-2Sn?usp=sharing) |
-| **VICReg**     | `ssl/voxceleb2/vicreg/vicreg_e-ecapa-1024`         | 7.85    | 0.6004           | [:link:](https://drive.google.com/drive/folders/1_SIlJrMXk7G0inims3efFKNOwUMCZOC6?usp=sharing) |
-| **DINO**       | `ssl/voxceleb2/dino/dino+_e-ecapa-1024`            | 2.92    | 0.3523           | [:link:](https://drive.google.com/drive/folders/1kQyJ_QdlneX_t9UgjZev6BpUO6zflcUR?usp=sharing) |
-| **Supervised** | `ssl/voxceleb2/supervised/supervised_e-ecapa-1024` | 1.34    | 0.1521           | [:link:](https://drive.google.com/drive/folders/1vKTEdHBnVl_22838n4OGH_h8Nx--yl_P?usp=sharing) |
+#### Fast ResNet-34
+
+| Method           | Model                                                                         | EER (%) | minDCF (p=0.01) | Checkpoint                                                                                     |
+|------------------|-------------------------------------------------------------------------------|:-------:|:---------------:|:----------------------------------------------------------------------------------------------:|
+| **LIM**          | `lim/lim_loss-NCE_proj-2048-BN-R-2048-BN-R-512`                               | 16.13   | 0.9015          |                                                                                                |
+| **CPC**          | `cpc/cpc_t-4_agg-GRU-1-256`                                                   | 12.77   | 0.8033          |                                                                                                |
+| **SimCLR**       | `simclr/simclr_proj-none_t-0.03`                                              |  9.05   | 0.6364          | [:link:](https://drive.google.com/drive/folders/14mAactPvU819-YHsuZHxpA_QAMu3IT88?usp=sharing) |
+| **MoCo**         | `moco/moco_proj-none_Q-32768_t-0.03_m-0.999`                                  |  8.49   | 0.5990          | [:link:](https://drive.google.com/drive/folders/1F1HZEzeVta1n6-MOT-0F27LAupwvxqyM?usp=sharing) |
+| **DeepCluster**  | `deepcluster/deepcluster_proj-2048-BN-R-2048-BN-R-512_K-3000-3000-3000_t-0.1` | 15.16   | 0.8193          |                                                                                                |
+| **SwAV**         | `swav/swav_proj-2048-BN-R-2048-BN-R-512_K-6000_t-0.1`                         | 11.82   | 0.7177          | [:link:](https://drive.google.com/drive/folders/1VC1jVhWK22mfk_B3ZwFV5mxMueNIcvqb?usp=sharing) |
+| **W-MSE**        | `wmse/wmse_proj-1024-BN-R-64_ws-128`                                          | 14.62   | 0.8506          |                                                                                                |
+| **Barlow Twins** | `barlowtwins/barlowtwins_proj-2048-BN-R-2048-BN-R-512_lambda-0.005`           | 13.22   | 0.7658          |                                                                                                |
+| **VICReg**       | `vicreg/vicreg_proj-2048-BN-R-2048-BN-R-512_inv-1.0_var-1.0_cov-0.1`          | 11.33   | 0.6658          | [:link:](https://drive.google.com/drive/folders/1AvOWDX4m9mdzI8QSpcrir1kSui0rm8I0?usp=sharing) |
+| **BYOL**         | `byol/byol_proj-2048-BN-R-2048-BN-R-512_pred-4096-BN-R-256_m-0.996-sched`     | 13.99   | 0.7509          |                                                                                                |
+| **SimSiam**      | `simsiam/simsiam_proj-2048-BN-R-2048-BN-R-512-BN_pred-512-BN-R-2048`          | 28.94   | 0.9984          |                                                                                                |
+| **DINO**         | `dino/dino_proj-2048-BN-G-2048-BN-G-256-L2-65536_G-2x4_L-4x2_t-0.04`          |  6.04   | 0.4526          | [:link:](https://drive.google.com/drive/folders/1DAvRYNlZFR7zllymsCfS2Yoa3Wt1tv0Z?usp=sharing) |
+| **Supervised**   | `supervised/supervised_loss-AAM_s-30_m-0.2`                                   |  2.95   | 0.3122          | [:link:](https://drive.google.com/drive/folders/1CZpeaiK6bCcOsvgdEeVj6n-XqKoiJkJs?usp=sharing) |
+
+#### ECAPA-TDNN
+
+| Method         | Model                                                                                   | EER (%) | minDCF (p=0.01) | Checkpoint                                                                                     |
+|----------------|-----------------------------------------------------------------------------------------|:-------:|:---------------:|:----------------------------------------------------------------------------------------------:|
+| **SimCLR**     | `simclr/simclr_enc-ECAPATDNN-1024_proj-none_t-0.03`                                     | 6.41    | 0.5160          | [:link:](https://drive.google.com/drive/folders/1ziVtNDFspiC1Qbj8kbqb5s9e1LW98Vmt?usp=sharing) |
+| **MoCo**       | `moco/moco_enc-ECAPATDNN-1024_proj-none_Q-32768_t-0.03_m-0.999`                         | 6.48    | 0.5372          | [:link:](https://drive.google.com/drive/folders/1obndtNWHm8I4-9rhxugS7OFlUbFhCNGh?usp=sharing) |
+| **SwAV**       | `swav/swav_enc-ECAPATDNN-1024_proj-2048-BN-R-2048-BN-R-512_K-6000_t-0.1`                | 8.12    | 0.6148          | [:link:](https://drive.google.com/drive/folders/1_oDDza2fau84tZA060Wy8xZfy_guAy6w?usp=sharing) |
+| **VICReg**     | `vicreg/vicreg_enc-ECAPATDNN-1024_proj-2048-BN-R-2048-BN-R-512_inv-1.0_var-1.0_cov-0.1` | 7.42    | 0.5659          | [:link:](https://drive.google.com/drive/folders/1Ir37Nh6O38biOvHeW6pzgcMB8oOaAdEg?usp=sharing) |
+| **DINO**       | `dino/dino_enc-ECAPATDNN-1024_proj-2048-BN-G-2048-BN-G-256-L2-65536_G-2x4_L-4x2_t-0.04` | 2.82    | 0.3463          | [:link:](https://drive.google.com/drive/folders/1_4jkqiumnFjHfMcYrm8ckpRo85c4Gdqd?usp=sharing) |
+| **Supervised** | `supervised/supervised_enc-ECAPATDNN-1024_loss-AAM_s-30_m-0.2`                          | 1.34    | 0.1521          | [:link:](https://drive.google.com/drive/folders/1ZTXgZeWv9dbnosLzMtHU4wSQXvg9M-SF?usp=sharing) |
+
+### SSPS
+
+- **Configs**: `models/ssps/voxceleb2/`
+- **Train set**: VoxCeleb2
+- **Evaluation**: VoxCeleb1-O (Original)
+- **Encoder**: ECAPA-TDNN
+
+| Method         | Model                                                                              | EER (%) | minDCF (p=0.01) | Checkpoint                                                                                     |
+|----------------|------------------------------------------------------------------------------------|:-------:|:---------------:|:----------------------------------------------------------------------------------------------:|
+| **SimCLR**     | `simclr_e-ecapa/ssps_kmeans_25k_uni-1`                                             | 2.57    | 0.3033          | [:link:](https://drive.google.com/drive/folders/1Uv09fswUNDCbhrxR8_e8kOLVa60KB2rW?usp=sharing) |
+| **DINO**       | `dino_e-ecapa/ssps_kmeans_25k_uni-1`                                               | 2.53    | 0.2843          | [:link:](https://drive.google.com/drive/folders/1wgtHkaha6O0lIT0hN3Hcf8bGIk9wHBA1?usp=sharing) |
 
 ---
 

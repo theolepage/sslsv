@@ -13,8 +13,6 @@ data
 env*
 wandb
 
-models/export/
-
 models/**/tensorboard/
 models/**/wandb/
 models/**/*.json

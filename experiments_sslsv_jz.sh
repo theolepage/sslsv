@@ -151,8 +151,8 @@ torchrun --nproc_per_node=2 sslsv/bin/evaluate_label_efficient_distributed.py \
 ./train_ddp_jz.sh 2 models/ssl/voxceleb2/moco/moco_proj-none_Q-32768_t-0.03_m-0.999_train-quarter-spk/
 ./train_ddp_jz.sh 2 models/ssl/voxceleb2/moco/moco_proj-none_Q-32768_t-0.03_m-0.999_train-quarter-utt/
 
-./train_ddp_jz.sh 2 models/ssl/voxceleb2/moco/moco_enc-ECAPATDNN-1024_proj-none_Q-32768_t-0.03_m-0.999/
 ./train_ddp_jz.sh 2 models/ssl/voxceleb2/moco/moco_enc-ECAPATDNN-1024_proj-none_Q-65536_t-0.03_m-0.999/
+./train_ddp_jz.sh 2 models/ssl/voxceleb2/moco/moco_enc-ECAPATDNN-1024_proj-none_Q-32768_t-0.03_m-0.999/
 
 
 
