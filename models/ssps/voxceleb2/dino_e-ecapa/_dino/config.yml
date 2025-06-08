@@ -9,6 +9,7 @@ method:
     start_epoch: 80
 trainer:
   epochs: 100
+  stop_at_epoch: 80
   batch_size: 128
   optimizer: 'sgd'
   learning_rate: 0.2

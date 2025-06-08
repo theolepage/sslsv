@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 from dataclasses import dataclass
 from enum import Enum
 
@@ -60,6 +60,7 @@ class TrainerConfig:
 
     Attributes:
         epochs (int): Number of epochs.
+        stop_at_epoch (Optional[int]): Epoch at which to stop training. 
         batch_size (int): Batch size for training.
         learning_rate (float): Initial learning rate.
         weight_decay (float): Weight decay for optimizer.
@@ -76,6 +77,7 @@ class TrainerConfig:
     """
 
     epochs: int = 100
+    stop_at_epoch: Optional[int] = None
     batch_size: int = 256
     learning_rate: float = 0.001
     weight_decay: float = 0
@@ -319,6 +321,8 @@ class Trainer:
         self.nb_epochs_remaining = 0
 
         max_epochs = self.config.trainer.epochs
+        if self.config.trainer.stop_at_epoch:
+            max_epochs = self.config.trainer.stop_at_epoch
 
         for epoch in range(start_epoch, max_epochs):
             logger = EpochLogger()
