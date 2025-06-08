@@ -6,8 +6,7 @@ method:
   projector_output_dim: 512
   temperature: 0.03
 trainer:
-  epochs: 111
-  last_checkpoint: 'models/ssl/voxceleb2/simclr/simclr_proj-2048-BN-R-2048-BN-R-512_t-0.03/checkpoints/model_epoch-90.pt'
+  last_checkpoint: 'models/ssl/voxceleb2/simclr/simclr_proj-2048-BN-R-2048-BN-R-512_t-0.03/checkpoints/model_epoch-79.pt'
 evaluation:
   validation:
     - type: 'sv_cosine'

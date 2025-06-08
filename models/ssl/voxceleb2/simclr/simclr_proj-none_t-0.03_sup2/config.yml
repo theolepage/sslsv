@@ -5,8 +5,7 @@ method:
   enable_projector: false
   temperature: 0.03
 trainer:
-  epochs: 111
-  last_checkpoint: 'models/ssl/voxceleb2/simclr/simclr_proj-none_t-0.03/checkpoints/model_epoch-90.pt'
+  last_checkpoint: 'models/ssl/voxceleb2/simclr/simclr_proj-none_t-0.03/checkpoints/model_epoch-79.pt'
 evaluation:
   validation:
     - type: 'sv_cosine'
