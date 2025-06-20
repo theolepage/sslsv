@@ -10,22 +10,35 @@
 
 # sslsv
 
-**sslsv** is a PyTorch-based Deep Learning framework consisting of a collection of **Self-Supervised Learning** (SSL) methods for learning speaker representations applicable to different speaker-related downstream tasks, notably **Speaker Verification** (SV).
+**sslsv** is a PyTorch-based deep learning toolkit consisting of a collection of **Self-Supervised Learning** (SSL) frameworks for learning speaker representations, applicable to various speaker-related downstream tasks, notably **Speaker Verification** (SV).
 
-Our aim is to: **(1) provide self-supervised SOTA methods** by porting algorithms from the computer vision domain; and **(2) evaluate them in a comparable environment**.
+Its main objectives are to: **(1) provide implementations of state-of-the-art SSL frameworks** by adapting algorithms from the computer vision domain; and **(2) evaluate them within a consistent and comparable environment**.
 
-Our training framework is depicted by the figure below.
+An overview of the general training and evaluation framework is provided in the figure below.
 
 <p align="center">
-  <img src="training_framework.svg" width=900 />
+  <img src="framework.svg" width=900 />
 </p>
 
 ---
 
 ## News
 
-* **April 2024** – :clap: Introduction of new various methods and complete refactoring (v2.0).
-* **June 2022** – :stars: First release of sslsv (v1.0).
+* **June 2025**     – :clap: Release of results and checkpoints (v2.0).
+* **June 2025**     – :bookmark: Support for Python 3.13 and PyTorch 2.7.
+* **December 2024** – :test_tube: Implementation of SimCLR MultiViews and MoCo Margins.
+* **November 2024** – :bulb: Implementation of Self-Supervised Positive Sampling (SSPS).
+* **July 2024**     – :seedling: Implementation of more losses for SimCLR Margins (SphereFace, CurricularFace, MagFace, AdaFace).
+* **May 2024**      – :books: Documentation of the complete codebase.
+* **April 2024**    – :hammer_and_wrench: Complete refactoring, including typing, tests, and coding style (v2.0).
+* **January 2024**  – :rocket: Implementation of the W-MSE framework.
+* **July 2023**     – :zap: Support for PyTorch Distributed Data Parallel (DDP).
+* **June 2023**     – :brain: Evaluation on language, emotion, age, and gender recognition tasks.
+* **April 2023**     – :bar_chart: Additional benchmarks (SITW, VOiCES) and metrics (CLLR, ActDCF, AvgRPrec).
+* **March 2023**     – :straight_ruler: Support for cosine scoring normalizations and PLDA evaluations.
+* **January 2023**  – :test_tube: Implementation of SimCLR Margins (CosFace and ArcFace).
+* **December 2022** – :rocket: Implementation of SSL frameworks: LIM, CPC, SimCLR, MoCo, Barlow Twins, VICReg, VIbCReg, DeepCluster, SwAV, SimSiam, BYOL, and DINO.
+* **June 2022**     – :stars: First release of sslsv (v1.0).
 
 ---
 
@@ -69,7 +82,7 @@ Our training framework is depicted by the figure below.
 </details>
 
 <details>
-  <summary><b>Methods</b></summary>
+  <summary><b>Frameworks</b></summary>
 
 - **LIM** (`sslsv.methods.LIM`)  
   Learning Speaker Representations with Mutual Information ([arXiv](https://arxiv.org/abs/1812.00271))  
@@ -125,7 +138,7 @@ Our training framework is depicted by the figure below.
 </details>
 
 <details open>
-  <summary><b>Methods (ours)</b></summary>
+  <summary><b>Methods (contributions)</b></summary>
 
 - **Combiner** (`sslsv.methods.Combiner`)  
   Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning ([arXiv](https://arxiv.org/abs/2207.05506))  
