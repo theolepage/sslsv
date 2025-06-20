@@ -20,6 +20,7 @@ evaluation:
       key: 'Language'
   test:
     - type: 'classification'
+      frame_length: null
       csv: 'voxlingua107_train.csv'
       key: 'Language'
 dataset:

@@ -19,6 +19,7 @@ evaluation:
       key: 'Emotion'
   test:
     - type: 'classification'
+      frame_length: null
       csv: 'cremad_train.csv'
       key: 'Emotion'
 dataset:

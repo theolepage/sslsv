@@ -19,6 +19,7 @@ evaluation:
       key: 'Speaker'
   test:
     - type: 'classification'
+      frame_length: null
       csv: 'voxceleb1_train_speaker.csv'
       key: 'Speaker'
 dataset:

@@ -9,7 +9,7 @@ method:
   freeze_encoder: false
 trainer:
   init_weights: 'models/ssl/voxceleb2/dino/dino_enc-ECAPATDNN-1024_proj-2048-BN-G-2048-BN-G-256-L2-65536_G-2x4_L-4x2_t-0.04/checkpoints/model_avg.pt'
-  epochs: 10
+  epochs: 50
   tracked_metric: 'val/classification/voxceleb1_train_gender/accuracy'
   tracked_mode: 'max'
   learning_rate: 0.0001
@@ -20,6 +20,7 @@ evaluation:
       key: 'Gender'
   test:
     - type: 'classification'
+      frame_length: null
       csv: 'voxceleb1_train_gender.csv'
       key: 'Gender'
 dataset:
