@@ -156,7 +156,7 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot:
         # + ggtitle("Detection Error Tradeoff (DET) Curve")
         + theme_bw()
         + theme(
-            figure_size=(9.5, 8),
+            figure_size=(7.5, 6),
             text=element_text(size=14),
             # legend_position='top',
             # legend_title=element_blank(),
@@ -200,7 +200,7 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot:
 
         labels.append(model_name)
 
-    plot += geom_abline(size=0.05)
+    # plot += geom_abline(size=0.05)
 
     plot += scale_color_discrete(labels=labels)
     plot += scale_shape_manual(

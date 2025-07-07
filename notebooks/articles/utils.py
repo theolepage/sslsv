@@ -35,21 +35,20 @@ def evaluate_sv(
     models,
     embeddings_path,
     trials=["voxceleb1_test_O"],
-    checkpoint_suffix="avg",
 ):
     res = {}
 
     for name, path in models.items():
         config = load_config(f"{path}/config.yml", verbose=False)
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = "cpu"
         model = load_model(config).to(device)
 
-        checkpoint = torch.load(
-            config.model_ckpt_path / f"model_{checkpoint_suffix}.pt", weights_only=False
-        )
-        model.load_state_dict(checkpoint["model"], strict=False)
-        model.eval()
+        # checkpoint = torch.load(
+        # config.model_ckpt_path / f"model_{checkpoint_suffix}.pt", weights_only=False
+        # )
+        # model.load_state_dict(checkpoint["model"], strict=False)
+        # model.eval()
 
         evaluation = _CosineSVEvaluation(
             model=model,
