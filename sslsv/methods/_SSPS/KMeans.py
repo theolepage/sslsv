@@ -113,12 +113,9 @@ class KMeans:
             desc="K-Means",
         ):
             # E step
-            local_memory_embeddings_batched = local_memory_embeddings.view(
-                N // self.batch_size, self.batch_size, -1
-            )
             local_matches = [
                 (batch @ centroids.T).max(dim=1)
-                for batch in local_memory_embeddings_batched
+                for batch in local_memory_embeddings.split(self.batch_size, dim=0)
             ]
 
             local_assignments = torch.cat([batch.indices for batch in local_matches])

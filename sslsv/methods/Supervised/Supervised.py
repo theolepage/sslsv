@@ -35,11 +35,15 @@ class SupervisedConfig(BaseMethodConfig):
         nb_classes (int): Number of classes.
         classifier (ClassifierEnum): Classifier.
         freeze_encoder (bool): Whether to freeze the encoder.
+        aam_scale (float): Scale for AAM-Softmax loss.
+        aam_margin (float): Margin for AAM-Softmax loss.
     """
 
     nb_classes: int = 5994
     classifier: ClassifierEnum = ClassifierEnum.SPEAKER
     freeze_encoder: bool = False
+    aam_scale: float = 30
+    aam_margin: float = 0.2
 
 
 class LinearClassifier(nn.Module):
@@ -158,12 +162,11 @@ class Supervised(BaseMethod):
             config.nb_classes,
         )
 
-        loss_cls = (
-            AAMSoftmaxLoss
+        self.loss_fn = (
+            AAMSoftmaxLoss(s=config.aam_scale, m=config.aam_margin)
             if config.classifier == ClassifierEnum.SPEAKER
-            else nn.CrossEntropyLoss
+            else nn.CrossEntropyLoss()
         )
-        self.loss_fn = loss_cls()
 
     def forward(self, X: T, training: bool = False) -> T:
         """

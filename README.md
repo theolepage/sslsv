@@ -65,19 +65,19 @@ An overview of the general training and evaluation framework is provided in the 
   <summary><b>Encoders</b></summary>
 
 - **TDNN** (`sslsv.encoders.TDNN`)  
-  X-vectors: Robust dnn embeddings for speaker recognition ([PDF](https://www.danielpovey.com/files/2018_icassp_xvectors.pdf))  
+  X-vectors: Robust dnn embeddings for speaker recognition [[PDF]](https://www.danielpovey.com/files/2018_icassp_xvectors.pdf)  
   *David Snyder, Daniel Garcia-Romero, Gregory Sell, Daniel Povey, Sanjeev Khudanpur*
 
 - **Simple Audio CNN** (`sslsv.encoders.SimpleAudioCNN`)  
-  Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
+  Representation Learning with Contrastive Predictive Coding [[PDF]](https://arxiv.org/pdf/1807.03748)  
   *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
 
 - **ResNet-34** (`sslsv.encoders.ResNet34`)  
-  VoxCeleb2: Deep Speaker Recognition ([arXiv](https://arxiv.org/abs/1806.05622))  
+  VoxCeleb2: Deep Speaker Recognition [[PDF]](https://arxiv.org/pdf/1806.05622)  
   *Joon Son Chung, Arsha Nagrani, Andrew Zisserman*
 
 - **ECAPA-TDNN** (`sslsv.encoders.ECAPATDNN`)  
-  ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification ([arXiv](https://arxiv.org/abs/2005.07143))  
+  ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification [[PDF]](https://arxiv.org/pdf/2005.07143)  
   *Brecht Desplanques, Jenthe Thienpondt, Kris Demuynck*
 </details>
 
@@ -85,55 +85,55 @@ An overview of the general training and evaluation framework is provided in the 
   <summary><b>Frameworks</b></summary>
 
 - **LIM** (`sslsv.methods.LIM`)  
-  Learning Speaker Representations with Mutual Information ([arXiv](https://arxiv.org/abs/1812.00271))  
+  Learning Speaker Representations with Mutual Information [[PDF]](https://arxiv.org/pdf/1812.00271)  
   *Mirco Ravanelli, Yoshua Bengio*
 
 - **CPC** (`sslsv.methods.CPC`)  
-  Representation Learning with Contrastive Predictive Coding ([arXiv](https://arxiv.org/abs/1807.03748))  
+  Representation Learning with Contrastive Predictive Coding [[PDF]](https://arxiv.org/pdf/1807.03748)  
   *Aaron van den Oord, Yazhe Li, Oriol Vinyals*
 
 - **SimCLR** (`sslsv.methods.SimCLR`)  
-  A Simple Framework for Contrastive Learning of Visual Representations ([arXiv](https://arxiv.org/abs/2002.05709))  
+  A Simple Framework for Contrastive Learning of Visual Representations [[PDF]](https://arxiv.org/pdf/2002.05709)  
   *Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton*
 
 - **MoCo v2+** (`sslsv.methods.MoCo`)  
-  Improved Baselines with Momentum Contrastive Learning ([arXiv](https://arxiv.org/abs/2003.04297))  
+  Improved Baselines with Momentum Contrastive Learning [[PDF]](https://arxiv.org/pdf/2003.04297)  
   *Xinlei Chen, Haoqi Fan, Ross Girshick, Kaiming He*
 
 - **DeepCluster v2** (`sslsv.methods.DeepCluster`)  
-  Deep Clustering for Unsupervised Learning of Visual Features ([arXiv](https://arxiv.org/abs/1807.05520))  
+  Deep Clustering for Unsupervised Learning of Visual Features [[PDF]](https://arxiv.org/pdf/1807.05520)  
   *Mathilde Caron, Piotr Bojanowski, Armand Joulin, Matthijs Douze*
 
 - **SwAV** (`sslsv.methods.SwAV`)  
-  Unsupervised Learning of Visual Features by Contrasting Cluster Assignments ([arXiv](https://arxiv.org/abs/2006.09882))  
+  Unsupervised Learning of Visual Features by Contrasting Cluster Assignments [[PDF]](https://arxiv.org/pdf/2006.09882)  
   *Mathilde Caron, Ishan Misra, Julien Mairal, Priya Goyal, Piotr Bojanowski, Armand Joulin*
 
 - **W-MSE** (`sslsv.methods.WMSE`)  
-  Whitening for Self-Supervised Representation Learning ([arXiv](https://arxiv.org/abs/2007.06346))  
+  Whitening for Self-Supervised Representation Learning [[PDF]](https://arxiv.org/pdf/2007.06346)  
   *Aleksandr Ermolov, Aliaksandr Siarohin, Enver Sangineto, Nicu Sebe*
 
 - **Barlow Twins** (`sslsv.methods.BarlowTwins`)  
-  Barlow Twins: Self-Supervised Learning via Redundancy Reduction ([arXiv](https://arxiv.org/abs/2103.03230))  
+  Barlow Twins: Self-Supervised Learning via Redundancy Reduction [[PDF]](https://arxiv.org/pdf/2103.03230)  
   *Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny*
 
 - **VICReg** (`sslsv.methods.VICReg`)  
-  VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning ([arXiv](https://arxiv.org/abs/2105.04906))  
+  VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning [[PDF]](https://arxiv.org/pdf/2105.04906)  
   *Adrien Bardes, Jean Ponce, Yann LeCun*
 
 - **VIbCReg** (`sslsv.methods.VIbCReg`)  
-  Computer Vision Self-supervised Learning Methods on Time Series ([arXiv](https://arxiv.org/abs/2109.00783))  
+  Computer Vision Self-supervised Learning Methods on Time Series [[PDF]](https://arxiv.org/pdf/2109.00783)  
   *Daesoo Lee, Erlend Aune*
 
 - **BYOL** (`sslsv.methods.BYOL`)  
-  Bootstrap Your Own Latent: A New Approach to Self-Supervised Learning ([arXiv](https://arxiv.org/abs/2006.07733))  
+  Bootstrap Your Own Latent: A New Approach to Self-Supervised Learning [[PDF]](https://arxiv.org/pdf/2006.07733)  
   *Jean-Bastien Grill, Florian Strub, Florent Altché, Corentin Tallec, Pierre H. Richemond, Elena Buchatskaya, Carl Doersch, Bernardo Avila Pires, Zhaohan Daniel Guo, Mohammad Gheshlaghi Azar, Bilal Piot, Koray Kavukcuoglu, Rémi Munos, Michal Valko*
 
 - **SimSiam** (`sslsv.methods.SimSiam`)  
-  Exploring Simple Siamese Representation Learning ([arXiv](https://arxiv.org/abs/2011.10566))  
+  Exploring Simple Siamese Representation Learning [[PDF]](https://arxiv.org/pdf/2011.10566)  
   *Xinlei Chen, Kaiming He*
 
 - **DINO** (`sslsv.methods.DINO`)  
-  Emerging Properties in Self-Supervised Vision Transformers ([arXiv](https://arxiv.org/abs/2104.14294))  
+  Emerging Properties in Self-Supervised Vision Transformers [[PDF]](https://arxiv.org/pdf/2104.14294)  
   *Mathilde Caron, Hugo Touvron, Ishan Misra, Hervé Jégou, Julien Mairal, Piotr Bojanowski, Armand Joulin*
 </details>
 
@@ -141,20 +141,16 @@ An overview of the general training and evaluation framework is provided in the 
   <summary><b>Methods (contributions)</b></summary>
 
 - **Combiner** (`sslsv.methods.Combiner`)  
-  Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning ([arXiv](https://arxiv.org/abs/2207.05506))  
+  Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning [[PDF]](https://arxiv.org/pdf/2207.05506) [[Ref]](https://theolepage.com/ref/lepage2022LabelEfficient/)  
   *Theo Lepage, Reda Dehak*
 
-- **SimCLR Margins** (`sslsv.methods.SimCLRMargins`)  
-  Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations ([arXiv](https://arxiv.org/abs/2404.14913))  
-  *Theo Lepage, Reda Dehak*
-
-- **MoCo Margins** (`sslsv.methods.MoCoMargins`)  
-  Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations ([arXiv](https://arxiv.org/abs/2404.14913))  
+- **Margins** (`sslsv.methods.SimCLRMargins`, `sslsv.methods.MoCoMargins`)  
+  Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations [[PDF]](https://arxiv.org/pdf/2404.14913) [[Ref]](https://theolepage.com/ref/lepage2024AdditiveMargin/)  
   *Theo Lepage, Reda Dehak*
 
 - **SSPS** (`sslsv.methods._SSPS`)  
   Self-Supervised Frameworks for Speaker Verification via Bootstrapped Positive Sampling
- ([arxiv](https://arxiv.org/abs/2501.17772))  
+ [[PDF]](https://arxiv.org/pdf/2501.17772) [[Ref]](https://theolepage.com/ref/lepage2025BootstrappedPositiveSampling/)  
  *Theo Lepage, Reda Dehak*
 
 </details>
@@ -350,45 +346,50 @@ If you use *sslsv*, please consider starring this repository on GitHub and citin
   author    = {Lepage, Theo and Dehak, Reda},
   year      = {2025},
   booktitle = {Interspeech 2025},
-  url       = {https://arxiv.org/abs/2505.14561},
+  pages     = {1098--1102},
+  doi       = {10.21437/Interspeech.2025-183},
+  url       = {https://www.isca-archive.org/interspeech_2025/lepage25_interspeech.pdf}
 }
 
-@Article{lepage2025SSLSVBootstrappedPositiveSampling,
+@Article{lepage2025BootstrappedPositiveSampling,
   title     = {Self-Supervised Frameworks for Speaker Verification via Bootstrapped Positive Sampling},
   author    = {Lepage, Theo and Dehak, Reda},
   year      = {2025},
-  journal   = {arXiv preprint library},
-  url       = {https://arxiv.org/abs/2501.17772},
+  journal   = {IEEE Transactions on Audio, Speech and Language Processing},
+  volume    = {33},
+  pages     = {2932--2945},
+  doi       = {10.1109/TASLPRO.2025.3587462},
+  url       = {https://arxiv.org/pdf/2501.17772}
 }
 
-@InProceedings{lepage2024AdditiveMarginSSLSV,
+@InProceedings{lepage2024AdditiveMargin,
   title     = {Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations},
   author    = {Lepage, Theo and Dehak, Reda},
   year      = {2024},
   booktitle = {The Speaker and Language Recognition Workshop (Odyssey 2024)},
   pages     = {38--42},
   doi       = {10.21437/odyssey.2024-6},
-  url       = {https://www.isca-archive.org/odyssey_2024/lepage24_odyssey.html},
+  url       = {https://www.isca-archive.org/odyssey_2024/lepage24_odyssey.pdf},
 }
 
-@InProceedings{lepage2023ExperimentingAdditiveMarginsSSLSV,
+@InProceedings{lepage2023ExperimentingAdditiveMargins,
   title     = {Experimenting with Additive Margins for Contrastive Self-Supervised Speaker Verification},
   author    = {Lepage, Theo and Dehak, Reda},
   year      = {2023},
   booktitle = {Interspeech 2023},
   pages     = {4708--4712},
   doi       = {10.21437/Interspeech.2023-1479},
-  url       = {https://www.isca-archive.org/interspeech_2023/lepage23_interspeech.html},
+  url       = {https://www.isca-archive.org/interspeech_2023/lepage23_interspeech.pdf},
 }
 
-@InProceedings{lepage2022LabelEfficientSSLSV,
+@InProceedings{lepage2022LabelEfficient,
   title     = {Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning},
   author    = {Lepage, Theo and Dehak, Reda},
   year      = {2022},
   booktitle = {Interspeech 2022},
   pages     = {4018--4022},
   doi       = {10.21437/Interspeech.2022-802},
-  url       = {https://www.isca-archive.org/interspeech_2022/lepage22_interspeech.html},
+  url       = {https://www.isca-archive.org/interspeech_2022/lepage22_interspeech.pdf},
 }
 ```
 

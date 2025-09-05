@@ -6,6 +6,9 @@ method:
     loss: 'nt-xent-curricularface'
     margin: 0.01
   enable_projector: false
+  queue_size: 32768
+trainer:
+  ddp_sync_batchnorm: false
 evaluation:
   validation:
     - type: 'sv_cosine'

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Iterable, List, Optional
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 import numpy as np
 from torch.utils.data import Sampler as TorchSampler
@@ -14,6 +14,7 @@ class SamplerConfig:
 
     Attributes:
         enable (bool): Whether the sampler is enabled.
+        balance (bool): Balance dataset in terms of number of samples per class.
         nb_utterances (Optional[int]): Number of utterances.
         nb_speakers (Optional[int]): Number of speakers.
         nb_samples_per_spk (Optional[int]): Number of samples per speaker.
@@ -23,6 +24,7 @@ class SamplerConfig:
     """
 
     enable: bool = True
+    balance: bool = False
     nb_utterances: Optional[int] = None
     nb_speakers: Optional[int] = None
     nb_samples_per_spk: Optional[int] = None
@@ -106,7 +108,14 @@ class Sampler(TorchSampler):
         if self.config.nb_utterances:
             nb_samples = min(self.config.nb_utterances, total_nb_samples)
 
-        indices = rng.choice(total_nb_samples, size=nb_samples, replace=False)
+        # Balancing
+        if self.config.balance:
+            counts = Counter(self.labels)
+            weights = np.array([1.0 / counts[label] for label in self.labels])
+            weights = weights / weights.sum()
+            indices = rng.choice(total_nb_samples, size=nb_samples, replace=True, p=weights)
+        else:
+            indices = rng.choice(total_nb_samples, size=nb_samples, replace=False)
 
         # Create list of utterances for each speaker
         spk_to_utterances = defaultdict(list)

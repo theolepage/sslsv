@@ -6,6 +6,9 @@ method:
     loss: 'nt-xent-adaface'
     margin: 0.2
   enable_projector: false
+  queue_size: 32768
+trainer:
+  ddp_sync_batchnorm: false
 evaluation:
   validation:
     - type: 'sv_cosine'

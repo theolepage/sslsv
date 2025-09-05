@@ -1,14 +1,9 @@
 encoder:
   type: 'resnet34'
 method:
-  type: 'moco_margins'
-  loss:
-    loss: 'nt-xent-sphereface'
-    margin: 4
-  enable_projector: false
-  queue_size: 32768
-trainer:
-  ddp_sync_batchnorm: false
+  type: 'supervised'
+  nb_classes: 5994
+  aam_margin: 0.2
 evaluation:
   validation:
     - type: 'sv_cosine'
@@ -16,7 +11,6 @@ evaluation:
     - type: 'sv_cosine'
       frame_length: null
 dataset:
-  ssl: true
   train: 'voxceleb2_train.csv'
   augmentation:
     enable: true

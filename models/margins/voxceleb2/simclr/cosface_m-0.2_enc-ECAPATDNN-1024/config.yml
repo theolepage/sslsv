@@ -1,14 +1,12 @@
 encoder:
-  type: 'resnet34'
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
 method:
-  type: 'moco_margins'
+  type: 'simclr_margins'
   loss:
-    loss: 'nt-xent-sphereface'
-    margin: 4
+    loss: 'nt-xent-cosface'
+    margin: 0.2
   enable_projector: false
-  queue_size: 32768
-trainer:
-  ddp_sync_batchnorm: false
 evaluation:
   validation:
     - type: 'sv_cosine'
