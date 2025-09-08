@@ -1,0 +1,17 @@
+encoder:
+  type: 'tdnn'
+method:
+  type: 'supervised'
+  nb_classes: 7500
+trainer:
+  epochs: 30
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  train: 'pl/vox2_dino_km-50000_ahc-7500.csv'
+  augmentation:
+    enable: true

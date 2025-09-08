@@ -1,0 +1,23 @@
+encoder:
+  type: 's3prl'
+  upstream: 'wavlm_base_plus'
+  avg_layer_features: true
+  pooling: 'tdnn'
+  frozen: true
+method:
+  type: 'simclr'
+  enable_projector: false
+  temperature: 0.03
+trainer:
+  epochs: 30
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true

@@ -45,9 +45,14 @@
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0.2_balanced/
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0.2_no-class-collisions/
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0.2_sup/
+# ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0_balanced/
+# ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0_no-class-collisions/
+# ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0_sup/
 
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0.2_bs-512/
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0.2_bs-128/
+# ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0_bs-512/
+# ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0_bs-128/
 
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0.2_nbspk-3000/
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/simclr/cosface_m-0.2_nbspk-1000/
@@ -78,7 +83,7 @@
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/moco/curricularface_m-0.01/
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/moco/curricularface_m-0.05/
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/moco/curricularface_m-0.1/
-# ✅./train_ddp_jz.sh 2 models/margins/voxceleb2/moco/curricularface_m-0.2/
+# ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/moco/curricularface_m-0.2/
 
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/moco/magface_m-0.01-0.05/
 # ✅ ./train_ddp_jz.sh 2 models/margins/voxceleb2/moco/magface_m-0.05-0.1/

@@ -111,7 +111,10 @@ class TDNN(BaseEncoder):
             ]
         )
 
-        self.last_fc = nn.Linear(config.channels[-1] * 2, config.encoder_dim)
+        self.linear1 = nn.Linear(config.channels[-1] * 2, config.encoder_dim)
+        self.relu1 = nn.ReLU()
+        self.bn1 = nn.BatchNorm1d(config.encoder_dim)
+        self.linear2 = nn.Linear(config.encoder_dim, config.encoder_dim)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
@@ -133,6 +136,9 @@ class TDNN(BaseEncoder):
         std = torch.std(Z, dim=-1)
         stats = torch.cat((mean, std), dim=1)
 
-        Z = self.last_fc(stats)
+        Z = self.linear1(stats)
+        Z = self.relu1(Z)
+        Z = self.bn1(Z)
+        Z = self.linear2(Z)
 
         return Z

@@ -5,6 +5,7 @@ encoder:
 method:
   type: 'dino'
 trainer:
+  epochs: 80
   batch_size: 128
   optimizer: 'sgd'
   learning_rate: 0.2

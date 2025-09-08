@@ -79,6 +79,9 @@ An overview of the general training and evaluation framework is provided in the 
 - **ECAPA-TDNN** (`sslsv.encoders.ECAPATDNN`)  
   ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification [[PDF]](https://arxiv.org/pdf/2005.07143)  
   *Brecht Desplanques, Jenthe Thienpondt, Kris Demuynck*
+
+- **S3PRL** (`sslsv.encoders.S3PRL`)  
+  Pre-trained speech foundation models (e.g., WavLM, HuBERT, wav2vec 2.0) can be used as encoders using the [s3prl](https://github.com/s3prl/s3prl) toolkit
 </details>
 
 <details>
@@ -338,9 +341,20 @@ Use `wandb online` and `wandb offline` to toggle wandb. To log your experiments 
 
 ## Citations
 
-If you use *sslsv*, please consider starring this repository on GitHub and citing one the following papers.
+If you use *sslsv*, please consider starring this repository on GitHub and citing one of the following papers.
 
 ```BibTeX
+@Article{lepage2025SLSRReview,
+  title   = {Self-Supervised Learning for Speaker Recognition: A study and review},
+  author  = {Lepage, Theo and Dehak, Reda},
+  year    = {2026},
+  journal = {Speech Communication},
+  volume  = {176},
+  pages   = {103333},
+  doi     = {10.1016/j.specom.2025.103333},
+  url     = {https://hal.science/hal-05149384v1/file/lepage_2025_specom.pdf}
+}
+
 @InProceedings{lepage2025SSPS,
   title     = {SSPS: Self-Supervised Positive Sampling for Robust Self-Supervised Speaker Verification},
   author    = {Lepage, Theo and Dehak, Reda},

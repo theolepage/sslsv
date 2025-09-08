@@ -30,6 +30,7 @@ from sslsv.encoders.TDNN import TDNN, TDNNConfig
 from sslsv.encoders.ResNet34 import ResNet34, ResNet34Config
 from sslsv.encoders.SimpleAudioCNN import SimpleAudioCNN, SimpleAudioCNNConfig
 from sslsv.encoders.ECAPATDNN import ECAPATDNN, ECAPATDNNConfig
+from sslsv.encoders.S3PRL import S3PRL, S3PRLConfig
 
 # Methods
 from sslsv.methods._BaseMethod import BaseMethod
@@ -99,6 +100,7 @@ REGISTERED_ENCODERS = {
     "resnet34": (ResNet34, ResNet34Config),
     "simpleaudiocnn": (SimpleAudioCNN, SimpleAudioCNNConfig),
     "ecapatdnn": (ECAPATDNN, ECAPATDNNConfig),
+    "s3prl": (S3PRL, S3PRLConfig),
 }
 
 

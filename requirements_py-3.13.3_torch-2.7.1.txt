@@ -15,3 +15,5 @@ prettyprinter
 tqdm
 
 pytest
+
+s3prl

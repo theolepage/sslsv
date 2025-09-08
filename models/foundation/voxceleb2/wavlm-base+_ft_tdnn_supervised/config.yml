@@ -1,0 +1,24 @@
+encoder:
+  type: 's3prl'
+  upstream: 'wavlm_base_plus'
+  global_feature_grad_mult: 0.1
+  avg_layer_features: true
+  pooling: 'tdnn'
+  frozen: false
+method:
+  type: 'supervised'
+  nb_classes: 5994
+trainer:
+  epochs: 20
+  learning_rate: 0.0001
+  init_weights: 'models/foundation/voxceleb2_new/wavlm-base+_frozen_tdnn_supervised/checkpoints/model_epoch-9.pt'
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true
