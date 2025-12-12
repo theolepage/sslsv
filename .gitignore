@@ -16,6 +16,7 @@ wandb
 models/**/tensorboard/
 models/**/wandb/
 models/**/*.json
+models/**/*.txt
 models/**/*.pt
 models/**/*.pkl
 

@@ -136,8 +136,8 @@ def plot_intra_class_similarity(type, checkpoints):
     )
 
     p = (
-        ggplot(data, aes(x="method", y="similarity", fill="method"))
-        + geom_boxplot(outlier_alpha=0.5)
+        ggplot(data, aes(x="method", y="similarity"))  # , fill="method"))
+        + geom_boxplot(outlier_alpha=0)
         # + labs(x=None, y=None, title=f"Intra-{type} cosine similarity")
         + labs(x="", y="")
         + scale_y_continuous(
@@ -148,7 +148,9 @@ def plot_intra_class_similarity(type, checkpoints):
         # + scale_y_continuous(limits=(0.25, 0.75), breaks=[0.25, 0.5, 0.75])
         + theme_bw()
         + theme(
-            figure_size=(8, 4.75), text=element_text(size=14), legend_position="none"
+            figure_size=(4, 3),
+            text=element_text(size=16),
+            legend_position="none",
         )
     )
 
@@ -273,15 +275,13 @@ def plot_inter_class_similarity(type, checkpoints, nb_samples=1000):
 
     p = (
         ggplot(data, aes(x="method", y="similarity", fill="method"))
-        + geom_boxplot(outlier_alpha=0.5)
+        + geom_boxplot(outlier_alpha=0)
         # + labs(x=None, y=None, title=f"Inter-{type} cosine similarity")
         + labs(x="", y="")
         + scale_y_continuous(limits=(-0.5, 0.75))
         # + scale_y_continuous(limits=(0.3, 0.7), breaks=[0.3, 0.4, 0.5, 0.6, 0.7])
         + theme_bw()
-        + theme(
-            figure_size=(8, 4.75), text=element_text(size=14), legend_position="none"
-        )
+        + theme(figure_size=(8, 3), text=element_text(size=14), legend_position="none")
     )
 
     stats = (

@@ -157,7 +157,8 @@ def det_curve(models: Dict[str, Model]) -> plotnine.ggplot:
         + theme_bw()
         + theme(
             figure_size=(7.5, 6),
-            text=element_text(size=14),
+            text=element_text(size=15),
+            axis_text=element_text(size=14),
             # legend_position='top',
             # legend_title=element_blank(),
         )
@@ -233,14 +234,26 @@ def scores_distribution(
 
     df["Model"] = df["Model"].astype("category")
     df["Model"] = df["Model"].cat.reorder_categories(models.keys())
+    df["Target"] = pd.Categorical(
+        df["Target"], categories=["Positive", "Negative"], ordered=True
+    )
 
     plot = (
         ggplot()
         + xlab("Score" if not use_angle else "Angle")
-        + ylab("Count")
-        + ggtitle(f"Scores distribution")
+        + ylab("")
+        # + ggtitle(f"Scores distribution")
         + theme_bw()
-        + theme(figure_size=(12, 6), text=element_text(size=10))
+        + theme(
+            figure_size=(16, 3.75),
+            text=element_text(size=16),
+            legend_position="top",
+            legend_title=element_blank(),
+            legend_key_spacing_x=15,
+            legend_box_spacing=0.02,
+            panel_spacing_x=0.02,
+        )
+        + guides(color=guide_legend(nrow=1))
         + geom_histogram(
             df,
             aes(x="Score", fill="Target", color="Target"),
@@ -248,7 +261,9 @@ def scores_distribution(
             binwidth=0.012,
             position="identity",
         )
-        + facet_wrap("Model")
+        + facet_wrap("Model", nrow=1)
+        + scale_fill_manual(values={"Positive": "#32BE43", "Negative": "#DB3A3A"})
+        + scale_color_manual(values={"Positive": "#32BE43", "Negative": "#DB3A3A"})
     )
 
     for i, (model_name, model) in enumerate(models.items()):
