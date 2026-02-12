@@ -352,7 +352,7 @@ If you use *sslsv*, please consider starring this repository on GitHub and citin
   volume  = {176},
   pages   = {103333},
   doi     = {10.1016/j.specom.2025.103333},
-  url     = {https://hal.science/hal-05149384v1/file/lepage_2025_specom.pdf}
+  url     = {https://arxiv.org/pdf/2602.10829}
 }
 
 @InProceedings{lepage2025SSPS,
@@ -374,36 +374,6 @@ If you use *sslsv*, please consider starring this repository on GitHub and citin
   pages     = {2932--2945},
   doi       = {10.1109/TASLPRO.2025.3587462},
   url       = {https://arxiv.org/pdf/2501.17772}
-}
-
-@InProceedings{lepage2024AdditiveMargin,
-  title     = {Additive Margin in Contrastive Self-Supervised Frameworks to Learn Discriminative Speaker Representations},
-  author    = {Lepage, Theo and Dehak, Reda},
-  year      = {2024},
-  booktitle = {The Speaker and Language Recognition Workshop (Odyssey 2024)},
-  pages     = {38--42},
-  doi       = {10.21437/odyssey.2024-6},
-  url       = {https://www.isca-archive.org/odyssey_2024/lepage24_odyssey.pdf},
-}
-
-@InProceedings{lepage2023ExperimentingAdditiveMargins,
-  title     = {Experimenting with Additive Margins for Contrastive Self-Supervised Speaker Verification},
-  author    = {Lepage, Theo and Dehak, Reda},
-  year      = {2023},
-  booktitle = {Interspeech 2023},
-  pages     = {4708--4712},
-  doi       = {10.21437/Interspeech.2023-1479},
-  url       = {https://www.isca-archive.org/interspeech_2023/lepage23_interspeech.pdf},
-}
-
-@InProceedings{lepage2022LabelEfficient,
-  title     = {Label-Efficient Self-Supervised Speaker Verification With Information Maximization and Contrastive Learning},
-  author    = {Lepage, Theo and Dehak, Reda},
-  year      = {2022},
-  booktitle = {Interspeech 2022},
-  pages     = {4018--4022},
-  doi       = {10.21437/Interspeech.2022-802},
-  url       = {https://www.isca-archive.org/interspeech_2022/lepage22_interspeech.pdf},
 }
 ```
 
