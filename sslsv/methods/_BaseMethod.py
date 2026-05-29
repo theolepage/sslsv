@@ -4,7 +4,11 @@ import torch
 import torch.nn as nn
 from torch import Tensor as T
 
+import numpy as np
+
 from dataclasses import dataclass
+
+from sslsv.trainer.Trainer import LearningRateSchedulerEnum
 
 from sslsv.encoders._BaseEncoder import BaseEncoder
 
@@ -131,14 +135,29 @@ class BaseMethod(nn.Module):
         Returns:
             Tuple[float, float]: Updated learning rate and weight decay.
         """
-        # Equivalent to StepLR(..., step_size=5, gamma=0.95)
-        lr = init_lr * (0.95 ** ((step // nb_steps_per_epoch) // 5))
+        lr_sched = self.trainer.config.trainer.learning_rate_sched
+        min_lr = self.trainer.config.trainer.learning_rate_min
+        nb_epochs_warmup = self.trainer.config.trainer.learning_rate_warmup
 
-        # lr_schedule = (
-        #    1e-4 + 0.5 * (init_lr - 1e-4) *
-        #    (1 + np.cos(np.pi * np.arange(nb_steps) / nb_steps))
-        # )
-        # lr = lr_schedule[step]
+        if lr_sched == LearningRateSchedulerEnum.DEFAULT:
+            # Equivalent to StepLR(..., step_size=5, gamma=0.95)
+            lr = init_lr * (0.95 ** ((step // nb_steps_per_epoch) // 5))
+        elif lr_sched == LearningRateSchedulerEnum.COSINE_DECAY:
+            lr_schedule = (
+               min_lr + 0.5 * (init_lr - min_lr) *
+               (1 + np.cos(np.pi * np.arange(nb_steps) / nb_steps))
+            )
+            lr = lr_schedule[step]
+        elif lr_sched == LearningRateSchedulerEnum.WARMUP_COSINE_DECAY:
+            warmup_lr_schedule = np.linspace(0, init_lr, nb_epochs_warmup * nb_steps_per_epoch)
+            lr_schedule = (
+                min_lr + 0.5 * (init_lr - min_lr) *
+                (1 + np.cos(np.pi * np.arange(nb_steps) / nb_steps))
+            )
+            lr_schedule = np.concatenate((warmup_lr_schedule, lr_schedule))
+            lr = lr_schedule[step]
+        else:
+            raise Exception("LR scheduler `{}` not supported".format(lr_sched))
 
         for param_group in optimizer.param_groups:
             param_group["lr"] = lr

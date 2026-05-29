@@ -1,0 +1,18 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [512, 512, 512, 512, 1536]
+  mel_n_mels: 80
+method:
+  type: 'supervised'
+  nb_classes: 5994
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true
+    aug_prob: 0.6

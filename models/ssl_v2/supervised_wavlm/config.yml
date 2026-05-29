@@ -1,0 +1,30 @@
+encoder:
+  type: 's3prl'
+  upstream: 'wavlm_base_plus'
+  pooling: 'mhfa'
+  frozen: true
+  encoder_dim: 256
+method:
+  type: 'supervised'
+  nb_classes: 5994
+trainer:
+  epochs: 10
+  optimizer: 'sgd'
+  learning_rate: 0.2
+  learning_rate_sched: 'warmup+cosine'
+  learning_rate_min: 0.01
+  learning_rate_warmup: 3
+  weight_decay: 0.0000001
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  train: 'voxceleb2_train.csv'
+  frame_length: 48000
+  augmentation:
+    enable: true
+    strategy: 'reverb|noise'
+    aug_prob: 0.6

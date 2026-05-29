@@ -55,7 +55,7 @@ An overview of the general training and evaluation framework is provided in the 
   - Tensorboard and wandb
 - **Evaluation**:
   - Speaker verification
-    - Backend: Cosine scoring and PLDA
+    - Backend: Cosine scoring (Z/T/S/AS-Norm) and PLDA
     - Metrics: EER, MinDCF, ActDFC, CLLR, AvgRPrec
   - Classification (emotion, language, ...)
 - **Notebooks**: DET curve, scores distribution, t-SNE on embeddings, ...

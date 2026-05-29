@@ -19,12 +19,14 @@ class DataAugmentationStrategyEnum(Enum):
     Attributes:
         REVERB (str): Apply reverberation.
         NOISE (str): Apply noise.
+        EITHER (str): Apply reverberation or noise.
         BOTH (str): Apply reverberation and noise.
         ALL (str): Apply reverberation or noise or both or nothing.
     """
 
     REVERB = "reverb"
     NOISE = "noise"
+    EITHER = "reverb|noise"
     BOTH = "reverb+noise"
     ALL = "all"
 
@@ -198,6 +200,12 @@ class DataAugmentation:
             audio = self.reverberate(audio)
         elif self.config.strategy == DataAugmentationStrategyEnum.NOISE:
             audio = self.add_noise(audio)
+        elif self.config.strategy == DataAugmentationStrategyEnum.EITHER:
+            aug_type = random.randint(1, 2)
+            if aug_type == 1:
+                audio = self.reverberate(audio)
+            else:
+                audio = self.add_noise(audio)
         elif self.config.strategy == DataAugmentationStrategyEnum.BOTH:
             audio = self.reverberate(audio)
             audio = self.add_noise(audio)

@@ -1,0 +1,35 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 1536]
+  mel_n_mels: 80
+method:
+  type: 'dino'
+  teacher_temperature: 0.07
+  teacher_temperature_warmup: 0.04
+  teacher_temperature_warmup_epochs: 30
+trainer:
+  epochs: 150
+  batch_size: 128
+  optimizer: 'sgd'
+  learning_rate: 0.2
+  learning_rate_sched: 'warmup+cosine'
+  learning_rate_min: 0.000025
+  learning_rate_warmup: 20
+  weight_decay: 0.00005
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  frame_length: 48000
+  frame_sampling: 'dino'
+  ssl_dino_global_length: 48000
+  ssl_dino_local_length: 32000
+  train: 'voxceleb2_train.csv'
+  augmentation:
+    enable: true
+    strategy: 'reverb|noise'
+    aug_prob: 0.6

@@ -1,0 +1,32 @@
+encoder:
+  type: 's3prl'
+  upstream: 'wavlm_base_plus'
+  pooling: 'mhfa'
+  frozen: false
+  global_feature_grad_mult: 0.1
+  encoder_dim: 256
+method:
+  type: 'supervised'
+  nb_classes: 5994
+trainer:
+  init_weights: 'models/tests/wavlm_1/checkpoints/model_avg.pt'
+  epochs: 10
+  optimizer: 'adamw'
+  learning_rate: 0.0002
+  learning_rate_sched: 'warmup+cosine'
+  learning_rate_min: 0.000002
+  learning_rate_warmup: 2
+  weight_decay: 0.0000001
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  train: 'voxceleb2_train.csv'
+  frame_length: 48000
+  augmentation:
+    enable: true
+    strategy: 'reverb|noise'
+    aug_prob: 0.6

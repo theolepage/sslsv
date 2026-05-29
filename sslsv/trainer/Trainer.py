@@ -14,10 +14,10 @@ import wandb
 import torch
 
 from torch.utils.tensorboard import SummaryWriter
-from torch.optim import Adam, SGD
+from torch.optim import Adam, SGD, AdamW
 from torch.cuda.amp import GradScaler, autocast
 
-from sslsv.methods._BaseMethod import BaseMethod
+# from sslsv.methods._BaseMethod import BaseMethod
 from sslsv.utils.distributed import (
     is_main_process,
     is_dist_initialized,
@@ -47,10 +47,27 @@ class OptimizerEnum(Enum):
     Attributes:
         ADAM (str): Adam optimizer.
         SGD (str): SGD optimizer.
+        ADAMW (str): AdamW optimizer.
     """
 
     ADAM = "adam"
     SGD = "sgd"
+    ADAMW = "adamw"
+
+
+class LearningRateSchedulerEnum(Enum):
+    """
+    Enumeration representing different learning rate schedulers.
+
+    Attributes:
+        DEFAULT (str): Default scheduler (-5% every 5 epochs).
+        COSINE_DECAY (str): Cosine decay.
+        WARMUP_COSINE_DECAY (str): Linear warm-up (10 epochs) + Cosine decay.
+    """
+
+    DEFAULT = "default"
+    COSINE_DECAY = "cosine"
+    WARMUP_COSINE_DECAY = "warmup+cosine"
 
 
 @dataclass
@@ -63,6 +80,9 @@ class TrainerConfig:
         stop_at_epoch (Optional[int]): Epoch at which to stop training. 
         batch_size (int): Batch size for training.
         learning_rate (float): Initial learning rate.
+        learning_rate_sched (LearningRateSchedulerEnum): Learning rate scheduler.
+        learning_rate_min (float): Minimal learning rate.
+        learning_rate_warmup (int): Number of epochs for learning rate warmup.
         weight_decay (float): Weight decay for optimizer.
         optimizer (OptimizerEnum): Optimizer type.
         patience (int): Number of epochs to wait for improvement before early stopping.
@@ -80,6 +100,9 @@ class TrainerConfig:
     stop_at_epoch: Optional[int] = None
     batch_size: int = 256
     learning_rate: float = 0.001
+    learning_rate_sched: LearningRateSchedulerEnum = LearningRateSchedulerEnum.DEFAULT
+    learning_rate_min: float = 1e-5
+    learning_rate_warmup: int = 10
     weight_decay: float = 0
     optimizer: OptimizerEnum = OptimizerEnum.ADAM
 
@@ -118,7 +141,7 @@ class Trainer:
 
     def __init__(
         self,
-        model: BaseMethod,
+        model: Any, # FIXME: use BaseMethod
         train_dataloader: torch.utils.data.DataLoader,
         config: Any,  # FIXME: use Config
         evaluate: Callable[..., Dict[str, float]],
@@ -476,19 +499,28 @@ class Trainer:
         Returns:
             None
         """
-        if self.config.trainer.optimizer == OptimizerEnum.SGD:
+        optimizer = self.config.trainer.optimizer
+        if optimizer == OptimizerEnum.SGD:
             self.optimizer = SGD(
                 self.model.module.get_learnable_params(),
                 momentum=0.9,
                 lr=0,
                 weight_decay=self.config.trainer.weight_decay,
             )
-        elif self.config.trainer.optimizer == OptimizerEnum.ADAM:
+        elif optimizer == OptimizerEnum.ADAM:
             self.optimizer = Adam(
                 self.model.module.get_learnable_params(),
                 lr=0,
                 weight_decay=self.config.trainer.weight_decay,
             )
+        elif optimizer == OptimizerEnum.ADAMW:
+            self.optimizer = AdamW(
+                self.model.module.get_learnable_params(),
+                lr=0,
+                weight_decay=self.config.trainer.weight_decay,
+            )
+        else:
+            raise Exception("Optimizer `{}` not supported".format(optimizer))
 
         self.scaler = GradScaler() if self.config.trainer.mixed_precision else None
 

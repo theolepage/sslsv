@@ -406,12 +406,12 @@ class AttentiveStatisticsPooling(nn.Module):
         Compute the statistics of a tensor.
 
         Args:
-            x (torch.Tensor): Input tensor. Shape: (N, L, D).
-            m (torch.Tensor): Mask tensor. Shape: (N, L).
+            x (torch.Tensor): Input tensor. Shape: (N, D, L).
+            m (torch.Tensor): Mask tensor. Shape: (N, D, L).
             eps (float): Small value to prevent division by zero. Defaults to 1e-12.
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: Mean and standard deviation tensors. Shape: (N, L).
+            Tuple[torch.Tensor, torch.Tensor]: Mean and standard deviation tensors. Shape: (N, D).
         """
         mean = (m * x).sum(dim=2)
         std = torch.sqrt((m * (x - mean.unsqueeze(dim=2)).pow(2)).sum(dim=2).clamp(eps))
@@ -545,7 +545,7 @@ class ECAPATDNN(BaseEncoder):
             )
 
         self.mfa = TDNNBlock(
-            config.channels[-1],
+            config.channels[-2] * (len(config.channels) - 2),
             config.channels[-1],
             config.kernel_sizes[-1],
             config.dilations[-1],

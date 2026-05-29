@@ -6,8 +6,11 @@ import torch.nn.functional as F
 
 from pathlib import Path
 import numpy as np
+from tqdm import tqdm
 
 from sslsv.evaluations._BaseEvaluation import BaseEvaluation, EvaluationTaskConfig
+
+from sslsv.utils.distributed import is_main_process
 
 
 def compute_error_rates(
@@ -370,7 +373,11 @@ class SpeakerVerificationEvaluation(BaseEvaluation):
 
         with open(self.config.dataset.base_path / file) as f:
             lines = f.readlines()
-        for line in lines:  # tqdm(lines, desc='Computing scores')
+        for line in tqdm(
+            lines,
+            desc=f'Computing scores ({file})',
+            disable=not self.verbose or not is_main_process()
+        ):
             target, enrol, test = line.rstrip().split(" ")
 
             score = self._get_sv_score(enrol, test)

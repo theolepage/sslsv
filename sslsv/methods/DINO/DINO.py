@@ -281,15 +281,14 @@ class DINO(BaseMomentumMethod):
         Returns:
             Tuple[float, float]: Updated learning rate and initial weight decay.
         """
-        min_lr = 1e-5
-        warmup_lr_schedule = np.linspace(0, init_lr, 10 * nb_steps_per_epoch)
-        lr_schedule = min_lr + 0.5 * (init_lr - min_lr) * (
-            1 + np.cos(np.pi * np.arange(nb_steps) / nb_steps)
+        lr, wd = super().update_optim(
+            optimizer,
+            init_lr,
+            init_wd,
+            step,
+            nb_steps,
+            nb_steps_per_epoch,
         )
-        lr_schedule = np.concatenate((warmup_lr_schedule, lr_schedule))
-        lr = lr_schedule[step]
-
-        # lr = init_lr * (0.95 ** ((step // nb_steps_per_epoch) // 5))
 
         for i, param_group in enumerate(optimizer.param_groups):
             param_group["lr"] = lr
