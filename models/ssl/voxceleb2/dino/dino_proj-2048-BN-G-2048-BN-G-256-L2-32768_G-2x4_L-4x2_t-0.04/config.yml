@@ -10,6 +10,7 @@ trainer:
   batch_size: 128
   optimizer: 'sgd'
   learning_rate: 0.2
+  learning_rate_sched: 'warmup+cosine'
   weight_decay: 0.00005
 evaluation:
   validation:

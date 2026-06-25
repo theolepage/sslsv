@@ -5,6 +5,7 @@ method:
 trainer:
   epochs: 80
   batch_size: 128
+  learning_rate_sched: 'warmup+cosine'
   weight_decay: 0.00005
 evaluation:
   validation:
