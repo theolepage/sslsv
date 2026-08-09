@@ -73,8 +73,11 @@ class Trainer:
         self.model.module.on_train_start()
         self.model.module.ssps.enabled_next_epoch = True
 
-        checkpoint_path = Path(self.config.trainer.last_checkpoint).with_name(
-            "model_latest.pt"
+        # Base checkpoint is the last checkpoint without its SSPS suffix
+        # (e.g. model_epoch-74_ssps-5k.pt -> model_epoch-74.pt)
+        last_checkpoint_path = Path(self.config.trainer.last_checkpoint)
+        checkpoint_path = last_checkpoint_path.with_name(
+            last_checkpoint_path.stem.split("_ssps-")[0] + last_checkpoint_path.suffix
         )
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
         self.model.module.load_state_dict(checkpoint["model"], strict=False)
@@ -125,6 +128,10 @@ def train(args: argparse.Namespace):
     torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
 
     config = load_config(args.config, verbose=not args.silent)
+
+    if config.method.ssps is None or config.trainer.last_checkpoint is None:
+        return
+
     train_dataloader = load_train_dataloader(config)
 
     if Path(config.trainer.last_checkpoint).exists():

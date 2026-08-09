@@ -205,6 +205,10 @@ class BaseMethod(nn.Module):
                 ref_embeddings_dim=self.encoder.encoder_dim,
                 pos_embeddings_dim=self.embeddings_dim,
                 device=self.trainer.device,
+                train_csv=(
+                    self.trainer.config.dataset.base_path
+                    / self.trainer.config.dataset.train
+                ),
                 nb_pos_embeddings=getattr(self, "SSPS_NB_POS_EMBEDDINGS", 1),
             )
 

@@ -19,6 +19,7 @@ module purge
 module load arch/a100
 module load pytorch-gpu/py3/1.12.1
 
+srun python -u sslsv/bin/create_ssps_buffers_distributed_jz.py $2/config.yml
 srun python -u sslsv/bin/train_distributed_jz.py $2/config.yml
 python sslsv/bin/average_model.py $2/config.yml --silent
 srun python -u sslsv/bin/evaluate_distributed_jz.py $2/config.yml --model_suffix avg --silent

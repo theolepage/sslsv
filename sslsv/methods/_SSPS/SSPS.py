@@ -66,6 +66,7 @@ class SSPS(nn.Module):
         ref_embeddings_dim: int,
         pos_embeddings_dim: int,
         device: torch.device,
+        train_csv: str,
         nb_pos_embeddings: int = 1,
     ):
         """
@@ -77,6 +78,7 @@ class SSPS(nn.Module):
             ref_embeddings_dim (int): Dimension of representations (Q^).
             pos_embeddings_dim (int): Dimension of embeddings (Q').
             device (torch.device): Device on which tensors will be allocated.
+            train_csv (str): Path to the train set csv file.
             nb_pos_embeddings (int): Number of positives. Defaults to 1.
 
         Returns:
@@ -84,7 +86,7 @@ class SSPS(nn.Module):
         """
         self.batch_size = batch_size
 
-        self.sampling.init(device, dataset_size, batch_size)
+        self.sampling.init(device, dataset_size, batch_size, train_csv)
 
         self.train_ref_size = dataset_size - (dataset_size % self.batch_size)
         if self.config.sampling == SSPSSamplingMethodEnum.KNN:

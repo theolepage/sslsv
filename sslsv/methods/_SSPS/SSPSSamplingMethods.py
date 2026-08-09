@@ -36,12 +36,17 @@ class _SSPS_BaseSampling:
         self.config = config
         self.verbose = config.verbose
 
-        self.df_train = pd.read_csv("data/voxceleb2_train.csv")
-        self.df_train["Video"] = [file.split("/")[-2] for file in self.df_train["File"]]
+        self.df_train = None
 
         self.global_metrics = {}
 
-    def init(self, device: torch.device, dataset_size: int, batch_size: int):
+    def init(
+        self,
+        device: torch.device,
+        dataset_size: int,
+        batch_size: int,
+        train_csv: str,
+    ):
         """
         Initialize sampling.
 
@@ -49,11 +54,13 @@ class _SSPS_BaseSampling:
             device (torch.device): Device on which tensors will be allocated.
             dataset_size (int): Number of samples in the train set.
             batch_size (int): Batch size.
+            train_csv (str): Path to the train set csv file.
 
         Returns:
             None
         """
-        pass
+        self.df_train = pd.read_csv(train_csv)
+        self.df_train["Video"] = [file.split("/")[-2] for file in self.df_train["File"]]
 
     def prepare(self, train_indices_ref: T, train_embeddings_ref: T):
         """
@@ -340,7 +347,13 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
         """
         super().__init__(config)
 
-    def init(self, device: torch.device, dataset_size: int, batch_size: int):
+    def init(
+        self,
+        device: torch.device,
+        dataset_size: int,
+        batch_size: int,
+        train_csv: str,
+    ):
         """
         Initialize sampling.
 
@@ -348,10 +361,13 @@ class SSPS_KMeansSampling(_SSPS_BaseSampling):
             device (torch.device): Device on which tensors will be allocated.
             dataset_size (int): Number of samples in the train set.
             batch_size (int): Batch size.
+            train_csv (str): Path to the train set csv file.
 
         Returns:
             None
         """
+        super().init(device, dataset_size, batch_size, train_csv)
+
         self.device = device
 
         self.kmeans = KMeans(

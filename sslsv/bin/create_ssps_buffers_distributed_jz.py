@@ -39,6 +39,10 @@ def train(args: argparse.Namespace):
     torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
 
     config = load_config(args.config, verbose=not args.silent)
+
+    if config.method.ssps is None or config.trainer.last_checkpoint is None:
+        return
+
     train_dataloader = load_train_dataloader(config)
 
     if Path(config.trainer.last_checkpoint).exists():
