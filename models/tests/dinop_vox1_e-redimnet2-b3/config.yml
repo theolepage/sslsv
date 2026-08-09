@@ -1,0 +1,40 @@
+encoder:
+  type: 'redimnet2'
+  encoder_dim: 512
+  mel_n_mels: 72
+  base_channels: 24
+  head_channels: null
+  agg_group_norm: false
+  stages:
+    - { freq_stride: 1, time_stride: 1, nb_blocks: 2, channels_expansion: 4.0, attention_reduction: 24 }
+    - { freq_stride: 2, time_stride: 1, nb_blocks: 3, channels_expansion: 3.0, attention_reduction: 24 }
+    - { freq_stride: 1, time_stride: 2, nb_blocks: 4, channels_expansion: 2.0, attention_reduction: 24 }
+    - { freq_stride: 2, time_stride: 1, nb_blocks: 5, channels_expansion: 1.0, attention_reduction: 24 }
+    - { freq_stride: 1, time_stride: 2, nb_blocks: 4, channels_expansion: 1.0, attention_reduction: 24 }
+    - { freq_stride: 2, time_stride: 1, nb_blocks: 3, channels_expansion: 1.0, attention_reduction: 24 }
+method:
+  type: 'dino_proto'
+trainer:
+  epochs: 150
+  batch_size: 256
+  optimizer: 'sgd'
+  learning_rate: 0.4
+  learning_rate_sched: 'warmup+cosine'
+  weight_decay: 0.00005
+  mixed_precision: true
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  frame_length: 64000
+  frame_sampling: 'dino_proto'
+  ssl_dino_global_count: 1
+  ssl_dino_local_count: 4
+  train: 'voxceleb1_train.csv'
+  augmentation:
+    enable: true
+    strategy: 'all'

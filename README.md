@@ -80,6 +80,18 @@ An overview of the general training and evaluation framework is provided in the 
   ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in TDNN Based Speaker Verification [[PDF]](https://arxiv.org/pdf/2005.07143)  
   *Brecht Desplanques, Jenthe Thienpondt, Kris Demuynck*
 
+- **ResNet-293** (`sslsv.encoders.ResNet293`)  
+  Wespeaker: A Research and Production Oriented Speaker Embedding Learning Toolkit [[PDF]](https://arxiv.org/pdf/2210.17016)  
+  *Hongji Wang, Chengdong Liang, Shuai Wang, Zhengyang Chen, Binbin Zhang, Xu Xiang, Yanlei Deng, Yanmin Qian*
+
+- **ECAPA2** (`sslsv.encoders.ECAPA2`)  
+  ECAPA2: A Hybrid Neural Network Architecture and Training Strategy for Robust Speaker Embeddings [[PDF]](https://arxiv.org/pdf/2401.08342)  
+  *Jenthe Thienpondt, Kris Demuynck*
+
+- **ReDimNet2** (`sslsv.encoders.ReDimNet2`)  
+  ReDimNet2: Scaling Speaker Verification via Time-Pooled Dimension Reshaping [[PDF]](https://arxiv.org/pdf/2603.11841)  
+  *Ivan Yakovlev, Anton Okhotnikov*
+
 - **S3PRL** (`sslsv.encoders.S3PRL`)  
   Pre-trained speech foundation models (e.g., WavLM, HuBERT, wav2vec 2.0) can be used as encoders using the [s3prl](https://github.com/s3prl/s3prl) toolkit
 </details>

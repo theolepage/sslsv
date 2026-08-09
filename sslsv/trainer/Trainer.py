@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, Optional
 from dataclasses import dataclass
 from enum import Enum
 
+from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 import json
@@ -15,7 +16,16 @@ import torch
 
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, SGD, AdamW
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import autocast
+
+try:  # torch >= 2.4
+    from torch.amp import GradScaler
+
+    _GRAD_SCALER_ARGS = ("cuda",)
+except ImportError:  # torch < 2.4
+    from torch.cuda.amp import GradScaler
+
+    _GRAD_SCALER_ARGS = ()
 
 # from sslsv.methods._BaseMethod import BaseMethod
 from sslsv.utils.distributed import (
@@ -70,6 +80,19 @@ class LearningRateSchedulerEnum(Enum):
     WARMUP_COSINE_DECAY = "warmup+cosine"
 
 
+class MixedPrecisionDtypeEnum(Enum):
+    """
+    Enumeration representing data types for mixed precision training.
+
+    Attributes:
+        BFLOAT16 (str): bfloat16 (does not require gradient scaling).
+        FLOAT16 (str): float16 (requires gradient scaling).
+    """
+
+    BFLOAT16 = "bfloat16"
+    FLOAT16 = "float16"
+
+
 @dataclass
 class TrainerConfig:
     """
@@ -90,6 +113,7 @@ class TrainerConfig:
         tracked_mode (TrackedModeEnum): Mode for tracking the the improvement of the tracked metric.
         ddp_sync_batchnorm (bool): Whether to synchronize BatchNorm statistics when using DDP.
         mixed_precision (bool): Whether to use mixed precision training.
+        mixed_precision_dtype (MixedPrecisionDtypeEnum): Data type for mixed precision training.
         init_weights (str): Path to initial weights for the model.
         last_checkpoint (str): Path to latest checkpoint to resume training.
         wandb_id (str): ID for the WandB run.
@@ -112,6 +136,7 @@ class TrainerConfig:
 
     ddp_sync_batchnorm: bool = True
     mixed_precision: bool = False
+    mixed_precision_dtype: MixedPrecisionDtypeEnum = MixedPrecisionDtypeEnum.BFLOAT16
     init_weights: str = None
     last_checkpoint: str = None
 
@@ -129,7 +154,10 @@ class Trainer:
         config (Any): Gloabal configuration.
         evaluate (Callable[..., Dict[str, float]]): Function for evaluating the model.
         optimizer (torch.optim.Optimizer): Optimizer instance used for training.
-        scaler (torch.cuda.amp.GradScaler): GradScaler instance for mixed precision training.
+        amp_dtype (Optional[torch.dtype]): Data type for mixed precision training,
+            None if mixed precision is disabled.
+        scaler (Optional[torch.amp.GradScaler]): GradScaler instance for float16
+            mixed precision training.
         device (torch.device): Device on which tensors will be allocated.
         best_metric (float): Best metric value achieved during training.
         nb_epochs_remaining (int): Number of epochs remaining before early stopping.
@@ -205,16 +233,19 @@ class Trainer:
                 indices = indices.to(self.device, non_blocking=True)
 
             # Forward and compute loss
-            # FIXME: deprecated in PyTorch 2.6
-            # with autocast(enabled=(self.scaler is not None)):
-            Z = self.model(X, training=True)
-            loss = self.model.module.train_step(
-                Z,
-                step=step,
-                step_rel=step_rel,
-                indices=indices,
-                labels=labels,
-            )
+            with (
+                autocast("cuda", dtype=self.amp_dtype)
+                if self.amp_dtype is not None
+                else nullcontext()
+            ):
+                Z = self.model(X, training=True)
+                loss = self.model.module.train_step(
+                    Z,
+                    step=step,
+                    step_rel=step_rel,
+                    indices=indices,
+                    labels=labels,
+                )
 
             self.optimizer.zero_grad(set_to_none=True)
 
@@ -522,7 +553,16 @@ class Trainer:
         else:
             raise Exception("Optimizer `{}` not supported".format(optimizer))
 
-        self.scaler = GradScaler() if self.config.trainer.mixed_precision else None
+        # Gradient scaling is only required for float16 (bfloat16 has the same
+        # dynamic range as float32).
+        self.amp_dtype = (
+            getattr(torch, self.config.trainer.mixed_precision_dtype.value)
+            if self.config.trainer.mixed_precision
+            else None
+        )
+        self.scaler = (
+            GradScaler(*_GRAD_SCALER_ARGS) if self.amp_dtype == torch.float16 else None
+        )
 
     def _init_tensorboard(self):
         """
