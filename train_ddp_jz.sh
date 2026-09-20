@@ -9,11 +9,15 @@ sbatch <<EOT
 #SBATCH --ntasks=$1
 #SBATCH --gres=gpu:$1
 #SBATCH --cpus-per-task=10
-####SBATCH --constraint v100-32g
+#SBATCH --constraint v100-32g
 #SBATCH --time=20:00:00
 #SBATCH --qos=qos_gpu-t3
 #SBATCH --hint=nomultithread
 #SBATCH --account=kdp@v100
+
+ulimit -c 0
+
+set -e
 
 module purge
 

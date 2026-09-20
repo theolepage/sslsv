@@ -15,8 +15,6 @@ from sslsv.methods._BaseMomentumMethod import (
     initialize_momentum_params,
 )
 
-from sslsv.utils.distributed import get_world_size
-
 from .DINOProtoLoss import DINOProtoLoss
 
 
@@ -26,7 +24,7 @@ class DINOProtoHead(nn.Module):
 
     Attributes:
         mlp (nn.Sequential): MLP module.
-        last_layer (nn.utils.weight_norm): Last layer module.
+        prototypes (nn.utils.weight_norm): Last layer module.
     """
 
     def __init__(
@@ -34,6 +32,7 @@ class DINOProtoHead(nn.Module):
         input_dim: int,
         hidden_dim: int,
         output_dim: int,
+        nb_prototypes: int,
     ):
         """
         Initialize a DINOProto head module.
@@ -42,6 +41,7 @@ class DINOProtoHead(nn.Module):
             input_dim (int): Dimension of the input.
             hidden_dim (int): Dimension of the hidden layers.
             output_dim (int): Dimension of the output.
+            nb_prototypes (int): Number of prototypes.
 
         Returns:
             None
@@ -51,29 +51,18 @@ class DINOProtoHead(nn.Module):
         self.head = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Linear(hidden_dim, output_dim),
         )
 
-        self.apply(self._init_weights)
-
-    def _init_weights(self, m: nn.Module):
-        """
-        Initialize weights.
-
-        Args:
-            m (nn.Module): PyTorch module.
-
-        Returns:
-            None
-        """
-        if isinstance(m, nn.Linear):
-            torch.nn.init.trunc_normal_(m.weight, std=0.02)
-            if isinstance(m, nn.Linear) and m.bias is not None:
-                nn.init.constant_(m.bias, 0)
+        self.prototypes = nn.utils.weight_norm(
+            nn.Linear(output_dim, nb_prototypes, bias=False)
+        )
+        self.prototypes.weight_g.data.fill_(1)
+        self.prototypes.weight_g.requires_grad = False
 
     def forward(self, x: T) -> T:
         """
@@ -87,6 +76,7 @@ class DINOProtoHead(nn.Module):
         """
         x = self.head(x)
         x = F.normalize(x, p=2, dim=-1)
+        x = self.prototypes(x)
         return x
 
 
@@ -152,35 +142,35 @@ class DINOProto(BaseMomentumMethod):
         """
         super().__init__(config, create_encoder_fn)
 
+        self.SSPS_NB_POS_EMBEDDINGS = config.global_count
+
+        self.embeddings_dim = config.nb_prototypes
+
         self.head = DINOProtoHead(
             input_dim=self.encoder.encoder_dim,
             hidden_dim=config.head_hidden_dim,
             output_dim=config.head_output_dim,
+            nb_prototypes=config.nb_prototypes,
         )
 
         self.head_momentum = DINOProtoHead(
             input_dim=self.encoder.encoder_dim,
             hidden_dim=config.head_hidden_dim,
             output_dim=config.head_output_dim,
+            nb_prototypes=config.nb_prototypes,
         )
         initialize_momentum_params(self.head, self.head_momentum)
-
-        # Prototypes
-        _sqrt_k = (1. / config.head_output_dim) ** 0.5
-        self.prototypes = nn.Parameter(torch.empty(config.nb_prototypes, config.head_output_dim))
-        nn.init.uniform_(self.prototypes, -_sqrt_k, _sqrt_k)
 
         self.loss_fn = DINOProtoLoss(
             global_count=config.global_count,
             local_count=config.local_count,
-            nb_prototypes=config.nb_prototypes,
             student_temp=config.student_temperature,
             teacher_temp=config.teacher_temperature,
             memax_weight=config.memax_weight,
             koleo_weight=config.koleo_weight,
         )
 
-    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T]]:
+    def forward(self, X: T, training: bool = False) -> Union[T, Tuple[T, T, T, T]]:
         """
         Forward pass.
 
@@ -189,7 +179,7 @@ class DINOProto(BaseMomentumMethod):
             training (bool): Whether the forward pass is for training. Defaults to False.
 
         Returns:
-            Union[T, Tuple[T, T, T]]: Encoder output for inference or embeddings for training.
+            Union[T, Tuple[T, T, T, T]]: Encoder output for inference or embeddings for training.
         """
         if not training:
             return self.encoder_momentum(X)
@@ -201,12 +191,19 @@ class DINOProto(BaseMomentumMethod):
         global_frames = X[:self.config.global_count, :, :].reshape(-1, L)
         local_frames = X[self.config.global_count:, :, : L // 2].reshape(-1, L // 2)
 
-        T = self.head_momentum(self.encoder_momentum(global_frames))
+        Y_global = self.encoder_momentum(global_frames)
+        T = self.head_momentum(Y_global)
 
         Y = self.encoder(local_frames)
         S = self.head(Y)
 
-        return S, T, Y
+        # Global frames are neither augmented nor cropped and are thus directly
+        # used as reference representations for SSPS (no extra frame required).
+        Y_ref = None
+        if self.ssps:
+            Y_ref = F.normalize(Y_global[:N].detach(), p=2, dim=-1)
+
+        return S, T, Y, Y_ref
 
     def update_optim(
         self,
@@ -272,7 +269,6 @@ class DINOProto(BaseMomentumMethod):
         return [
             {"params": regularized},
             {"params": not_regularized},
-            {"params": [self.prototypes]}
         ]
 
     def get_momentum_pairs(self) -> List[Tuple[nn.Module, nn.Module]]:
@@ -287,7 +283,7 @@ class DINOProto(BaseMomentumMethod):
 
     def train_step(
         self,
-        Z: Tuple[T, T, T],
+        Z: Tuple[T, T, T, T],
         step: int,
         step_rel: Optional[int] = None,
         indices: Optional[T] = None,
@@ -297,7 +293,7 @@ class DINOProto(BaseMomentumMethod):
         Perform a training step.
 
         Args:
-            Z (Tuple[T, T, T]): Embedding tensors.
+            Z (Tuple[T, T, T, T]): Embedding tensors.
             step (int): Current training step.
             step_rel (Optional[int]): Current training step (relative to the epoch).
             indices (Optional[T]): Training sample indices.
@@ -306,9 +302,18 @@ class DINOProto(BaseMomentumMethod):
         Returns:
             T: Loss tensor.
         """
-        S, T, Y = Z
-        
-        loss, loss_metrics = self.loss_fn(S, T, self.prototypes, Y)
+        S, T, Y, Y_ref = Z
+
+        if self.ssps:
+            self.ssps.sample(indices, Y_ref)
+            T_views = T.chunk(self.config.global_count)
+            T_pp = torch.cat(
+                [self.ssps.apply(i, T_i) for i, T_i in enumerate(T_views)]
+            )
+            self.ssps.update_buffers(step_rel, indices, Y_ref, T_views)
+            loss, loss_metrics = self.loss_fn(S, T_pp, Y)
+        else:
+            loss, loss_metrics = self.loss_fn(S, T, Y)
 
         self.log_step_metrics(
             {

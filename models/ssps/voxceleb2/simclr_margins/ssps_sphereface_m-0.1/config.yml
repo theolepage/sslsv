@@ -2,10 +2,11 @@ encoder:
   type: 'resnet34'
 method:
   type: 'simclr_margins'
-  scale: 33.3333333333
+  loss:
+    loss: 'nt-xent-sphereface'
+    scale: 33.3333333333
+    margin: 0.1
   enable_projector: false
-  loss: 'nt-xent-sphereface'
-  margin: 0.1
   ssps:
     start_epoch: 100
     verbose: true

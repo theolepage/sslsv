@@ -27,7 +27,6 @@ class DINOProtoLoss(nn.Module):
         self,
         global_count: int,
         local_count: int,
-        nb_prototypes: int,
         student_temp: float,
         teacher_temp: float,
         memax_weight: float,
@@ -39,7 +38,6 @@ class DINOProtoLoss(nn.Module):
         Args:
             global_count (int): Number of global views.
             local_count (int): Number of local views.
-            nb_prototypes (int): Head output dimension.
             student_temp (float): Temperature value for the student.
             teacher_temp (float): Temperature value for the teacher.
             memax_weight (float): Weight for Me-Max regularization.
@@ -59,39 +57,22 @@ class DINOProtoLoss(nn.Module):
         self.memax_weight = memax_weight
         self.koleo_weight = koleo_weight
 
-    def snn(self, embeddings: T, prototypes: T, temperature: float) -> T:
-        """
-        Soft Nearest Neighbours similarity classifier.
-
-        Args:
-            embeddings (T): Embeddings tensor.
-            prototypes (T): Prototypes tensor.
-            temperature (float): Temperature scaling factor.
-
-        Returns:
-            T: Assigments tensor.
-        """
-        embeddings = F.normalize(embeddings, p=2, dim=-1)
-        prototypes = F.normalize(prototypes, p=2, dim=-1)
-        return F.softmax(embeddings @ prototypes.T / temperature, dim=-1)
-
-    def forward(self, student: T, teacher: T, prototypes: T, Y: T) -> T:
+    def forward(self, student: T, teacher: T, Y: T) -> T:
         """
         Compute loss.
 
         Args:
             student (T): Student embeddings tensor.
             teacher (T): Teacher embeddings tensor.
-            prototypes (T): Prototypes tensor.
             Y (T): Student representations tensor.
 
         Returns:
             T: Loss tensor.
         """
-        student = self.snn(student, prototypes, self.student_temp)
+        student = F.softmax(student / self.student_temp)
 
         with torch.no_grad():
-            teacher = self.snn(teacher, prototypes, self.teacher_temp)
+            teacher = F.softmax(teacher / self.teacher_temp)
             teacher = self.sk(teacher)
             teacher = teacher.repeat(self.local_count, 1).detach()
 

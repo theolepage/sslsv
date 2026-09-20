@@ -413,7 +413,15 @@ class Trainer:
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
         self.best_metric = checkpoint["best_metric"]
         self.model.module.load_state_dict(checkpoint["model"], strict=False)
-        self.optimizer.load_state_dict(checkpoint["optimizer"])
+        try:
+            self.optimizer.load_state_dict(checkpoint["optimizer"])
+        except ValueError:
+            if is_main_process():
+                print(
+                    "Trainer: optimizer state was not restored because the learnable "
+                    "parameters changed since the checkpoint; resuming with a fresh "
+                    "optimizer state."
+                )
         return checkpoint
 
     def _save_checkpoint(self, suffix: str):
