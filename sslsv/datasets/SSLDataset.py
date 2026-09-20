@@ -206,7 +206,11 @@ class SSLDataset(Dataset):
                     self.config.ssl_dino_local_count,
                     self.config.ssl_dino_local_length
                 )
-                frames = [frames1[i] if i < 2 else frames2[i] for i in range(len(frames1))]
+                nb_global = self.config.ssl_dino_global_count
+                frames = [
+                    frames1[i] if i < nb_global else frames2[i]
+                    for i in range(len(frames1))
+                ]
             else:
                 frame1 = load_audio(
                     self.config.base_path / self.files[i[0]],

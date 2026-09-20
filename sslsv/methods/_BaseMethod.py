@@ -149,10 +149,12 @@ class BaseMethod(nn.Module):
             )
             lr = lr_schedule[step]
         elif lr_sched == LearningRateSchedulerEnum.WARMUP_COSINE_DECAY:
-            warmup_lr_schedule = np.linspace(0, init_lr, nb_epochs_warmup * nb_steps_per_epoch)
+            nb_steps_warmup = nb_epochs_warmup * nb_steps_per_epoch
+            warmup_lr_schedule = np.linspace(0, init_lr, nb_steps_warmup)
+            nb_steps_decay = nb_steps - nb_steps_warmup
             lr_schedule = (
                 min_lr + 0.5 * (init_lr - min_lr) *
-                (1 + np.cos(np.pi * np.arange(nb_steps) / nb_steps))
+                (1 + np.cos(np.pi * np.arange(nb_steps_decay) / nb_steps_decay))
             )
             lr_schedule = np.concatenate((warmup_lr_schedule, lr_schedule))
             lr = lr_schedule[step]

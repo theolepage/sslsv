@@ -44,10 +44,12 @@ class CosineSVEvaluationTaskConfig(SpeakerVerificationEvaluationTaskConfig):
     Attributes:
         score_norm (ScoreNormEnum): Type of score normalization to be applied.
         score_norm_cohort_size (int): Size of the cohort used for score normalization.
+        score_norm_per_speaker (bool): Whether the cohort holds one averaged embedding per speaker.
     """
 
     score_norm: ScoreNormEnum = ScoreNormEnum.NONE
     score_norm_cohort_size: int = 300
+    score_norm_per_speaker: bool = True
 
 
 class CosineSVEvaluation(SpeakerVerificationEvaluation):
@@ -68,7 +70,10 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
         """
         super().__init__(*args, **kwargs)
 
-        self.task_config.__subtype__ = self.task_config.score_norm.value
+        subtype = self.task_config.score_norm.value
+        if self.task_config.score_norm == ScoreNormEnum.ASNORM:
+            subtype = f"{subtype}-{self.task_config.score_norm_cohort_size}"
+        self.task_config.__subtype__ = subtype
 
     def _extract_trials_embeddings(self, trials: List[Path]):
         """
@@ -96,15 +101,22 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
         enrol_files = _get_trials_files(1)
         test_files = _get_trials_files(2)
 
-        # if embeddings_file.exists():
-        #     embeddings = torch.load(embeddings_file)
-
         all_files = list(dict.fromkeys(enrol_files + test_files))
-        embeddings = self._extract_embeddings(
-            all_files,
-            desc="Extracting enrollment and test embeddings"
-        )
-        torch.save(embeddings, embeddings_file)
+
+        if not self.validation and embeddings_file.exists():
+            embeddings = torch.load(embeddings_file)
+            missing = [f for f in all_files if f not in embeddings]
+        else:
+            embeddings, missing = {}, all_files
+
+        if missing:
+            embeddings.update(
+                self._extract_embeddings(
+                    missing,
+                    desc="Extracting enrollment and test embeddings"
+                )
+            )
+            torch.save(embeddings, embeddings_file)
 
         self.enrol_embeddings = {f:embeddings[f] for f in enrol_files}
         self.test_embeddings = {f:embeddings[f] for f in test_files}
@@ -121,17 +133,45 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
         if "Set" in df.columns:
             df = df[df["Set"] == "train"]
 
+        cohort_file = self.config.model_path / (
+            "train_cohort_speaker.pt"
+            if self.task_config.score_norm_per_speaker
+            else "train_cohort_utterance.pt"
+        )
+        if not self.validation and cohort_file.exists():
+            self.cohort = torch.load(cohort_file)
+            return
+
         # Extract or load train embeddings
         embeddings_file = self.config.model_path / f"train_embeddings.pt"
-        if embeddings_file.exists():
-            self.train_embeddings = torch.load(embeddings_file)
+        if not self.validation and embeddings_file.exists():
+            train_embeddings = torch.load(embeddings_file)
         else:
             files = df["File"].tolist()
-            self.train_embeddings = self._extract_embeddings(
+            train_embeddings = self._extract_embeddings(
                 files,
                 desc="Extracting train embeddings"
             )
-            torch.save(self.train_embeddings, embeddings_file)
+            torch.save(train_embeddings, embeddings_file)
+
+        files = [f for f in df["File"].tolist() if f in train_embeddings]
+        cohort = torch.stack([train_embeddings[f] for f in files]).mean(dim=1)
+
+        if self.task_config.score_norm_per_speaker:
+            speakers = df.set_index("File").loc[files, "Speaker"]
+            speakers = torch.from_numpy(pd.factorize(speakers)[0]).long()
+            speakers = speakers.to(cohort.device)
+
+            sums = torch.zeros(
+                int(speakers.max()) + 1, cohort.size(-1), device=cohort.device
+            )
+            sums.index_add_(0, speakers, cohort)
+            counts = torch.bincount(speakers).unsqueeze(-1)
+
+            cohort = F.normalize(sums / counts, p=2, dim=-1)
+
+        self.cohort = cohort
+        torch.save(cohort, cohort_file)
 
     def _compute_norm_stats(self, embeddings: Dict[str, torch.Tensor], batch_size: int = 5000):
         """
@@ -144,13 +184,14 @@ class CosineSVEvaluation(SpeakerVerificationEvaluation):
         Returns:
             Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]: Mean and std of scores
         """
-        cohort_size = len(self.train_embeddings)
+        cohort = self.cohort
+
+        cohort_size = len(cohort)
         if self.task_config.score_norm == ScoreNormEnum.ASNORM:
-            cohort_size = self.task_config.score_norm_cohort_size
+            cohort_size = min(self.task_config.score_norm_cohort_size, len(cohort))
 
         keys = list(embeddings.keys())
 
-        cohort = torch.stack(list(self.train_embeddings.values())).mean(dim=1) 
         embeddings = torch.stack(list(embeddings.values())).mean(dim=1)
 
         means = []

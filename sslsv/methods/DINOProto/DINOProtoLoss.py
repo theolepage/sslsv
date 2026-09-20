@@ -69,10 +69,10 @@ class DINOProtoLoss(nn.Module):
         Returns:
             T: Loss tensor.
         """
-        student = F.softmax(student / self.student_temp)
+        student = F.softmax(student / self.student_temp, dim=-1)
 
         with torch.no_grad():
-            teacher = F.softmax(teacher / self.teacher_temp)
+            teacher = F.softmax(teacher / self.teacher_temp, dim=-1)
             teacher = self.sk(teacher)
             teacher = teacher.repeat(self.local_count, 1).detach()
 

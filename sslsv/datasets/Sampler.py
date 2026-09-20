@@ -19,6 +19,7 @@ class SamplerConfig:
         nb_speakers (Optional[int]): Number of speakers.
         nb_samples_per_spk (Optional[int]): Number of samples per speaker.
         create_contrastive_pairs (bool): Whether to create contrastive pairs.
+        contrastive_pairs_diff_video (bool): Whether to create contrastive pairs from different videos.
         prevent_class_collisions (bool): Whether to prevent class collisions.
         randomize_at_each_epoch (bool): Whether to randomize the starting indices at each epoch.
     """
@@ -29,6 +30,7 @@ class SamplerConfig:
     nb_speakers: Optional[int] = None
     nb_samples_per_spk: Optional[int] = None
     create_contrastive_pairs: bool = False
+    contrastive_pairs_diff_video: bool = False
     prevent_class_collisions: bool = False
     randomize_at_each_epoch: bool = False
 
@@ -52,6 +54,7 @@ class Sampler(TorchSampler):
         batch_size: int,
         config: SamplerConfig,
         seed: int = 0,
+        videos: Optional[List[int]] = None,
     ):
         """
         Initialize a Sampler object.
@@ -61,8 +64,10 @@ class Sampler(TorchSampler):
             batch_size (int): Batch size.
             config (SamplerConfig): Sampler configuration.
             seed (int): Seed for reproducibility. Defaults to 0.
+            videos (Optional[List[int]]): Video labels.
         """
         self.labels = labels
+        self.videos = videos
         self.batch_size = batch_size
         self.config = config
         self.seed = seed
@@ -90,6 +95,38 @@ class Sampler(TorchSampler):
             None
         """
         self.epoch = epoch
+
+    def _interleave_videos(
+        self,
+        utterances: List[int],
+        rng: np.random.Generator,
+    ) -> List[int]:
+        """
+        Order the utterances of a speaker so that consecutive ones come from different recordings, by taking one utterance from each recording in turn.
+
+        Args:
+            utterances (List[int]): Utterances of a speaker.
+            rng (np.random.Generator): Random generator.
+
+        Returns:
+            List[int]: Reordered utterances.
+        """
+        by_video = defaultdict(list)
+        for u in utterances:
+            by_video[self.videos[u]].append(u)
+
+        groups = list(by_video.values())
+        for g in groups:
+            rng.shuffle(g)
+        rng.shuffle(groups)
+
+        res = []
+        while groups:
+            for g in groups:
+                res.append(g.pop())
+            groups = [g for g in groups if g]
+
+        return res
 
     def __iter__(self) -> Iterable[int]:
         """
@@ -140,11 +177,22 @@ class Sampler(TorchSampler):
                 nb_utt = min(nb_utt, self.config.nb_samples_per_spk)
 
             if self.config.create_contrastive_pairs:
-                nb_utt = nb_utt - nb_utt % 2
+                utterances = utterances[:nb_utt]
+
+                if self.config.contrastive_pairs_diff_video:
+                    utterances = self._interleave_videos(utterances, rng)
+
+                nb_utt = len(utterances) - len(utterances) % 2
                 for idx in range(0, nb_utt, 2):
-                    x.append((utterances[idx], utterances[idx + 1]))
+                    a, b = utterances[idx], utterances[idx + 1]
+                    if (
+                        self.config.contrastive_pairs_diff_video
+                        and self.videos[a] == self.videos[b]
+                    ):
+                        continue
+                    x.append((a, b))
                     y.append(i)
-                    x.append((utterances[idx + 1], utterances[idx]))
+                    x.append((b, a))
                     y.append(i)
             else:
                 for idx in range(nb_utt):

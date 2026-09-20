@@ -194,13 +194,16 @@ def _bind_evaluate_tasks_config(
 
     tasks = []
 
+    seen = []
+
     for task in data["evaluation"][key]:
         type_ = task["type"]
         if type_ not in REGISTERED_EVALUATIONS.keys():
             raise Exception("Evaluation `{}` not supported".format(type_))
 
-        if type_ in [t.__type__ for t in tasks]:
+        if task in seen:
             raise Exception("Evaluation `{}` already registered".format(type_))
+        seen.append(task)
 
         res = from_dict(
             REGISTERED_EVALUATIONS[type_][1], task, DaciteConfig(cast=[Enum])
@@ -303,11 +306,18 @@ def load_train_dataloader(config: Config) -> torch.utils.data.DataLoader:
 
     if config.dataset.sampler and config.dataset.sampler.enable:
         shuffle = False
+        videos = None
+        if config.dataset.sampler.contrastive_pairs_diff_video:
+            videos = pd.factorize(
+                [f.rsplit("/", 1)[0] for f in files]
+            )[0].tolist()
+
         sampler = Sampler(
             dataset.labels,
             config.trainer.batch_size,
             config.dataset.sampler,
             seed=config.seed,
+            videos=videos,
         )
         if is_dist_initialized():
             sampler = DistributedSamplerWrapper(sampler)
@@ -418,12 +428,15 @@ def evaluate(
                 validation,
             )
 
-            prefix = f"{prefix}/{task.__type__}{f'_{task.__subtype__}' if task.__subtype__ else ''}/"
+            task_prefix = (
+                f"{prefix}/{task.__type__}"
+                f"{f'_{task.__subtype__}' if task.__subtype__ else ''}/"
+            )
 
             task_metrics = evaluation.evaluate()
             task_metrics = add_prefix_to_dict_keys(
                 task_metrics,
-                prefix=prefix,
+                prefix=task_prefix,
             )
             metrics.update(task_metrics)
 
