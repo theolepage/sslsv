@@ -85,9 +85,15 @@ class DINOProtoLoss(nn.Module):
         # Koleo regularization
         koleo_loss = torch.stack([self.koleo(v) for v in Y.chunk(self.local_count)]).sum()
 
-        loss = loss + self.memax_weight * memax_loss + self.koleo_weight * koleo_loss
+        metrics = {
+            # `loss_ce` and `loss_koleo` are directly comparable to SDPN's
+            # `train_ploss` and `train_ke_loss`.
+            "train/loss_ce": loss,
+            "train/loss_memax": memax_loss,
+            "train/loss_koleo": koleo_loss,
+        }
 
-        metrics = {}
+        loss = loss + self.memax_weight * memax_loss + self.koleo_weight * koleo_loss
 
         return loss, metrics
 

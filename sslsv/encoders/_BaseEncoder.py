@@ -19,6 +19,13 @@ class BaseEncoderConfig:
         mel_win_length (int): Window size for Mel Spectrogram.
         mel_hop_length (int): Length of hop between STFT windows for Mel Spectrogram.
         mel_sample_rate (int): Sample rate of audio signal for Mel Spectrogram.
+        waveform_scale (float): Factor applied to the waveform before extracting
+            Mel Spectrogram features, during training only. SDPN reads its training
+            audio as int16 with `scipy.io.wavfile`, which makes the `1e-6` floor
+            added before the log negligible, whereas audio read as float in [-1, 1]
+            gets its low-energy bins clamped by that floor. Set to 32768 to train on
+            the same feature domain as SDPN (which still evaluates in the float
+            domain, hence training only).
     """
 
     encoder_dim: int = 512
@@ -30,6 +37,7 @@ class BaseEncoderConfig:
     mel_win_length: int = 400  # 25ms
     mel_hop_length: int = 160  # 10ms
     mel_sample_rate: int = 16000  # 16kHz
+    waveform_scale: float = 1.0
 
     spec_aug: bool = False
     spec_aug_prob: float = 0.2
@@ -66,6 +74,8 @@ class BaseEncoder(nn.Module):
             None
         """
         super().__init__()
+
+        self.config = config
 
         self.encoder_dim = config.encoder_dim
 
@@ -134,6 +144,8 @@ class BaseEncoder(nn.Module):
         """
         if self.features_extractor:
             with torch.no_grad():
+                if self.training and self.config.waveform_scale != 1.0:
+                    X = X * self.config.waveform_scale
                 Z = self.features_extractor(X)
                 if self.spec_aug and self.training and X.size(-1) == 32000:
                     Z = self._apply_spec_aug(Z)

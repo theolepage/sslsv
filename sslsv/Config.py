@@ -19,6 +19,9 @@ class Config:
         model_path (Path): Path to the model directory.
         seed (int): Seed for reproducibility.
         reproducibility (bool): Whether or not to enable reproducibility mode.
+        cudnn_benchmark (bool): Whether cuDNN may benchmark algorithms for each new
+            input shape. Disabling it skips that search, whose trial workspaces are
+            much larger than the ones it settles on, at the cost of some speed.
         encoder (BaseEncoderConfig): Encoder configuration.
         method (BaseMethodConfig): Method configuration.
         trainer (TrainerConfig): Trainer configuration.
@@ -31,6 +34,7 @@ class Config:
 
     seed: int = 1717
     reproducibility: bool = False
+    cudnn_benchmark: bool = True
 
     encoder: BaseEncoderConfig = None
     method: BaseMethodConfig = None

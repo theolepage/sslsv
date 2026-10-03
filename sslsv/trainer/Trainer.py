@@ -422,6 +422,18 @@ class Trainer:
                     "parameters changed since the checkpoint; resuming with a fresh "
                     "optimizer state."
                 )
+
+        # The weights and the optimizer state have been copied where they belong, so
+        # drop the loaded copies and hand the blocks the allocator cached for them back
+        # to the driver. A resumed run reaches its first backward with the optimizer
+        # state already resident, unlike a fresh run which only allocates it on the
+        # first step, and that first backward is also where cuDNN searches for an
+        # algorithm using workspaces far larger than the ones it settles on.
+        checkpoint.pop("model", None)
+        checkpoint.pop("optimizer", None)
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
         return checkpoint
 
     def _save_checkpoint(self, suffix: str):

@@ -17,6 +17,7 @@ evaluation:
   test:
     - type: 'sv_cosine'
       frame_length: null
+      score_norm: 'as-norm'
 dataset:
   ssl: true
   frame_length: 64000

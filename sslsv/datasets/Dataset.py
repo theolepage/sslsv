@@ -38,6 +38,10 @@ class DatasetConfig:
         ssl_dino_global_count (int): Number of DINO global (large) frames.
         ssl_dino_global_length (int): Length of DINO global (large) frames.
         ssl_dino_local_count (int): Number of DINO local (small) frames.
+        ssl_dino_local_pairs (bool): Whether to concatenate DINO local frames by pairs,
+            as SDPN does. Local frames are then Mel-transformed two at a time and split
+            back apart by the method, which also avoids padding them to the length of
+            the global frames.
         ssl_dino_local_length (int): Length of DINO local (small) frames.
         ssps (bool): Whether to use Self-Supervised Positive Sampling (SSPS).
         ssps_frame_length (int): Frame length for SSPS.
@@ -57,6 +61,7 @@ class DatasetConfig:
     ssl_dino_global_count: int = 2
     ssl_dino_global_length: int = 4 * 16000
     ssl_dino_local_count: int = 4
+    ssl_dino_local_pairs: bool = False
     ssl_dino_local_length: int = 2 * 16000
     ssps: bool = False
     ssps_frame_length: int = 64000

@@ -228,6 +228,15 @@ class SSLDataset(Dataset):
                 self.preprocess_data(f) if j >= self.config.ssl_dino_global_count else f
                 for j, f in enumerate(frames)
             ]
+            if self.config.ssl_dino_local_pairs:
+                # SDPN augments each local frame independently, then concatenates
+                # them by pairs so that every row is as long as a global frame.
+                nb_global = self.config.ssl_dino_global_count
+                local = frames[nb_global:]
+                frames = frames[:nb_global] + [
+                    np.concatenate(local[i : i + 2], axis=-1)
+                    for i in range(0, len(local), 2)
+                ]
         else:
             frames = [self.preprocess_data(f) for f in frames]
 

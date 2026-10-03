@@ -56,6 +56,7 @@ from sslsv.methods.SimCLRMultiViews.SimCLRMultiViews import (
     SimCLRMultiViewsConfig,
 )
 from sslsv.methods.DINOProto.DINOProto import DINOProto, DINOProtoConfig
+from sslsv.methods.DINOProto2.DINOProto2 import DINOProto2, DINOProto2Config
 
 # Evaluations
 from sslsv.evaluations._BaseEvaluation import EvaluationTaskConfig
@@ -125,6 +126,7 @@ REGISTERED_METHODS = {
     "moco_margins": (MoCoMargins, MoCoMarginsConfig),
     "simclr_multiviews": (SimCLRMultiViews, SimCLRMultiViewsConfig),
     "dino_proto": (DINOProto, DINOProtoConfig),
+    "dino_proto2": (DINOProto2, DINOProto2Config),
 }
 
 
@@ -243,7 +245,7 @@ def load_config(path: str, verbose: bool = True) -> Config:
     config.model_ckpt_path = config.model_path / "checkpoints"
 
     # Reproducibility / performance
-    torch.backends.cudnn.benchmark = not config.reproducibility
+    torch.backends.cudnn.benchmark = config.cudnn_benchmark and not config.reproducibility
     torch.backends.cudnn.deterministic = config.reproducibility
     torch.use_deterministic_algorithms(config.reproducibility)
 
