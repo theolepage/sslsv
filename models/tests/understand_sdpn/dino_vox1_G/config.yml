@@ -25,7 +25,7 @@ evaluation:
 dataset:
   ssl: true
   frame_length: 64000
-  frame_sampling: 'dino_proto'
+  frame_sampling: 'dinosk'
   ssl_dino_global_count: 1
   train: 'voxceleb1_train.csv'
   augmentation:

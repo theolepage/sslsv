@@ -1,0 +1,71 @@
+cudnn_benchmark: false  # cuDNN's algorithm search allocated oversized workspaces on resume
+# Ablation 2, on top of dinop_vox1_sdpn_1 (which already reverted #9 hann,
+# #11 gradient clipping and #7 the augmentation profile). Adds the head-level reverts:
+#   - head_activation (#12) gelu -> relu
+#   - sdpn_init       (#13) trunc_normal(0.02) + zero bias -> PyTorch defaults
+#   - prototypes_weight_decay (#14) exempt -> regularized like every other 2-D weight
+# The shared prototype bank (#3) and its summed gradients (#4) are kept, so this
+# isolates the head from the prototype mechanics that block D bundled together.
+#
+# Note on "default init for the prototypes": there is nothing to change. The shared
+# bank is initialized uniform(+/- (1/256)**0.5) = +/-0.0625, and PyTorch's default for
+# the Linear it replaces is kaiming_uniform(a=sqrt(5)) = +/-1/sqrt(fan_in) = +/-0.0625.
+# The two are the same distribution, so #13 only affects the head MLP.
+#
+# Candidate model: every difference identified against SDPN, minus the two that were
+# only reproduction scaffolding.
+#   - `init_weights` dropped: transplanting SDPN's initialization was a diagnostic to
+#     remove init as a variable, not something to keep.
+#   - `musan_file` dropped: SDPN's MUSAN list collapses 128924 segments to 1768 through
+#     a duplicate-key bug in its own data prep, so sslsv globs the full pool instead.
+# `sdpn_spec_aug` is kept: it was active in the exp/sdpn run the published results come
+# from, and it is a genuine regularizer rather than an artefact.
+#
+# dinop_sdpn5 reproduces SDPN to within its own run-to-run spread (step-100 ce 6.7702
+# vs 6.7735, SDPN's two runs differing by 0.0030), so this is that reproduction with
+# the scaffolding removed.
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+  mel_n_mels: 80
+  waveform_scale: 32768.0         # (#6)  train in the int16 domain (SDPN reads wavs
+                                  #       with scipy, so the 1e-6 log floor is inert)
+  extract_mel_features: false     # (#10) the method owns the Mel transform
+method:
+  type: 'dinosk'
+  shared_prototypes: true             # (#3)  one SGD-trained bank, teacher reads it live
+  prototypes_grad_world_size_sum: true  # (#4) sum instead of average across ranks
+  head_activation: 'relu'             # (#12) REVERTED
+  sdpn_init: false                    # (#13) REVERTED: PyTorch default init
+  prototypes_weight_decay: true       # (#14) REVERTED: prototypes are regularized
+  sdpn_views: true                    # (#10) pairs Mel-transformed then split in half
+  clip_grad: 0.0                      # (#11) REVERTED: no gradient clipping
+  sdpn_spec_aug: true                 # (#16) erasing on local views, active in exp/sdpn
+trainer:
+  epochs: 150
+  batch_size: 384                 # (#2)  96 per GPU x 4 GPUs
+  optimizer: 'sgd'
+  learning_rate: 0.6              # (#2)  0.4 * 384 / 256
+  learning_rate_sched: 'warmup+cosine'
+  weight_decay: 0.00005
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  frame_length: 64000
+  frame_sampling: 'dinosk'
+  ssl_dino_global_count: 1
+  ssl_dino_local_count: 4
+  ssl_dino_local_pairs: true      # (#10) also removes the -100 padding (OOM at bs 384)
+  train: 'voxceleb1_train.csv'
+  augmentation:
+    enable: true
+    strategy: 'all'
+    rir_file: 'rirs/rir.npy'      # (#8)  SDPN's fixed 1000-RIR bank
+    rir_normalize: false          # (#8)  SDPN does not normalize RIR energy
+    rir_gain: [-7, 3]             # (#8)  SDPN applies a random gain to the RIR
+    snr_eps: 9.3132257e-14        # (#6)  1e-4 / 32768^2: SDPN computes SNR on int16

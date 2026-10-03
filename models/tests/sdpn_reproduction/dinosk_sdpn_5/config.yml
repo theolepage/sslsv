@@ -1,0 +1,43 @@
+cudnn_benchmark: false
+# _4 minus SDPN's batch/lr scaling (#2): back to sslsv's 256 / 0.4.
+# _3 minus sdpn_views (#10) and SDPN masking (#16), which the code couples: SDPN masking
+# lives inside assemble_sdpn_views, sslsv masking lives in BaseEncoder. So this swaps both
+# at once -- the encoder owns the Mel again and applies sslsv's masking to the local views.
+# _2 minus SDPN's augmentation profile (#7): the four cases go back to uniform 0.25.
+# _1 minus the SDPN RIR bank, gain and un-normalized convolution (#8).
+# Reverts the changes vox1 found negligible -- clip_grad (#11), sdpn_init (#13),
+# summed prototype gradients (#4), the int16 waveform domain (#6 waveform_scale+snr_eps)
+# -- plus hann (#9). Keeps GELU (#12), shared prototypes (#3), protos exempt from wd (#14),
+# assemble_sdpn_views, so dropping it would silently disable masking too. It is reverted
+# in _4 together with #16, which is the only way the code allows them to move.
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+  mel_n_mels: 80
+  spec_aug: true                  # (#16) sslsv's masking, reachable now the encoder owns the Mel
+method:
+  type: 'dinosk'
+  shared_prototypes: true         # (#3)
+  head_activation: 'gelu'         # (#12)
+  prototypes_weight_decay: false  # (#14)
+trainer:
+  epochs: 150
+  batch_size: 256
+  optimizer: 'sgd'
+  learning_rate: 0.4
+  learning_rate_sched: 'warmup+cosine'
+  weight_decay: 0.00005
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  frame_length: 64000
+  frame_sampling: 'dinosk'
+  ssl_dino_global_count: 1
+  ssl_dino_local_pairs: true      # packing only: keeps every row 64000 so nothing is padded
+  augmentation:
+    strategy: 'all'

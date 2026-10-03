@@ -20,12 +20,12 @@ class FrameSamplingEnum(Enum):
     Members:
         DEFAULT (str): Default frame sampling option.
         DINO (str): DINO frame sampling option.
-        DINO_PROTO (str): DINOProto frame sampling option.
+        DINOSK (str): DINOSK frame sampling option.
     """
 
     DEFAULT = "default"
     DINO = "dino"
-    DINO_PROTO = "dino_proto"
+    DINOSK = "dinosk"
 
 
 @dataclass

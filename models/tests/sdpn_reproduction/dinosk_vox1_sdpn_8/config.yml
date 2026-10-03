@@ -1,0 +1,37 @@
+cudnn_benchmark: false  # cuDNN's algorithm search allocated oversized workspaces on resume
+# Ablation 8, on top of _7. Reverts #10: the encoder owns the Mel again and takes it
+# per 2s view, rather than the method transforming a joined pair and splitting it at
+# frame 200. `ssl_dino_local_pairs` stays on -- it only governs how the dataset packs
+# the batch, and the method splits the pairs back apart in the waveform domain, so
+# nothing is padded with -100.
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+  mel_n_mels: 80
+method:
+  type: 'dinosk'
+  sdpn_spec_aug: true                 # (#16) erasing on local views, active in exp/sdpn
+trainer:
+  epochs: 150
+  batch_size: 256                 # (#2)  REVERTED: sslsv's batch size
+  optimizer: 'sgd'
+  learning_rate: 0.4              # (#2)  REVERTED: unscaled
+  learning_rate_sched: 'warmup+cosine'
+  weight_decay: 0.00005
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  frame_length: 64000
+  frame_sampling: 'dinosk'
+  ssl_dino_global_count: 1
+  ssl_dino_local_count: 4
+  ssl_dino_local_pairs: true      # kept: packing only, so nothing is padded to -100
+  train: 'voxceleb1_train.csv'
+  augmentation:
+    enable: true
+    strategy: 'all'

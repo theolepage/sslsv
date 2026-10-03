@@ -1,0 +1,35 @@
+encoder:
+  type: 'ecapatdnn'
+  channels: [1024, 1024, 1024, 1024, 3072]
+  mel_n_mels: 80
+method:
+  type: 'dinosk'
+trainer:
+  last_checkpoint: 'models/tests/dinosk/checkpoints/model_epoch-74.pt'
+  epochs: 150
+  batch_size: 256
+  optimizer: 'sgd'
+  learning_rate: 0.4
+  learning_rate_sched: 'warmup+cosine'
+  weight_decay: 0.00005
+evaluation:
+  validation:
+    - type: 'sv_cosine'
+  test:
+    - type: 'sv_cosine'
+      frame_length: null
+dataset:
+  ssl: true
+  frame_length: 64000
+  frame_sampling: 'dinosk'
+  ssl_dino_global_count: 1
+  ssl_dino_local_count: 4
+  train: 'voxceleb2_train.csv'
+  sampler:
+    enable: true
+    create_contrastive_pairs: true
+    contrastive_pairs_diff_video: true
+    randomize_at_each_epoch: true
+  augmentation:
+    enable: true
+    strategy: 'all'
