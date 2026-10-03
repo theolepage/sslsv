@@ -20,10 +20,10 @@ evaluation:
 dataset:
   ssl: true
   frame_length: 64000
-  frame_sampling: 'dinosk'
+  frame_sampling: 'dino'
   ssl_dino_global_count: 1
   ssl_dino_local_count: 4
-  train: 'voxceleb2_train.csv'
+  train: 'voxceleb1_train.csv'
   augmentation:
     enable: true
     strategy: 'all'

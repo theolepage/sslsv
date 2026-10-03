@@ -6,9 +6,9 @@ method:
   type: 'dinosk'
 trainer:
   epochs: 150
-  batch_size: 256
+  batch_size: 384
   optimizer: 'sgd'
-  learning_rate: 0.4
+  learning_rate: 0.6
   learning_rate_sched: 'warmup+cosine'
   weight_decay: 0.00005
 evaluation:
@@ -23,7 +23,7 @@ dataset:
   frame_sampling: 'dinosk'
   ssl_dino_global_count: 1
   ssl_dino_local_count: 4
-  train: 'voxceleb2_train.csv'
+  train: 'voxceleb1_train.csv'
   augmentation:
     enable: true
     strategy: 'all'

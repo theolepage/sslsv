@@ -4,7 +4,15 @@ encoder:
   mel_n_mels: 80
 method:
   type: 'dinosk'
+  ssps:
+    start_epoch: 75
+    sampling: 'kmeans-repr'
+    kmeans_nb_prototypes: 25000
+    inter_sampling_size: 1
+    pos_queue_size: 25000
+    verbose: true
 trainer:
+  last_checkpoint: 'models/tests/dinosk/checkpoints/model_epoch-74.pt'
   epochs: 150
   batch_size: 256
   optimizer: 'sgd'

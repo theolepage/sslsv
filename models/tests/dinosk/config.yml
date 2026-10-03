@@ -17,6 +17,24 @@ evaluation:
   test:
     - type: 'sv_cosine'
       frame_length: null
+      score_norm: 'as-norm'
+      score_norm_cohort_size: 100
+    - type: 'sv_cosine'
+      frame_length: null
+      score_norm: 'as-norm'
+      score_norm_cohort_size: 300
+    - type: 'sv_cosine'
+      frame_length: null
+      score_norm: 'as-norm'
+      score_norm_cohort_size: 1000
+    - type: 'sv_cosine'
+      frame_length: null
+      score_norm: 'as-norm'
+      score_norm_cohort_size: 3000
+    - type: 'sv_cosine'
+      frame_length: null
+      score_norm: 'as-norm'
+      score_norm_cohort_size: 5994
 dataset:
   ssl: true
   frame_length: 64000

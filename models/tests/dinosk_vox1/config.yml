@@ -17,13 +17,14 @@ evaluation:
   test:
     - type: 'sv_cosine'
       frame_length: null
+      score_norm: 'as-norm'
 dataset:
   ssl: true
   frame_length: 64000
   frame_sampling: 'dinosk'
   ssl_dino_global_count: 1
   ssl_dino_local_count: 4
-  train: 'voxceleb2_train.csv'
+  train: 'voxceleb1_train.csv'
   augmentation:
     enable: true
     strategy: 'all'

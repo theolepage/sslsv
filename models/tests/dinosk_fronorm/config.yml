@@ -4,6 +4,9 @@ encoder:
   mel_n_mels: 80
 method:
   type: 'dinosk'
+  head_hidden_dim: 3072
+  head_output_dim: 1024
+  fronorm_weight: 0.1
 trainer:
   epochs: 150
   batch_size: 256

@@ -165,7 +165,7 @@ class SSLDataset(Dataset):
             )  # (1, T)
             if self.config.frame_sampling in [
                 FrameSamplingEnum.DINO,
-                FrameSamplingEnum.DINO_PROTO
+                FrameSamplingEnum.DINOSK
             ]:
                 frames = sample_frames_dino(
                     data,
@@ -180,7 +180,7 @@ class SSLDataset(Dataset):
             file, label = self.files[i[0]], self.labels[i[0]]
             if self.config.frame_sampling in [
                 FrameSamplingEnum.DINO,
-                FrameSamplingEnum.DINO_PROTO
+                FrameSamplingEnum.DINOSK
             ]:
                 data1 = load_audio(
                     self.config.base_path / self.files[i[0]],
@@ -222,7 +222,7 @@ class SSLDataset(Dataset):
                 )
                 frames = [frame1, frame2]
 
-        if self.config.frame_sampling == FrameSamplingEnum.DINO_PROTO:
+        if self.config.frame_sampling == FrameSamplingEnum.DINOSK:
             # Only apply data-augmentation on local views
             frames = [
                 self.preprocess_data(f) if j >= self.config.ssl_dino_global_count else f

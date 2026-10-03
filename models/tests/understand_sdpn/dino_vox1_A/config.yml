@@ -3,7 +3,7 @@ encoder:
   channels: [1024, 1024, 1024, 1024, 3072]
   mel_n_mels: 80
 method:
-  type: 'dinosk'
+  type: 'dino'
 trainer:
   epochs: 150
   batch_size: 256
@@ -20,10 +20,8 @@ evaluation:
 dataset:
   ssl: true
   frame_length: 64000
-  frame_sampling: 'dinosk'
-  ssl_dino_global_count: 1
-  ssl_dino_local_count: 4
-  train: 'voxceleb2_train.csv'
+  frame_sampling: 'dino'
+  train: 'voxceleb1_train.csv'
   augmentation:
     enable: true
     strategy: 'all'

@@ -55,7 +55,7 @@ from sslsv.methods.SimCLRMultiViews.SimCLRMultiViews import (
     SimCLRMultiViews,
     SimCLRMultiViewsConfig,
 )
-from sslsv.methods.DINOProto.DINOProto import DINOProto, DINOProtoConfig
+from sslsv.methods.DINOSK.DINOSK import DINOSK, DINOSKConfig
 
 # Evaluations
 from sslsv.evaluations._BaseEvaluation import EvaluationTaskConfig
@@ -124,7 +124,7 @@ REGISTERED_METHODS = {
     "simclr_margins": (SimCLRMargins, SimCLRMarginsConfig),
     "moco_margins": (MoCoMargins, MoCoMarginsConfig),
     "simclr_multiviews": (SimCLRMultiViews, SimCLRMultiViewsConfig),
-    "dino_proto": (DINOProto, DINOProtoConfig),
+    "dinosk": (DINOSK, DINOSKConfig),
 }
 
 

@@ -4,7 +4,17 @@ encoder:
   mel_n_mels: 80
 method:
   type: 'dinosk'
+  osps:
+    start_epoch: 75
+    nb_clusters: 15000
+    memory_size: 4
+    centroids_momentum: 0.9
+    inter_sampling_size: 1
+    coverage: 0.25
+    metrics: true
+    verbose: true
 trainer:
+  last_checkpoint: 'models/tests/dinosk/checkpoints/model_epoch-74.pt'
   epochs: 150
   batch_size: 256
   optimizer: 'sgd'

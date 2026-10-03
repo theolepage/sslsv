@@ -5,6 +5,7 @@ encoder:
 method:
   type: 'dinosk'
 trainer:
+  last_checkpoint: 'models/tests/understand_sdpn/dinosk_vox1_h-proto2/checkpoints/model_epoch-70.pt'
   epochs: 150
   batch_size: 256
   optimizer: 'sgd'
@@ -23,7 +24,11 @@ dataset:
   frame_sampling: 'dinosk'
   ssl_dino_global_count: 1
   ssl_dino_local_count: 4
-  train: 'voxceleb2_train.csv'
+  train: 'voxceleb1_train.csv'
+  sampler:
+    enable: true
+    create_contrastive_pairs: true
+    randomize_at_each_epoch: true
   augmentation:
     enable: true
     strategy: 'all'
